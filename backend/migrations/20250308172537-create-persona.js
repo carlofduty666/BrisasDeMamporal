@@ -36,7 +36,13 @@ module.exports = {
         allowNull: true
       },
       tipo: {
-        type: Sequelize.ENUM('estudiante', 'representante', 'profesor', 'administrativo', 'obrero', 'adminWeb'),
+        type: Sequelize.ENUM(
+          'estudiante',
+          'representante',
+          'profesor',
+          'administrativo',
+          'obrero',
+          'adminWeb'),
         allowNull: false
       },
       username: {

@@ -2,22 +2,25 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Grados', {
+    await queryInterface.createTable('Materias', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      nombre_grado: {
+      asignatura: {
         type: Sequelize.STRING
       },
-      nivelID: {
+      gradoID: {
         type: Sequelize.INTEGER,
+        allowNull: false,
         references: {
-          model: 'Nivel',
+          model: 'Grados',
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       createdAt: {
         allowNull: false,
@@ -30,6 +33,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Grados');
+    await queryInterface.dropTable('Materias');
   }
 };
