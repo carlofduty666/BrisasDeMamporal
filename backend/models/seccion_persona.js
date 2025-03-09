@@ -15,6 +15,14 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'annoEscolarID',
         as: 'annoEscolar'
       })
+      Seccion_Persona.belongsTo(models.Seccion, {
+        foreignKey: 'seccionID',
+        as: 'seccion'
+      })
+      Seccion_Persona.belongsTo(models.Persona, {
+        foreignKey: 'personaID',
+        as: 'persona'
+      })
     }
   }
   Seccion_Persona.init({
