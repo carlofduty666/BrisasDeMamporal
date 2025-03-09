@@ -24,17 +24,17 @@ module.exports = {
           },
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE'
-      },
-      annoEscolarID: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'AnnoEscolar',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
       }
+      // annoEscolarID: {
+      //   type: Sequelize.INTEGER,
+      //   allowNull: false,
+      //   references: {
+      //     model: 'AnnoEscolar',
+      //     key: 'id'
+      //   },
+      //   onUpdate: 'CASCADE',
+      //   onDelete: 'CASCADE'
+      // }
     });
   },
   async down(queryInterface, Sequelize) {
