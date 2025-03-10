@@ -19,7 +19,23 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Documentos.init({
-    tipoDocumento: DataTypes.ENUM,
+    tipoDocumento: DataTypes.ENUM(
+      'cedula',
+      'partidaNacimiento',
+      'boletin',
+      'notasCertificadas',
+      'fotoCarnet',
+      'fotoCarta',
+      'boletaRetiroPlantel',
+      'constanciaTrabajo',
+      'solvenciaPago',
+      'foniatrico',
+      'psicomental',
+      'certificadoSalud',
+      'curriculumVitae',
+      'constanciaEstudio6toSemestre',
+      'titulo'
+    ),
     urlDocumento: DataTypes.STRING,
     personaID: {
       type: DataTypes.INTEGER,

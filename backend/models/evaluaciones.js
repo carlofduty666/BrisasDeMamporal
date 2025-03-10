@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     nombreEvaluacion: DataTypes.STRING,
     tipoEvaluacion: DataTypes.STRING,
     porcentaje: DataTypes.FLOAT,
-    lapso: DataTypes.ENUM,
+    lapso: DataTypes.ENUM('1', '2', '3'),
     materiaID: DataTypes.INTEGER
   }, {
     sequelize,

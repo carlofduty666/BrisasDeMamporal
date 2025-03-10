@@ -13,20 +13,12 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
-const sequelize = new Sequelize(
-    dbconfig.database,
-    dbconfig.username,
-    dbconfig.password, 
-    {
-        host: dbconfig.host,
-        dialect: dbconfig.dialect
-    }
-);
+// Elimina esta segunda declaración de sequelize ya que la tienes arriba
+// const sequelize = new Sequelize( ... )
 
-sequelize.sync({ force: false }) // { force: true } borra y crea las tablas
+sequelize.sync({ force: false })
   .then(() => {
     console.log('Base de datos sincronizada.');
-    // Puerto y arranque del servidor
     const PORT = process.env.PORT || 3000;
     const HOST = process.env.HOST || 'localhost';
     app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${HOST}:${PORT}`));
