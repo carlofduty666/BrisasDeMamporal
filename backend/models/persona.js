@@ -31,7 +31,7 @@ module.exports = (sequelize, DataTypes) => {
       });
       Persona.hasMany(models.PagoEstudiante, {
         foreignKey: 'estudianteID',
-        as: 'pagos'
+        as: 'pagosEstudiante'
       })
       Persona.hasMany(models.PagoEstudiante, { 
         foreignKey: 'representanteID', 

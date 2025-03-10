@@ -17,11 +17,11 @@ module.exports = (sequelize, DataTypes) => {
       });
       Nomina.hasMany(models.DeduccionNomina, {
         foreignKey: 'nominaID',
-        as: 'pagos'
+        as: 'deducciones'
       });
       Nomina.hasMany(models.BonificacionNomina, {
         foreignKey: 'nominaID',
-        as: 'pagos'
+        as: 'bonificaciones'
       });
     }
 
