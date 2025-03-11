@@ -1,61 +1,112 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+const moment = require('moment');
+
 module.exports = (sequelize, DataTypes) => {
-  class Persona extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
+  class Personas extends Model {
     static associate(models) {
-      // define association here
-      Persona.hasMany(models.Documentos, {
+      Personas.hasMany(models.Documentos, {
         foreignKey: 'personaID',
         as: 'documentos'
       });
-      Persona.belongsToMany(models.Seccion, {
-        through: 'SeccionPersona',
+      Personas.belongsToMany(models.Secciones, {
+        through: 'Seccion_Personas',
         foreignKey: 'personaID',
         as: 'secciones',
       });
-      Persona.belongsToMany(models.Grado, {
-        through: 'GradoPersona',
+      Personas.belongsToMany(models.Grados, {
+        through: 'Grado_Personas',
         foreignKey: 'personaID',
         as: 'grados',
       });
-      Persona.hasMany(models.Pago, {
-        foreignKey: 'personaID',
-        as: 'pagos'
-      });
-      Persona.hasMany(models.PagoEstudiante, {
+      Personas.hasMany(models.PagoEstudiantes, {
         foreignKey: 'estudianteID',
-        as: 'pagosEstudiante'
-      })
-      Persona.hasMany(models.PagoEstudiante, { 
+        as: 'pagosEstudiantes'
+      });
+      Personas.hasMany(models.PagoEstudiantes, { 
         foreignKey: 'representanteID', 
         as: 'pagosRealizados'
       });
-      Persona.hasMany(models.GradoPersona, {
+      Personas.hasMany(models.Grado_Personas, {
         foreignKey: 'personaID',
-        as: 'gradoPersona'
+        as: 'gradoPersonas'
+      });
+      Personas.hasMany(models.Calificaciones, {
+        foreignKey: 'personaID',
+        as: 'calificaciones'
       });
     }
+
+    static async getAllPersonas(filter = null) {
+      try {
+          if (filter) {
+              return await this.findAll({ where: filter });
+          } else {
+              return await this.findAll();
+          }
+      } catch (error) {
+          console.error('Error al obtener personas:', error);
+          throw error;
+      }
   }
-  Persona.init({
+
+    static async getPersonaBy(field, value) {
+      try {
+          if (field === 'id') {
+              return await this.findByPk(value);
+          } else {
+              const whereClause = { [field]: value };
+              return await this.findOne({ where: whereClause });
+          }
+      } catch (error) {
+          console.error(`Error al buscar persona por ${field}:`, error);
+          throw error;
+      }
+  }
+
+    static async createPersona(personaData) {
+      return await Personas.create(personaData);
+    }
+
+    static async deletePersona(id) {
+      return await Personas.destroy({ where: { id } });
+    }
+
+    static async updatePersona(id, updatedData) {
+      return await Personas.update(updatedData, { where: { id } });
+    }
+
+    
+  }
+  
+  Personas.init({
     nombre: DataTypes.STRING,
     apellido: DataTypes.STRING,
     cedula: DataTypes.STRING,
-    fechaNacimiento: DataTypes.DATE,
+    fechaNacimiento: {
+      type: DataTypes.DATE,
+      get() {
+        return moment(this.getDataValue('fechaNacimiento')).format('DD-MM-YYYY');
+      },
+      set(value) {
+        const fecha = moment(value, 'DD-MM-YYYY');
+        if (fecha.isValid()) {
+          this.setDataValue('fechaNacimiento', fecha.toDate());
+        } else {
+          throw new Error('Formato de fecha inválido');
+        }
+      }
+    },
     telefono: DataTypes.STRING,
     email: DataTypes.STRING,
-    tipo: DataTypes.ENUM,
+    tipo: DataTypes.ENUM('estudiante', 'representante', 'profesor', 'administrativo', 'obrero', 'owner', 'adminWeb'),
     username: DataTypes.STRING,
     password: DataTypes.STRING
   }, {
     sequelize,
-    modelName: 'Persona',
+    modelName: 'Personas'
+
   });
-  return Persona;
+  
+  return Personas;
 };

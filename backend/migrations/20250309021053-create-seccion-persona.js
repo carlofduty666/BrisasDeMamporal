@@ -12,18 +12,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
         primaryKey: true
-      }
-      // annoEscolarID: {
-      //   type: Sequelize.INTEGER,
-      //   allowNull: false,
-      //   references: {
-      //     model: 'AnnoEscolar',
-      //     key: 'id'
-      //   },
-      //   onUpdate: 'CASCADE',
-      //   onDelete: 'CASCADE'
-      // }
-      
+      }      
     });
   },
   async down(queryInterface, Sequelize) {

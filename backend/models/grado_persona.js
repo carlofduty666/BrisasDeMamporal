@@ -1,45 +1,38 @@
 'use strict';
-const {
-  Model,
-  DataTypes
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  class Grado_Persona extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
+  class Grado_Personas extends Model {
     static associate(models) {
-      // define association here
-      Grado_Persona.belongsTo(models.AnnoEscolar, {
+      Grado_Personas.belongsTo(models.AnnoEscolar, {
         foreignKey: 'annoEscolarID',
         as: 'annoEscolar'
       })
     }
   }
-  Grado_Persona.init({
-    gradoID: { // Clave foránea a la tabla Grados
+  
+  Grado_Personas.init({
+    gradoID: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      primaryKey: true, // Especificar que es parte de la clave primaria
+      primaryKey: true,
       references: {
-        model: 'Grados', // Nombre de la tabla de referencia
-        key: 'id' // Nombre de la columna de referencia
+        model: 'Grados',
+        key: 'id'
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    personaID: { // Clave foránea a la tabla Personas (estudiante o profesor)
+    personaID: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      primaryKey: true, // Especificar que es parte de la clave primaria
+      primaryKey: true,
       references: {
-        model: 'Personas', // Nombre de la tabla de referencia
-        key: 'id' // Nombre de la columna de referencia
+        model: 'Personas',
+        key: 'id'
       },
       onUpdate: 'CASCADE',
-      onDelete: 'CASCADE'
+      onDelete: 'CASCADE' 
     },
     annoEscolarID: {
       type: DataTypes.INTEGER,
@@ -50,10 +43,12 @@ module.exports = (sequelize, DataTypes) => {
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
-    },
+    }
+  }, {
     sequelize,
-    modelName: 'Grado_Persona',
-    timestamps: false // Agregar esta línea para habilitar timestamps, lo cual es necesario para que las columnas createdAt y updatedAt se generen automáticamente
+    modelName: 'Grado_Personas',
+    timestamps: false
   });
-  return Grado_Persona;
+
+  return Grado_Personas;
 };

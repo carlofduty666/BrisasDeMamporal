@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class Seccion_Persona extends Model {
+  class Seccion_Personas extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -11,21 +11,21 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Seccion_Persona.belongsTo(models.AnnoEscolar, {
+      Seccion_Personas.belongsTo(models.AnnoEscolar, {
         foreignKey: 'annoEscolarID',
         as: 'annoEscolar'
       })
-      Seccion_Persona.belongsTo(models.Seccion, {
+      Seccion_Personas.belongsTo(models.Secciones, {
         foreignKey: 'seccionID',
-        as: 'seccion'
+        as: 'secciones'
       })
-      Seccion_Persona.belongsTo(models.Persona, {
+      Seccion_Personas.belongsTo(models.Personas, {
         foreignKey: 'personaID',
-        as: 'persona'
+        as: 'personas'
       })
     }
   }
-  Seccion_Persona.init({
+  Seccion_Personas.init({
     seccionID: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -48,8 +48,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     sequelize,
-    modelName: 'Seccion_Persona',
+    modelName: 'Seccion_Personas',
     timestamps: false // Agregar esta línea para habilitar timestamps, lo cual es necesario para que las columnas createdAt y updatedAt se generen automáticamente
   });
-  return Seccion_Persona;
+  return Seccion_Personas;
 };

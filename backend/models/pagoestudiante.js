@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class PagoEstudiante extends Model {
+  class PagoEstudiantes extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -11,25 +11,25 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      PagoEstudiante.belongsTo(models.Persona, {
+      PagoEstudiantes.belongsTo(models.Personas, {
         foreignKey: 'estudianteID',
-        as: 'estudiante'
+        as: 'estudiantes'
       })
-      PagoEstudiante.belongsTo(models.Persona, {
+      PagoEstudiantes.belongsTo(models.Personas, {
         foreignKey: 'representanteID',
-        as: 'representante'
+        as: 'representantes'
       })
-      PagoEstudiante.belongsTo(models.MetodoPago, {
+      PagoEstudiantes.belongsTo(models.MetodoPagos, {
         foreignKey: 'metodoPagoID',
-        as: 'metodoPago'
+        as: 'metodoPagos'
       })
-      PagoEstudiante.belongsTo(models.Arancel, {
+      PagoEstudiantes.belongsTo(models.Aranceles, {
         foreignKey: 'arancelID',
-        as: 'arancel'
+        as: 'aranceles'
       })
     }
   }
-  PagoEstudiante.init({
+  PagoEstudiantes.init({
     estudianteID: DataTypes.INTEGER,
     representanteID: DataTypes.INTEGER,
     metodoPagoID: DataTypes.INTEGER,
@@ -40,7 +40,7 @@ module.exports = (sequelize, DataTypes) => {
     stripePaymentID: DataTypes.STRING
   }, {
     sequelize,
-    modelName: 'PagoEstudiante',
+    modelName: 'PagoEstudiantes',
   });
-  return PagoEstudiante;
+  return PagoEstudiantes;
 };

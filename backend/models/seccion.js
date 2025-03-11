@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class Seccion extends Model {
+  class Secciones extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -11,23 +11,23 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Seccion.belongsTo(models.Grado, {
+      Secciones.belongsTo(models.Grados, {
         foreignKey: 'gradoID',
-        as: 'Grado'
+        as: 'Grados'
       })
-      Seccion.belongsToMany(models.Persona, {
-        through: 'SeccionPersona', // es necesario crear esta tabla intermedia para la relación muchos a muchos
+      Secciones.belongsToMany(models.Personas, {
+        through: 'Seccion_Personas', // es necesario crear esta tabla intermedia para la relación muchos a muchos
         foreignKey: 'seccionID', // 
         as: 'personas', // nombre de la relación en la tabla Persona
       })
     }
   }
-  Seccion.init({
+  Secciones.init({
     nombre_seccion: DataTypes.STRING,
     gradoID: DataTypes.INTEGER
   }, {
     sequelize,
-    modelName: 'Seccion',
+    modelName: 'Secciones',
   });
-  return Seccion;
+  return Secciones;
 };

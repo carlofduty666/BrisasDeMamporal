@@ -15,7 +15,7 @@ module.exports = {
       nivelID: {
         type: Sequelize.INTEGER,
         references: {
-          model: 'Nivel',
+          model: 'Niveles',
           key: 'id'
         }
       },

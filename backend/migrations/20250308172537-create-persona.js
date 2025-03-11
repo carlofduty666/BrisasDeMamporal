@@ -2,7 +2,6 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Users');
     await queryInterface.createTable('Personas', {
       id: {
         type: Sequelize.INTEGER,
@@ -42,6 +41,7 @@ module.exports = {
           'profesor',
           'administrativo',
           'obrero',
+          'owner',
           'adminWeb'),
         allowNull: false
       },

@@ -25,7 +25,7 @@ module.exports = {
       type: 'foreign key',
       name: 'seccion_persona_seccion_id_fk',
       references: {
-        table: 'Seccion',
+        table: 'Secciones',
         field: 'id'
       },
       onDelete: 'cascade',

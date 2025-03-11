@@ -24,6 +24,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'BonificacionNomina',
+    tableName: 'BonificacionNomina'
   });
   return BonificacionNomina;
 };

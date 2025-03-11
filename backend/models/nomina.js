@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Nomina.hasMany(models.PagoEmpleado, {
+      Nomina.hasMany(models.PagoEmpleados, {
         foreignKey: 'nominaID',
         as: 'pagos'
       });
@@ -33,6 +33,8 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Nomina',
+    tableName: 'Nomina',
+    freezeTableName: true
   });
   return Nomina;
 };

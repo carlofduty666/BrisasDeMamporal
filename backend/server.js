@@ -1,10 +1,10 @@
 require('dotenv').config()
 const express = require('express')
-const { Sequelize, DataTypes } = require('sequelize')
 const bodyParser = require('body-parser')
 const cors = require('cors')
-const sequelize = require('./config/dbconfig.js')
+const db = require('./models')
 const app = express()
+const personaRoutes = require('./routes/persona.routes')
 
 app.use(cors())
 app.use(bodyParser.json())
@@ -13,10 +13,11 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
-// Elimina esta segunda declaración de sequelize ya que la tienes arriba
-// const sequelize = new Sequelize( ... )
+app.use('/', personaRoutes)
 
-sequelize.sync({ force: false })
+
+
+db.sequelize.sync({ force: false })
   .then(() => {
     console.log('Base de datos sincronizada.');
     const PORT = process.env.PORT || 3000;

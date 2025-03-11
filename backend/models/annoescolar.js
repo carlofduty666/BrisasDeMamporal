@@ -19,6 +19,8 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'AnnoEscolar',
+    tableName: 'AnnoEscolar', // Asegúrate de que el nombre de la tabla sea correcto
+    freezeTableName: true
   });
   return AnnoEscolar;
 };

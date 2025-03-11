@@ -22,11 +22,12 @@ module.exports = {
       },
       personaID: {
         type: Sequelize.INTEGER,
-        allowNull: false,
         references: {
-          model: 'Personas',
+          model: 'Personas', // Nombre de la tabla referenciada
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
       },
       createdAt: {
         allowNull: false,

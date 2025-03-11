@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Documentos.belongsTo(models.Persona, { // Nombre del modelo al que se relaciona
+      Documentos.belongsTo(models.Personas, { // Nombre del modelo al que se relaciona
         foreignKey: 'personaID', // Nombre de la clave foránea en la tabla Documentos
         as: 'persona' // Nombre de la relación en la tabla Persona
       })
@@ -40,7 +40,7 @@ module.exports = (sequelize, DataTypes) => {
     personaID: {
       type: DataTypes.INTEGER,
       references: {
-        model: 'Persona',
+        model: 'Personas',
         key: 'id'
       }
     }
