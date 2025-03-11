@@ -10,7 +10,7 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       nombre_nivel: {
-        type: Sequelize.STRING,
+        type: Sequelize.ENUM('primaria', 'secundaria'),
         allowNull: false
       },
       createdAt: {

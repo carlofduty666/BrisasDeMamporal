@@ -4,7 +4,11 @@ const bodyParser = require('body-parser')
 const cors = require('cors')
 const db = require('./models')
 const app = express()
-const personaRoutes = require('./routes/persona.routes')
+
+// Importar rutas
+const personaRoutes = require('./routes/persona.routes');
+const nivelRoutes = require('./routes/nivel.routes');
+const gradoRoutes = require('./routes/grados.routes');
 
 app.use(cors())
 app.use(bodyParser.json())
@@ -14,6 +18,8 @@ app.get('/', (req, res) => {
 })
 
 app.use('/', personaRoutes)
+app.use('/', nivelRoutes)
+app.use('/', gradoRoutes)
 
 
 

@@ -29,6 +29,30 @@ module.exports = (sequelize, DataTypes) => {
         as: 'personas', // nombre de la relación en la tabla Persona
       })
     }
+    static async getAllGrados() {
+      return await Grados.findAll();
+    }
+    static async getGradoById(id) {
+      return await Grados.findByPk(id);
+    }
+
+    static async getGradoByNivel(nivelID) {
+      return await Grados.findAll({
+        where: { nivelID }
+      });
+    }
+    
+    static async createGrado(gradoData) {
+      return await Grados.create(gradoData);
+    }
+    static async deleteGrado(id) {
+      return await Grados.destroy
+      ({ where: { id } });
+    }
+    static async updateGrado(id, updatedData) {
+      return await Grados.update(updatedData, { where: { id } });
+    }
+
   }
   Grados.init({
     nombre_grado: DataTypes.STRING,
