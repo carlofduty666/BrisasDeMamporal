@@ -36,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       return await Grados.findByPk(id);
     }
 
-    static async getGradoByNivel(nivelID) {
+    static async getGradosByNivel(nivelID) {
       return await Grados.findAll({
         where: { nivelID }
       });

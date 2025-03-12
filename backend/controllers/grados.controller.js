@@ -1,4 +1,5 @@
 const db = require('../models');
+const Niveles = db.Niveles
 const Grados = db.Grados;
 
 const gradosController = {
@@ -24,13 +25,17 @@ const gradosController = {
             res.status(500).json({ message: err.message });
         }
     },
-    getGradoByNivel: async (req, res) => {
+    getGradosByNivel: async (req, res) => {
         try {
-            const grado = await Grados.findOne({ where: { nivel: req.params.nivel } });
-            if (grado) {
-                res.json(grado);
+            const nivel = await Niveles.findOne({ where: { nombre_nivel: req.params.nombre_nivel } }); // se necesita un registro de la tabla niveles usando findOne
+            if (!nivel) {
+                return res.status(404).json({ message: 'Nivel no encontrado' });
+            }
+            const grados = await Grados.findAll({ where: { nivelID: nivel.id } }); // se necesitan todos los grados de un nivel
+            if (grados.length > 0) {
+                res.json(grados);
             } else {
-                res.status(404).json({ message: 'Grado no encontrado' });
+                res.status(404).json({ message: 'No se encontraron grados para este nivel' });
             }
         } catch (err) {
             console.error(err);
@@ -63,7 +68,7 @@ const gradosController = {
         try {
             const updated = await Grados.update(req.body, { where: { id: req.params.id } });
             if (updated) {
-                const updatedGrado = await Grado.findByPk(req.params.id);
+                const updatedGrado = await Grados.findByPk(req.params.id);
                 res.json({ message: 'Grado actualizado', grado: updatedGrado });
             } else {
                 res.status(404).json({ message: 'Grado no encontrado' });
