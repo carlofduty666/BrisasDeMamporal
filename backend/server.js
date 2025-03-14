@@ -9,6 +9,7 @@ const app = express()
 const personaRoutes = require('./routes/persona.routes');
 const nivelRoutes = require('./routes/nivel.routes');
 const gradoRoutes = require('./routes/grados.routes');
+const materiaRoutes = require('./routes/materias.routes');
 
 app.use(cors())
 app.use(bodyParser.json())
@@ -20,6 +21,7 @@ app.get('/', (req, res) => {
 app.use('/', personaRoutes)
 app.use('/', nivelRoutes)
 app.use('/', gradoRoutes)
+app.use('/', materiaRoutes)
 
 
 

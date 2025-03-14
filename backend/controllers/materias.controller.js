@@ -82,6 +82,9 @@ const materiasController = {
             }
             const materias = estudiante.grados.flatMap(grados => { grados.materias});
             const materiasConCalificaciones = materias.map(materias)
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({message: err.message});
         }
     },
     createMateria: async (req, res) => {
@@ -92,7 +95,7 @@ const materiasController = {
             console.error(err);
             res.status(500).json({message: err.message});
         }
-    }.
+    },
     deleteMateria: async (req, res) => {
         try {
             const deletedMateria = await Materias.destroy({ where: { id: req.params.id } })
@@ -101,10 +104,27 @@ const materiasController = {
                 res.status(200).json({message: 'Materia eliminada'})
             } else {
                 res.status(404).json({message: 'No se encuentró materia'})
-            } catch (err) {
-                console.error(err)
-                res.status(500).json({message: err.message})
             }
+        } catch (err) {
+            console.error(err)
+            res.status(500).json({message: err.message})
+        }
+    },
+    updateMateria: async (req, res) => {
+        try {
+            const updatedMateria = await Materias.findByPk(req.params.id);
+            if (updatedMateria) {
+                await updatedMateria.update(req.body);
+                res.json(updatedMateria);
+            } else {
+                res.status(404).
+                json({message: 'Materia no encontrada'})
+            }
+        } catch (error) {
+            console.error(err);
+            res.status(500).json({message: err.message})
         }
     }
 }
+
+module.exports = materiasController;

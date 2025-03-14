@@ -19,15 +19,20 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'gradoID',
         as: 'Secciones'
       });
-      Grados.hasMany(models.Materias, {
+      // Relación muchos a muchos con Materias
+      Grados.belongsToMany(models.Materias, {
+        through: 'Grado_Materia',
         foreignKey: 'gradoID',
+        otherKey: 'materiaID',
         as: 'Materias'
-      })
+      });
+      
       Grados.belongsToMany(models.Personas, {
-        through: 'Grado_Personas', // es necesario crear esta tabla intermedia para la relación muchos a muchos
+        through: 'Grado_Personas',
         foreignKey: 'gradoID',
-        as: 'personas', // nombre de la relación en la tabla Persona
-      })
+        otherKey: 'personaID',
+        as: 'personas'
+      });
     }
     static async getAllGrados() {
       return await Grados.findAll();
