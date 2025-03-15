@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   
+  // este modelo es solo para añadir estudiantes a grados, el modelo para añadir profesores a grados es Profesor_Materia_Grados
   Grado_Personas.init({
     gradoID: {
       type: DataTypes.INTEGER,
@@ -43,6 +44,11 @@ module.exports = (sequelize, DataTypes) => {
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
+    },
+    tipo: {
+      type: DataTypes.ENUM('estudiante'),
+      allowNull: false,
+      defaultValue: 'estudiante'
     }
   }, {
     sequelize,

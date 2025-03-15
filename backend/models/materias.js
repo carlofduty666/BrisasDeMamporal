@@ -16,7 +16,12 @@ module.exports = (sequelize, DataTypes) => {
         otherKey: 'gradoID',
         as: 'Grados'
       });
-      Materias.hasMany(models.Evaluaciones, {  // Cambiamos 'Evaluacion' por 'Evaluaciones'
+      Materias.belongsToMany(models.Personas, {
+        through: 'Profesor_Materia_Grados',
+        foreignKey: 'materiaID',
+        as: 'profesores'
+      });
+      Materias.hasMany(models.Evaluaciones, {
         foreignKey: 'materiaID',
         as: 'Evaluaciones'
       });
@@ -77,8 +82,7 @@ module.exports = (sequelize, DataTypes) => {
   
   }
   Materias.init({
-    asignatura: DataTypes.STRING,
-    gradoID: DataTypes.INTEGER
+    asignatura: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Materias',
