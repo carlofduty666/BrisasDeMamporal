@@ -29,12 +29,24 @@ module.exports = (sequelize, DataTypes) => {
     seccionID: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      primaryKey: true
+      primaryKey: true,
+      references: {
+        model: 'Secciones',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE'
     },
     personaID: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      primaryKey: true
+      primaryKey: true,
+      references: {
+        model: 'Personas',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE'
     },
     annoEscolarID: {
       type: DataTypes.INTEGER,
@@ -45,6 +57,21 @@ module.exports = (sequelize, DataTypes) => {
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
+    },
+    rol: {
+      type: DataTypes.ENUM('estudiante', 'profesor'),
+      allowNull: false,
+      defaultValue: 'estudiante'
+    },
+    materiaID: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Materias',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL'
     }
   }, {
     sequelize,

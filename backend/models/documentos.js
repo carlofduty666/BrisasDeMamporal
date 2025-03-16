@@ -43,6 +43,22 @@ module.exports = (sequelize, DataTypes) => {
         model: 'Personas',
         key: 'id'
       }
+    },
+    nombre_archivo: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    tamano: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    tipo_archivo: {
+      type: DataTypes.STRING, // Para almacenar el MIME type (ej: application/pdf)
+      allowNull: false
+    },
+    descripcion: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   }, {
     sequelize,

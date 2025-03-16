@@ -16,5 +16,10 @@ router.delete('/materias/profesor/:profesorID/:materiaID/:gradoID/:annoEscolarID
 
 router.put('/materias/:id', materiaController.updateMateria);
 
+// materias, secciones
+router.post('/materias/asignar-a-seccion', materiaController.asignarMateriaASeccion);
+router.get('/materias/seccion/:seccionID', materiaController.getMateriasBySeccion);
+
+
 
 module.exports = router;

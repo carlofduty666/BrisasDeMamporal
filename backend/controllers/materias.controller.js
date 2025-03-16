@@ -240,7 +240,100 @@ const materiasController = {
             console.error(err);
             res.status(500).json({message: err.message})
         }
+    },
+
+    // Añadir al controlador existente
+
+// Asignar materia a sección específica
+asignarMateriaASeccion: async (req, res) => {
+    try {
+      const { materiaID, seccionID, annoEscolarID } = req.body;
+      
+      // Verificar que la materia existe
+      const materia = await db.Materias.findByPk(materiaID);
+      if (!materia) {
+        return res.status(404).json({ message: 'Materia no encontrada' });
+      }
+      
+      // Verificar que la sección existe
+      const seccion = await db.Secciones.findByPk(seccionID);
+      if (!seccion) {
+        return res.status(404).json({ message: 'Sección no encontrada' });
+      }
+      
+      // Verificar que el año escolar existe
+      const annoEscolar = await db.AnnoEscolar.findByPk(annoEscolarID);
+      if (!annoEscolar) {
+        return res.status(404).json({ message: 'Año escolar no encontrado' });
+      }
+      
+      // Obtener el grado de la sección
+      const gradoID = seccion.gradoID;
+      
+      // Verificar que la materia está asignada al grado
+      const gradoMateria = await db.Grado_Materia.findOne({
+        where: { gradoID, materiaID, annoEscolarID }
+      });
+      
+      if (!gradoMateria) {
+        // Si la materia no está asignada al grado, la asignamos
+        await db.Grado_Materia.create({
+          gradoID,
+          materiaID,
+          annoEscolarID
+        });
+      }
+      
+      // Crear una entrada en una tabla de relación Seccion_Materia si es necesario
+      // O simplemente devolver éxito si no se requiere una tabla adicional
+      
+      res.status(201).json({ 
+        message: 'Materia asignada a la sección correctamente' 
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
     }
+  },
+  
+  // Obtener materias por sección
+  getMateriasBySeccion: async (req, res) => {
+    try {
+      const { seccionID } = req.params;
+      const { annoEscolarID } = req.query;
+      
+      if (!annoEscolarID) {
+        return res.status(400).json({ message: 'Se requiere el ID del año escolar' });
+      }
+      
+      const seccion = await db.Secciones.findByPk(seccionID);
+      if (!seccion) {
+        return res.status(404).json({ message: 'Sección no encontrada' });
+      }
+      
+      const gradoID = seccion.gradoID;
+      
+      // Obtener las materias asignadas al grado de esta sección
+      const materias = await db.Materias.findAll({
+        include: [{
+          model: db.Grados,
+          as: 'Grados',
+          through: {
+            where: { annoEscolarID },
+            attributes: []
+          },
+          where: { id: gradoID },
+          required: true
+        }]
+      });
+      
+      res.json(materias);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+  }
+  
 }
 
 module.exports = materiasController;

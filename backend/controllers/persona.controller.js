@@ -1,5 +1,7 @@
 const db = require('../models');
 const Personas = db.Personas;
+const Roles = db.Roles;
+const Persona_Roles = db.Persona_Roles;
 
 const getAllPersonas = async (req, res) => {
   try {
@@ -82,6 +84,85 @@ const updatePersona = async (req, res) => {
   }
 }
 
+const asignarRolAPersona = async (req, res) => {
+  try {
+    const { personaID, rolID } = req.body;
+    
+    // Verificar que la persona existe
+    const persona = await db.Personas.findByPk(personaID);
+    if (!persona) {
+      return res.status(404).json({ message: 'Persona no encontrada' });
+    }
+    
+    // Verificar que el rol existe
+    const rol = await db.Roles.findByPk(rolID);
+    if (!rol) {
+      return res.status(404).json({ message: 'Rol no encontrado' });
+    }
+    
+    // Verificar si ya tiene asignado ese rol
+    const existingAssignment = await db.Persona_Roles.findOne({
+      where: { personaID, rolID }
+    });
+    
+    if (existingAssignment) {
+      return res.status(400).json({ message: 'La persona ya tiene asignado este rol' });
+    }
+    
+    // Asignar el rol
+    await db.Persona_Roles.create({ personaID, rolID });
+    
+    res.status(201).json({ message: 'Rol asignado correctamente' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Eliminar rol de persona
+const eliminarRolDePersona = async (req, res) => {
+  try {
+    const { personaID, rolID } = req.params;
+    
+    const deleted = await db.Persona_Roles.destroy({
+      where: { personaID, rolID }
+    });
+    
+    if (deleted === 0) {
+      return res.status(404).json({ message: 'Asignación no encontrada' });
+    }
+    
+    res.json({ message: 'Rol eliminado de la persona correctamente' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Obtener roles de una persona
+const getRolesDePersona = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const persona = await db.Personas.findByPk(id, {
+      include: [{
+        model: db.Roles,
+        as: 'roles',
+        through: { attributes: [] }
+      }]
+    });
+    
+    if (!persona) {
+      return res.status(404).json({ message: 'Persona no encontrada' });
+    }
+    
+    res.json(persona.roles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 
 module.exports = { 
@@ -90,5 +171,8 @@ module.exports = {
     getPersonaByCriterio,
     createPersona,
     deletePersona,
-    updatePersona
+    updatePersona,
+    asignarRolAPersona,
+    eliminarRolDePersona,
+    getRolesDePersona
 }

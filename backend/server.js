@@ -10,7 +10,10 @@ const personaRoutes = require('./routes/persona.routes');
 const nivelRoutes = require('./routes/nivel.routes');
 const gradoRoutes = require('./routes/grados.routes');
 const materiaRoutes = require('./routes/materias.routes');
-const annoEscolarRoutes = require('./routes/annoEscolar.routes')
+const annoEscolarRoutes = require('./routes/annoEscolar.routes');
+const seccionRoutes = require('./routes/secciones.routes');
+const rolesRoutes = require('./routes/roles.routes');
+const documentosRoutes = require('./routes/documentos.routes')
 
 app.use(cors())
 app.use(bodyParser.json())
@@ -24,6 +27,10 @@ app.use('/', nivelRoutes)
 app.use('/', gradoRoutes)
 app.use('/', materiaRoutes)
 app.use('/', annoEscolarRoutes)
+app.use('/', seccionRoutes)
+app.use('/', rolesRoutes)
+app.use('/', documentosRoutes)
+
 
 
 
