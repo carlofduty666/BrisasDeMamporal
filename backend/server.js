@@ -1,39 +1,47 @@
-require('dotenv').config()
-const express = require('express')
-const bodyParser = require('body-parser')
-const cors = require('cors')
-const db = require('./models')
-const app = express()
+require('dotenv').config();
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const path = require('path');
+const db = require('./models');
+const app = express();
 
 // Importar rutas
 const personaRoutes = require('./routes/persona.routes');
 const nivelRoutes = require('./routes/nivel.routes');
-const gradoRoutes = require('./routes/grados.routes');
-const materiaRoutes = require('./routes/materias.routes');
+const gradosRoutes = require('./routes/grados.routes');
+const materiasRoutes = require('./routes/materias.routes');
+const seccionesRoutes = require('./routes/secciones.routes');
+const evaluacionesRoutes = require('./routes/evaluaciones.routes');
+const calificacionesRoutes = require('./routes/calificaciones.routes');
+const documentosRoutes = require('./routes/documentos.routes');
 const annoEscolarRoutes = require('./routes/annoEscolar.routes');
-const seccionRoutes = require('./routes/secciones.routes');
-const rolesRoutes = require('./routes/roles.routes');
-const documentosRoutes = require('./routes/documentos.routes')
 
-app.use(cors())
-app.use(bodyParser.json())
+// Middlewares
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
+// Servir archivos estáticos
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Ruta de prueba
 app.get('/', (req, res) => {
-    res.send('Hello World!')
-})
+    res.send('API del Sistema de Gestión Escolar - Brisas de Mamporal');
+});
 
-app.use('/', personaRoutes)
-app.use('/', nivelRoutes)
-app.use('/', gradoRoutes)
-app.use('/', materiaRoutes)
-app.use('/', annoEscolarRoutes)
-app.use('/', seccionRoutes)
-app.use('/', rolesRoutes)
-app.use('/', documentosRoutes)
+// Usar rutas
+app.use('/', personaRoutes);
+app.use('/', nivelRoutes);
+app.use('/', gradosRoutes);
+app.use('/', materiasRoutes);
+app.use('/', seccionesRoutes);
+app.use('/', evaluacionesRoutes);
+app.use('/', calificacionesRoutes);
+app.use('/', documentosRoutes);
+app.use('/', annoEscolarRoutes);
 
-
-
-
+// Sincronizar base de datos
 db.sequelize.sync({ force: false })
   .then(() => {
     console.log('Base de datos sincronizada.');

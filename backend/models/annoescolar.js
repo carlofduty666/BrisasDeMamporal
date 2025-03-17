@@ -31,6 +31,11 @@ module.exports = (sequelize, DataTypes) => {
         as: 'calificaciones'
       });
 
+      AnnoEscolar.hasMany(models.Evaluaciones, {
+        foreignKey: 'annoEscolarID',
+        as: 'evaluaciones'
+      });
+
     }
 
   static async getAllAnnoEscolares() {

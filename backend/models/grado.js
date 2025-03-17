@@ -19,6 +19,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'gradoID',
         as: 'Secciones'
       });
+
+      Grados.hasMany(models.Evaluaciones, {
+        foreignKey: 'gradoID',
+        as: 'evaluaciones'
+      });
+      
       // Relación muchos a muchos con Materias
       Grados.belongsToMany(models.Materias, {
         through: 'Grado_Materia',

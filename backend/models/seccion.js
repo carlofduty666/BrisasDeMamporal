@@ -21,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
         otherKey: 'personaID',
         as: 'personas',
       });
+      Secciones.hasMany(models.Evaluaciones, {
+        foreignKey: 'seccionID',
+        as: 'evaluaciones'
+      });
     }
     static async getSeccionesByGrado(gradoID) {
       return await this.findAll({

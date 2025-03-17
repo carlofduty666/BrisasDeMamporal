@@ -19,12 +19,54 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'personaID',
         as: 'Personas'
       })
+      Calificaciones.belongsTo(models.AnnoEscolar, {
+        foreignKey: 'annoEscolarID',
+        as: 'AnnoEscolar'
+      });
     }
   }
   Calificaciones.init({
-    calificacion: DataTypes.FLOAT,
-    evaluacionID: DataTypes.INTEGER,
-    personaID: DataTypes.INTEGER
+    calificacion: {
+      type: DataTypes.FLOAT,
+      allowNull: false,
+      validate: {
+        min: 0,
+        max: 20 // Asumiendo escala de 0-20
+      }
+    },
+    evaluacionID: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'Evaluaciones',
+        key: 'id'
+      }
+    },
+    personaID: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'Personas',
+        key: 'id'
+      }
+    },
+    annoEscolarID: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'AnnoEscolar',
+        key: 'id'
+      }
+    },
+    observaciones: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    fechaRegistro: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
+    }
   }, {
     sequelize,
     modelName: 'Calificaciones',
