@@ -15,12 +15,29 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'nominaID',
         as: 'nomina'
       });
+      BonificacionNomina.belongsTo(models.Personas, {
+        foreignKey: 'personaID',
+        as: 'persona',
+        allowNull: true
+      });
     }
   }
   BonificacionNomina.init({
     nominaID: DataTypes.INTEGER,
+    personaID: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
     nombre: DataTypes.STRING,
-    monto: DataTypes.DECIMAL
+    tipo: {
+      type: DataTypes.ENUM('cestaticket', 'responsabilidad', 'puntualidad', 'finDeAño', 'vacacional', 'otro'),
+      defaultValue: 'otro'
+    },
+    monto: DataTypes.DECIMAL,
+    descripcion: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    }
   }, {
     sequelize,
     modelName: 'BonificacionNomina',

@@ -16,6 +16,16 @@ const evaluacionesRoutes = require('./routes/evaluaciones.routes');
 const calificacionesRoutes = require('./routes/calificaciones.routes');
 const documentosRoutes = require('./routes/documentos.routes');
 const annoEscolarRoutes = require('./routes/annoEscolar.routes');
+const nominaRoutes = require('./routes/nomina.routes');
+const metodoPagoRoutes = require('./routes/metodoPagos.routes');
+const arancelesRoutes = require('./routes/aranceles.routes');
+const pagoEmpleadosRoutes = require('./routes/pagoEmpleado.routes');
+const pagoEstudiantesRoutes = require('./routes/pagoEstudiantes.routes');
+const configuracionNominaRoutes = require('./routes/configuracionNomina.routes')
+const configuracionBeneficioRoutes = require('./routes/configuracionBeneficio.routes')
+const liquidacionRoutes = require('./routes/liquidacion.routes')
+
+
 
 // Middlewares
 app.use(cors());
@@ -40,6 +50,15 @@ app.use('/', evaluacionesRoutes);
 app.use('/', calificacionesRoutes);
 app.use('/', documentosRoutes);
 app.use('/', annoEscolarRoutes);
+app.use('/', nominaRoutes);
+app.use('/', metodoPagoRoutes);
+app.use('/', arancelesRoutes);
+app.use('/', pagoEmpleadosRoutes);
+app.use('/', pagoEstudiantesRoutes)
+app.use('/', configuracionNominaRoutes);
+app.use('/', configuracionBeneficioRoutes)
+app.use('/', liquidacionRoutes)
+
 
 // Sincronizar base de datos
 db.sequelize.sync({ force: false })

@@ -27,6 +27,14 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'arancelID',
         as: 'aranceles'
       })
+      PagoEstudiantes.belongsTo(models.Inscripciones, {
+        foreignKey: 'inscripcionID',
+        as: 'inscripciones'
+      });
+      PagoEstudiantes.belongsTo(models.AnnoEscolar, {
+        foreignKey: 'annoEscolarID',
+        as: 'annoEscolar'
+      });
     }
   }
   PagoEstudiantes.init({
@@ -34,10 +42,30 @@ module.exports = (sequelize, DataTypes) => {
     representanteID: DataTypes.INTEGER,
     metodoPagoID: DataTypes.INTEGER,
     arancelID: DataTypes.INTEGER,
-    monto: DataTypes.DECIMAL,
+    inscripcionID: DataTypes.INTEGER,
+    annoEscolarID: DataTypes.INTEGER,
+    monto: DataTypes.DECIMAL(10,2),
+    montoMora: {
+      type: DataTypes.DECIMAL(10,2),
+      defaultValue: 0
+    },
+    descuento: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 0
+    },
+    montoTotal: DataTypes.DECIMAL,
+    mesPago: DataTypes.STRING,
     fechaPago: DataTypes.DATE,
+    fechaVencimiento: DataTypes.DATE,
     referencia: DataTypes.STRING,
-    stripePaymentID: DataTypes.STRING
+    comprobante: DataTypes.STRING,
+    estado: {
+      type: DataTypes.ENUM('pendiente', 'pagado', 'vencido', 'anulado'),
+      defaultValue: 'pendiente'
+    },
+    stripeSessionID: DataTypes.STRING,
+    stripePaymentID: DataTypes.STRING,
+    observaciones: DataTypes.TEXT
   }, {
     sequelize,
     modelName: 'PagoEstudiantes',
