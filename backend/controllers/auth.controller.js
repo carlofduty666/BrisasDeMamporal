@@ -237,3 +237,140 @@ exports.resendVerification = async (req, res) => {
     res.status(500).json({ message: 'Error al reenviar código de verificación', error: error.message });
   }
 };
+
+// Solicitar recuperación de contraseña
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    // Buscar el usuario por email
+    const usuario = await db.Usuario.findOne({ 
+      where: { email } 
+    });
+    
+    if (!usuario) {
+      // Por seguridad, no revelamos si el email existe o no
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Si el correo existe, recibirás un código de recuperación' 
+      });
+    }
+    
+    // Generar código de recuperación de 6 dígitos
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Establecer expiración (1 hora)
+    const expiracion = new Date();
+    expiracion.setHours(expiracion.getHours() + 1);
+    
+    // Actualizar usuario con el código y la expiración
+    await usuario.update({
+      codigoRecuperacion: resetCode,
+      expiracionCodigoRecuperacion: expiracion
+    });
+    
+    // Configurar nodemailer (asumiendo que ya tienes las variables de entorno configuradas)
+    const transporter = nodemailer.createTransport({
+      service: process.env.EMAIL_SERVICE || 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+    
+    // Enviar email con el código
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Recuperación de Contraseña - Brisas de Mamporal',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Recuperación de Contraseña</h2>
+          <p>Has solicitado restablecer tu contraseña en el Sistema de Gestión Escolar Brisas de Mamporal.</p>
+          <p>Tu código de recuperación es: <strong>${resetCode}</strong></p>
+          <p>Este código expirará en 1 hora.</p>
+          <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+        </div>
+      `
+    };
+    
+    await transporter.sendMail(mailOptions);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Si el correo existe, recibirás un código de recuperación'
+    });
+  } catch (error) {
+    console.error('Error en recuperación de contraseña:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al procesar la solicitud' 
+    });
+  }
+};
+
+// Restablecer contraseña
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    
+    // Validar datos
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Todos los campos son requeridos' 
+      });
+    }
+    
+    // Buscar usuario
+    const usuario = await db.Usuario.findOne({ 
+      where: { email } 
+    });
+    
+    if (!usuario) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Usuario no encontrado' 
+      });
+    }
+    
+    // Verificar código
+    if (usuario.codigoRecuperacion !== code) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Código de recuperación inválido' 
+      });
+    }
+    
+    // Verificar expiración
+    if (!usuario.expiracionCodigoRecuperacion || 
+        new Date() > new Date(usuario.expiracionCodigoRecuperacion)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'El código de recuperación ha expirado' 
+      });
+    }
+    
+    // Hash de la nueva contraseña
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Actualizar contraseña y limpiar códigos
+    await usuario.update({
+      password: hashedPassword,
+      codigoRecuperacion: null,
+      expiracionCodigoRecuperacion: null
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Contraseña actualizada correctamente'
+    });
+  } catch (error) {
+    console.error('Error al restablecer contraseña:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al procesar la solicitud' 
+    });
+  }
+};
+

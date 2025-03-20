@@ -56,3 +56,25 @@ export const getCurrentUser = () => {
 export const isAuthenticated = () => {
   return !!localStorage.getItem('token');
 };
+
+export const forgotPassword = async (email) => {
+    try {
+      const response = await api.post('/auth/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Error de conexión' };
+    }
+  };
+  
+  export const resetPassword = async (email, code, newPassword) => {
+    try {
+      const response = await api.post('/auth/reset-password', { 
+        email, 
+        code, 
+        newPassword 
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Error de conexión' };
+    }
+  };

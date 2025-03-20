@@ -24,11 +24,11 @@ const RepresentanteDashboard = () => {
         };
 
         const estudiantesResponse = await axios.get('/api/representante/estudiantes', config);
-        setEstudiantes(estudiantesResponse.data);
+        setEstudiantes(estudiantesResponse.data?.estudiantes || []);
 
         // Obtener cupos disponibles por grado
         const cuposResponse = await axios.get('/api/inscripcion/cupos-disponibles', config);
-        setCuposDisponibles(cuposResponse.data);
+        setCuposDisponibles(cuposResponse.data || []);
       } catch (err) {
         setError('Error al cargar los datos. Por favor, inténtelo de nuevo.');
         console.error(err);
