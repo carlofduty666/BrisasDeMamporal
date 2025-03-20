@@ -23,11 +23,11 @@ const RepresentanteDashboard = () => {
           headers: { Authorization: `Bearer ${token}` }
         };
 
-        const estudiantesResponse = await axios.get('/api/representante/estudiantes', config);
+        const estudiantesResponse = await axios.get('/representante/estudiantes', config);
         setEstudiantes(estudiantesResponse.data?.estudiantes || []);
 
         // Obtener cupos disponibles por grado
-        const cuposResponse = await axios.get('/api/inscripcion/cupos-disponibles', config);
+        const cuposResponse = await axios.get('/inscripcion/cupos-disponibles', config);
         setCuposDisponibles(cuposResponse.data || []);
       } catch (err) {
         setError('Error al cargar los datos. Por favor, inténtelo de nuevo.');

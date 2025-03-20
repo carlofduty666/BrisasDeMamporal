@@ -223,7 +223,7 @@ const ComprobanteInscripcion = () => {
           headers: { Authorization: `Bearer ${token}` }
         };
 
-        const response = await axios.get(`/api/inscripcion/comprobante/${inscripcionId}`, config);
+        const response = await axios.get(`/inscripcion/comprobante/${inscripcionId}`, config);
         
         setInscripcion(response.data.inscripcion);
         setEstudiante(response.data.estudiante);

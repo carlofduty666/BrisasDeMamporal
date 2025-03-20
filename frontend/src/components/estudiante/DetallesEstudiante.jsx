@@ -26,28 +26,28 @@ const DetallesEstudiante = () => {
         };
 
         // Obtener información del estudiante
-        const estudianteResponse = await axios.get(`/api/estudiante/${estudianteId}`, config);
+        const estudianteResponse = await axios.get(`/estudiante/${estudianteId}`, config);
         setEstudiante(estudianteResponse.data);
 
         // Obtener información de la inscripción
-        const inscripcionResponse = await axios.get(`/api/inscripcion/estudiante/${estudianteId}`, config);
+        const inscripcionResponse = await axios.get(`/inscripcion/estudiante/${estudianteId}`, config);
         setInscripcion(inscripcionResponse.data);
 
         // Obtener documentos del estudiante
-        const documentosResponse = await axios.get(`/api/documentos/estudiante/${estudianteId}`, config);
+        const documentosResponse = await axios.get(`/documentos/estudiante/${estudianteId}`, config);
         setDocumentos(documentosResponse.data);
 
         // Obtener estado de pagos
-        const pagosResponse = await axios.get(`/api/pagos/estudiante/${estudianteId}`, config);
+        const pagosResponse = await axios.get(`/pagos/estudiante/${estudianteId}`, config);
         setPagos(pagosResponse.data);
         
         // Verificar si el pago está al día
-        const pagoResponse = await axios.get(`/api/pagos/estado/${estudianteId}`, config);
+        const pagoResponse = await axios.get(`/pagos/estado/${estudianteId}`, config);
         setPagoAlDia(pagoResponse.data.alDia);
 
         // Si el pago está al día, obtener las notas
         if (pagoResponse.data.alDia) {
-          const notasResponse = await axios.get(`/api/notas/estudiante/${estudianteId}`, config);
+          const notasResponse = await axios.get(`/notas/estudiante/${estudianteId}`, config);
           setNotas(notasResponse.data);
         }
       } catch (err) {

@@ -25,21 +25,23 @@ const NuevoEstudiante = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const config = {
-          headers: { Authorization: `Bearer ${token}` }
-        };
-
-        // Obtener lista de documentos requeridos
-        const docsResponse = await axios.get('/api/documentos/requeridos', config);
-        setDocumentosRequeridos(docsResponse.data);
-
-        // Obtener cupos disponibles por grado
-        const cuposResponse = await axios.get('/api/inscripcion/cupos-disponibles', config);
-        setCuposDisponibles(cuposResponse.data);
+          const token = localStorage.getItem('token');
+          const config = { headers: { Authorization: `Bearer ${token}` } };
+  
+          // Obtener documentos requeridos para estudiantes
+          const docsResponse = await axios.get(
+              '/documentos/verificar/0/estudiante', 
+              config
+          );
+          setDocumentosRequeridos(docsResponse.data.documentosRequeridos || []);
+  
+          // Obtener cupos disponibles
+          const cuposResponse = await axios.get('/inscripcion/cupos-disponibles', config);
+          setCuposDisponibles(cuposResponse.data || {});
+  
       } catch (err) {
-        setError('Error al cargar los datos. Por favor, inténtelo de nuevo.');
-        console.error(err);
+          setError('Error al cargar documentos requeridos');
+          setDocumentosRequeridos([]);
       }
     };
 
@@ -124,7 +126,7 @@ const NuevoEstudiante = () => {
       });
 
       // Enviar solicitud de inscripción
-      const response = await axios.post('/api/inscripcion/nuevo-estudiante', formDataObj, config);
+      const response = await axios.post('/inscripcion/nuevo-estudiante', formDataObj, config);
       
       // Redireccionar a la página de comprobante
       navigate(`/inscripcion/comprobante/${response.data.inscripcionId}`);
@@ -317,39 +319,42 @@ const NuevoEstudiante = () => {
             )}
 
             {step === 2 && (
-              <div className="space-y-6">
-                <p className="text-sm text-gray-500">
-                  Por favor, adjunte los siguientes documentos requeridos para la inscripción.
-                </p>
+                <div className="space-y-6">
+                    <p className="text-sm text-gray-500">
+                        Documentos requeridos para {formData.grado.includes("Representante") ? "el representante" : "el estudiante"}:
+                    </p>
 
-                <div className="space-y-4">
-                  {documentosRequeridos.map((documento) => (
-                    <div key={documento.id} className="border border-gray-200 p-4 rounded-md">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-900">
-                            {documento.nombre} {documento.obligatorio && <span className="text-red-500">*</span>}
-                          </h3>
-                          <p className="text-xs text-gray-500 mt-1">{documento.descripcion}</p>
-                        </div>
-                        <div className="ml-4 flex-shrink-0">
-                          <input
-                            type="file"
-                            id={`documento_${documento.id}`}
-                            onChange={(e) => handleFileChange(e, documento.id)}
-                            className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                          />
-                        </div>
-                      </div>
-                      {documentos[documento.id] && (
-                        <p className="text-xs text-green-600 mt-2">
-                          Archivo seleccionado: {documentos[documento.id].name}
-                        </p>
-                      )}
+                    <div className="space-y-4">
+                        {documentosRequeridos.map((doc) => (
+                            <div key={doc.id} className="border border-gray-200 p-4 rounded-md">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <h3 className="text-sm font-medium text-gray-900">
+                                            {doc.nombre} 
+                                            {doc.obligatorio && <span className="text-red-500 ml-1">*</span>}
+                                        </h3>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {doc.descripcion || (doc.obligatorio ? 'Documento obligatorio' : 'Documento opcional')}
+                                        </p>
+                                    </div>
+                                    <div className="ml-4 flex-shrink-0">
+                                        <input
+                                            type="file"
+                                            id={`documento_${doc.id}`}
+                                            onChange={(e) => handleFileChange(e, doc.id)}
+                                            className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                        />
+                                    </div>
+                                </div>
+                                {documentos[doc.id] && (
+                                    <p className="text-xs text-green-600 mt-2">
+                                        Archivo seleccionado: {documentos[doc.id].name}
+                                    </p>
+                                )}
+                            </div>
+                        ))}
                     </div>
-                  ))}
                 </div>
-              </div>
             )}
 
 {step === 3 && (
