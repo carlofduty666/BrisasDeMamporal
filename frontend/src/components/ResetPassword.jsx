@@ -1,52 +1,64 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { registerUser } from '../../services/auth.service';
-import axios from 'axios';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { resetPassword } from '../../services/auth.service';
 
-const RegisterForm = () => {
+const ResetPassword = () => {
   const navigate = useNavigate();
-  const [formData, setState] = useState({
-    cedula: '',
-    nombres: '',
-    apellidos: '',
+  const location = useLocation();
+  const [formData, setFormData] = useState({
     email: '',
-    telefono: '',
-    direccion: '',
-    password: '',
-    confirmPassword: '',
-    role: 'representante', // Default role
+    code: '',
+    newPassword: '',
+    confirmPassword: ''
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    // Si viene de la página de recuperación, obtener el email
+    if (location.state?.email) {
+      setFormData(prev => ({ ...prev, email: location.state.email }));
+    }
+  }, [location]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setState({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-  
-    if (formData.password !== formData.confirmPassword) {
+    setSuccess('');
+
+    // Validar que las contraseñas coincidan
+    if (formData.newPassword !== formData.confirmPassword) {
       setError('Las contraseñas no coinciden');
       setLoading(false);
       return;
     }
-  
+
     try {
-      const response = await registerUser(formData);
-      setLoading(false);
+      const response = await resetPassword(
+        formData.email,
+        formData.code,
+        formData.newPassword
+      );
       
-      if (response.success) {
-        navigate('/verificacion-email', { 
-          state: { email: formData.email } 
+      setSuccess(response.message);
+      
+      // Redirigir al login después de 3 segundos
+      setTimeout(() => {
+        navigate('/login', { 
+          state: { message: 'Contraseña restablecida correctamente. Ahora puedes iniciar sesión.' } 
         });
-      }
+      }, 3000);
     } catch (err) {
+      setError(err.message || 'Error al restablecer la contraseña');
+    } finally {
       setLoading(false);
-      setError(err.message || 'Error al registrar usuario');
     }
   };
 
@@ -54,8 +66,11 @@ const RegisterForm = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Registro de Representante
+          Restablecer Contraseña
         </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Ingresa el código que recibiste por correo y tu nueva contraseña.
+        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -66,58 +81,13 @@ const RegisterForm = () => {
             </div>
           )}
           
+          {success && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+              <span className="block sm:inline">{success}</span>
+            </div>
+          )}
+          
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="cedula" className="block text-sm font-medium text-gray-700">
-                Cédula
-              </label>
-              <div className="mt-1">
-                <input
-                  id="cedula"
-                  name="cedula"
-                  type="text"
-                  required
-                  value={formData.cedula}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="nombres" className="block text-sm font-medium text-gray-700">
-                Nombres
-              </label>
-              <div className="mt-1">
-                <input
-                  id="nombres"
-                  name="nombres"
-                  type="text"
-                  required
-                  value={formData.nombres}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="apellidos" className="block text-sm font-medium text-gray-700">
-                Apellidos
-              </label>
-              <div className="mt-1">
-                <input
-                  id="apellidos"
-                  name="apellidos"
-                  type="text"
-                  required
-                  value={formData.apellidos}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-              </div>
-            </div>
-
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Correo Electrónico
@@ -137,16 +107,16 @@ const RegisterForm = () => {
             </div>
 
             <div>
-              <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">
-                Teléfono
+              <label htmlFor="code" className="block text-sm font-medium text-gray-700">
+                Código de Recuperación
               </label>
               <div className="mt-1">
                 <input
-                  id="telefono"
-                  name="telefono"
+                  id="code"
+                  name="code"
                   type="text"
                   required
-                  value={formData.telefono}
+                  value={formData.code}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
@@ -154,34 +124,17 @@ const RegisterForm = () => {
             </div>
 
             <div>
-              <label htmlFor="direccion" className="block text-sm font-medium text-gray-700">
-                Dirección
-              </label>
-              <div className="mt-1">
-                <textarea
-                  id="direccion"
-                  name="direccion"
-                  rows="3"
-                  required
-                  value={formData.direccion}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Contraseña
+              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+                Nueva Contraseña
               </label>
               <div className="mt-1">
                 <input
-                  id="password"
-                  name="password"
+                  id="newPassword"
+                  name="newPassword"
                   type="password"
                   autoComplete="new-password"
                   required
-                  value={formData.password}
+                  value={formData.newPassword}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
@@ -212,7 +165,7 @@ const RegisterForm = () => {
                 disabled={loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                {loading ? 'Procesando...' : 'Registrarse'}
+                {loading ? 'Procesando...' : 'Restablecer Contraseña'}
               </button>
             </div>
           </form>
@@ -224,7 +177,7 @@ const RegisterForm = () => {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-gray-500">
-                  ¿Ya tienes una cuenta?
+                  ¿Recordaste tu contraseña?
                 </span>
               </div>
             </div>
@@ -234,7 +187,7 @@ const RegisterForm = () => {
                 onClick={() => navigate('/login')}
                 className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                Iniciar Sesión
+                Volver a Iniciar Sesión
               </button>
             </div>
           </div>
@@ -244,4 +197,4 @@ const RegisterForm = () => {
   );
 };
 
-export default RegisterForm;
+export default ResetPassword;

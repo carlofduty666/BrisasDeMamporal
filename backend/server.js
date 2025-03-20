@@ -24,6 +24,8 @@ const pagoEstudiantesRoutes = require('./routes/pagoEstudiantes.routes');
 const configuracionNominaRoutes = require('./routes/configuracionNomina.routes')
 const configuracionBeneficioRoutes = require('./routes/configuracionBeneficio.routes')
 const liquidacionRoutes = require('./routes/liquidacion.routes')
+const authRoutes = require('./routes/auth.routes');
+
 
 
 
@@ -57,7 +59,8 @@ app.use('/', pagoEmpleadosRoutes);
 app.use('/', pagoEstudiantesRoutes)
 app.use('/', configuracionNominaRoutes);
 app.use('/', configuracionBeneficioRoutes)
-app.use('/', liquidacionRoutes)
+app.use('/', liquidacionRoutes);
+app.use('/', authRoutes);
 
 
 // Sincronizar base de datos
@@ -70,4 +73,4 @@ db.sequelize.sync({ force: false })
   })
   .catch(error => {
     console.error('Error al sincronizar la base de datos:', error);
-  });
+});

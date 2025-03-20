@@ -29,6 +29,8 @@ import RepresentanteDashboard from './components/dashboard/RepresentanteDashboar
 import NuevoEstudiante from './components/inscripcion/NuevoEstudiante';
 import ComprobanteInscripcion from './components/inscripcion/ComprobanteInscripcion';
 import DetallesEstudiante from './components/estudiante/DetallesEstudiante';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 
 // Importando tus componentes existentes
 import NavBar from './components/NavBar';
@@ -73,6 +75,8 @@ function App() {
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/verificacion-email" element={<EmailVerification />} />
         <Route path="/login" element={<LoginForm />} />
+        <Route path="/recuperar-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         
         {/* Rutas protegidas */}
         <Route 

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { verifyEmail, resendVerification } from '../../services/auth.service';
+
 import axios from 'axios';
 
 const EmailVerification = () => {
@@ -32,20 +34,17 @@ const EmailVerification = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
+  
     try {
-      const response = await axios.post('/api/auth/verify-email', {
-        email,
-        verificationCode
-      });
+      const response = await verifyEmail(email, verificationCode);
       
-      if (response.data.success) {
+      if (response.success) {
         navigate('/login', { 
           state: { message: 'Correo verificado correctamente. Ahora puedes iniciar sesión.' } 
         });
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Código de verificación inválido');
+      setError(err.message || 'Código de verificación inválido');
     } finally {
       setLoading(false);
     }
@@ -56,11 +55,11 @@ const EmailVerification = () => {
     setError('');
     
     try {
-      await axios.post('/api/auth/resend-verification', { email });
+      await resendVerification(email);
       setCountdown(60);
       setCanResend(false);
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al reenviar el código');
+      setError(err.message || 'Error al reenviar el código');
     } finally {
       setLoading(false);
     }

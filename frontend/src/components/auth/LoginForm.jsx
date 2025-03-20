@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { loginUser } from '../../services/auth.service';
+
 import axios from 'axios';
 
 const LoginForm = () => {
@@ -31,36 +33,33 @@ const LoginForm = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
+  
     try {
       const payload = {
         password: formData.password,
       };
-
+  
       // Agregar email o cédula según el tipo de inicio de sesión
       if (loginType === 'email') {
         payload.email = formData.email;
       } else {
         payload.cedula = formData.cedula;
       }
-
-      const response = await axios.post('/api/auth/login', payload);
-      
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+  
+      const response = await loginUser(payload);
       
       // Redireccionar según el rol del usuario
-      if (response.data.user.role === 'representante') {
+      if (response.user.tipo === 'representante') {
         navigate('/dashboard/representante');
-      } else if (response.data.user.role === 'admin') {
+      } else if (response.user.tipo === 'adminWeb' || response.user.tipo === 'owner') {
         navigate('/dashboard/admin');
-      } else if (response.data.user.role === 'profesor') {
+      } else if (response.user.tipo === 'profesor') {
         navigate('/dashboard/profesor');
       } else {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión');
+      setError(err.message || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
