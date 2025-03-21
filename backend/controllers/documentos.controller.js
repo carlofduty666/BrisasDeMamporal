@@ -378,7 +378,7 @@ updateDocumento: async (req, res) => {
         // Configuración completa de documentos con estructura de objetos
         const documentosConfig = {
             estudiante: [
-                { id: 'cedula', nombre: 'Cédula Escolar', obligatorio: true },
+                { id: 'cedula', nombre: 'Cédula Escolar', obligatorio: false },
                 { id: 'partidaNacimiento', nombre: 'Partida de Nacimiento', obligatorio: true },
                 { id: 'boletin', nombre: 'Boletín de Calificaciones', obligatorio: true },
                 { id: 'notasCertificadas', nombre: 'Notas Certificadas', obligatorio: true },
