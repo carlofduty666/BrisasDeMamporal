@@ -1,195 +1,275 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 const RepresentanteDashboard = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const [representante, setRepresentante] = useState(null);
   const [estudiantes, setEstudiantes] = useState([]);
+  const [inscripciones, setInscripciones] = useState([]);
+  const [cuposResumen, setCuposResumen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [cuposDisponibles, setCuposDisponibles] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Obtener información del usuario desde localStorage
-        const userData = JSON.parse(localStorage.getItem('user'));
-        setUser(userData);
-
-        // Obtener estudiantes representados
+        setLoading(true);
         const token = localStorage.getItem('token');
-        const config = {
-          headers: { Authorization: `Bearer ${token}` }
-        };
-
-        const estudiantesResponse = await axios.get('/representante/estudiantes', config);
-        setEstudiantes(estudiantesResponse.data?.estudiantes || []);
-
-        // Obtener cupos disponibles por grado
-        const cuposResponse = await axios.get('/inscripcion/cupos-disponibles', config);
-        setCuposDisponibles(cuposResponse.data || []);
+        const userData = JSON.parse(atob(token.split('.')[1]));
+        
+        // Obtener datos del representante
+        const representanteResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/personas/${userData.id}`,
+          {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }
+        );
+        setRepresentante(representanteResponse.data);
+        
+        // Obtener estudiantes del representante
+        const estudiantesResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/personas/representante/${userData.id}/estudiantes`,
+          {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }
+        );
+        setEstudiantes(estudiantesResponse.data);
+        
+        // Obtener inscripciones del representante
+        const inscripcionesResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/inscripciones/representante/${userData.id}`,
+          {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }
+        );
+        setInscripciones(inscripcionesResponse.data);
+        
+        // Obtener resumen de cupos
+        const cuposResponse = await axios.get(`${import.meta.env.VITE_API_URL}/cupos/resumen`);
+        setCuposResumen(cuposResponse.data.resumenCupos);
+        
+        setLoading(false);
       } catch (err) {
-        setError('Error al cargar los datos. Por favor, inténtelo de nuevo.');
-        console.error(err);
-      } finally {
+        console.error('Error al cargar datos:', err);
+        setError('Error al cargar datos. Por favor, intente nuevamente.');
         setLoading(false);
       }
     };
-
+    
     fetchData();
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
-
-  const handleInscribirEstudiante = () => {
-    navigate('/inscripcion/nuevo-estudiante');
-  };
-
-  const handleVerDetallesEstudiante = (estudianteId) => {
-    navigate(`/estudiante/${estudianteId}`);
-  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="spinner-border text-primary" role="status">
-            <span className="sr-only">Cargando...</span>
-          </div>
-          <p className="mt-2">Cargando información...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex">
-              <div className="flex-shrink-0 flex items-center">
-                <h1 className="text-xl font-bold text-indigo-600">Brisas De Mamporal</h1>
-              </div>
-            </div>
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard del Representante</h1>
             <div className="flex items-center">
-              <div className="ml-3 relative">
-                <div className="flex items-center">
-                  <span className="mr-3 text-gray-700">{user?.nombres} {user?.apellidos}</span>
-                  <button
-                    onClick={handleLogout}
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Cerrar Sesión
-                  </button>
+              <span className="text-gray-600 mr-4">{representante?.nombre} {representante?.apellido}</span>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('token');
+                  window.location.href = '/login';
+                }}
+                className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition-colors"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Sección de Estudiantes */}
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-medium text-gray-900">Mis Estudiantes</h2>
+                <Link
+                  to="/inscripcion/nuevo-estudiante"
+                  className="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition-colors"
+                >
+                  Inscribir Nuevo Estudiante
+                </Link>
+              </div>
+              
+              {estudiantes.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-gray-500">No tiene estudiantes registrados.</p>
+                  <p className="text-gray-500 mt-2">Haga clic en "Inscribir Nuevo Estudiante" para comenzar.</p>
                 </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cédula</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grado</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {estudiantes.map((estudiante) => (
+                        <tr key={estudiante.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {estudiante.nombre} {estudiante.apellido}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">{estudiante.cedula}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {estudiante.grado?.nombre_grado || 'No asignado'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <Link to={`/estudiante/${estudiante.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                              Ver Detalles
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
+                    {/* Sección de Inscripciones */}
+                    <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Inscripciones Recientes</h2>
+              
+              {inscripciones.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-gray-500">No tiene inscripciones registradas.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estudiante</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grado</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {inscripciones.map((inscripcion) => (
+                        <tr key={inscripcion.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {inscripcion.estudiante.nombre} {inscripcion.estudiante.apellido}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {inscripcion.grado.nombre_grado} - {inscripcion.seccion.nombre_seccion}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              inscripcion.estado === 'aprobada' ? 'bg-green-100 text-green-800' :
+                              inscripcion.estado === 'rechazada' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {inscripcion.estado.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <Link to={`/inscripcion/comprobante/${inscripcion.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                              Ver Comprobante
+                            </Link>
+                            {!inscripcion.pagado && (
+                              <Link to={`/pagos/inscripcion/${inscripcion.id}`} className="text-green-600 hover:text-green-900">
+                                Pagar
+                              </Link>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Sección de Cupos Disponibles */}
+          <div className="bg-white overflow-hidden shadow rounded-lg lg:col-span-2">
+            <div className="px-4 py-5 sm:p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Cupos Disponibles</h2>
+              
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grado</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacidad Total</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cupos Ocupados</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cupos Disponibles</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ocupación</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {cuposResumen.map((cupo) => (
+                      <tr key={cupo.gradoID}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{cupo.nombre_grado}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">{cupo.totalCapacidad}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">{cupo.totalOcupados}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">{cupo.totalDisponibles}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div 
+                              className={`h-2.5 rounded-full ${
+                                cupo.porcentajeOcupacion > 90 ? 'bg-red-600' :
+                                cupo.porcentajeOcupacion > 70 ? 'bg-yellow-600' :
+                                'bg-green-600'
+                              }`}
+                              style={{ width: `${cupo.porcentajeOcupacion}%` }}
+                            ></div>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">{cupo.porcentajeOcupacion}%</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
-      </nav>
-
-      <div className="py-10">
-        <header>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-bold leading-tight text-gray-900">
-              Panel de Representante
-            </h1>
-          </div>
-        </header>
-        <main>
-          <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4" role="alert">
-                <span className="block sm:inline">{error}</span>
-              </div>
-            )}
-
-            <div className="px-4 py-6 sm:px-0">
-              <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-                <div className="px-4 py-5 sm:px-6">
-                  <h2 className="text-lg leading-6 font-medium text-gray-900">
-                    Cupos Disponibles
-                  </h2>
-                  <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                    Información de cupos disponibles por grado para el período actual.
-                  </p>
-                </div>
-                <div className="border-t border-gray-200">
-                  <dl>
-                    {Object.entries(cuposDisponibles).map(([grado, cupos]) => (
-                      <div key={grado} className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                        <dt className="text-sm font-medium text-gray-500">
-                          {grado}
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          {cupos} cupos disponibles
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              </div>
-
-              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-                  <div>
-                    <h2 className="text-lg leading-6 font-medium text-gray-900">
-                      Estudiantes Representados
-                    </h2>
-                    <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                      Lista de estudiantes bajo su representación.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleInscribirEstudiante}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Inscribir Nuevo Estudiante
-                  </button>
-                </div>
-                <div className="border-t border-gray-200">
-                  {estudiantes.length === 0 ? (
-                    <div className="px-4 py-5 text-center text-gray-500">
-                      No tiene estudiantes registrados. Puede inscribir un nuevo estudiante haciendo clic en el botón "Inscribir Nuevo Estudiante".
-                    </div>
-                  ) : (
-                    <ul className="divide-y divide-gray-200">
-                      {estudiantes.map((estudiante) => (
-                        <li key={estudiante.id} className="px-4 py-4 sm:px-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <div className="ml-3">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {estudiante.nombres} {estudiante.apellidos}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  Grado: {estudiante.grado} | Estado: {estudiante.estadoInscripcion}
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleVerDetallesEstudiante(estudiante.id)}
-                              className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                            >
-                              Ver Detalles
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
+      </main>
     </div>
   );
 };

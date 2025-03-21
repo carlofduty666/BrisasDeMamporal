@@ -84,7 +84,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.NOW
     },
     estado: {
-      type: DataTypes.ENUM('pendiente', 'inscrito', 'retirado', 'graduado'),
+      type: DataTypes.ENUM('pendiente', 'inscrito', 'retirado', 'graduado','aprobado', 'rechazado'),
       allowNull: false,
       defaultValue: 'pendiente'
     },

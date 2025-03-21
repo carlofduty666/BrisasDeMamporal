@@ -24,6 +24,8 @@ const pagoEstudiantesRoutes = require('./routes/pagoEstudiantes.routes');
 const configuracionNominaRoutes = require('./routes/configuracionNomina.routes')
 const configuracionBeneficioRoutes = require('./routes/configuracionBeneficio.routes')
 const liquidacionRoutes = require('./routes/liquidacion.routes')
+const inscripcionRoutes = require('./routes/inscripcion.routes')
+const cuposRoutes = require('./routes/cupos.routes')
 const authRoutes = require('./routes/auth.routes');
 
 
@@ -60,6 +62,8 @@ app.use('/', pagoEstudiantesRoutes)
 app.use('/', configuracionNominaRoutes);
 app.use('/', configuracionBeneficioRoutes)
 app.use('/', liquidacionRoutes);
+app.use('/', inscripcionRoutes)
+app.use('/', cuposRoutes);
 app.use('/', authRoutes);
 
 
