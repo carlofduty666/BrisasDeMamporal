@@ -32,17 +32,27 @@ import DetallesEstudiante from './components/estudiante/DetallesEstudiante';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 
+// Componentes de administrador
+import AdminDashboard from './components/admin/AdminDashboard';
+import EstudiantesList from './components/admin/estudiantes/EstudiantesList';
+import CuposManager from './components/admin/academico/CuposManager';
+
 // Importando tus componentes existentes
 import NavBar from './components/NavBar';
 import Carrusel from './components/Carrusel';
 import InfoHome from './components/InfoHome';
 
 // Componente para proteger rutas
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   
   if (!token) {
     return <Navigate to="/login" replace />;
+  }
+  
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.tipo)) {
+    return <Navigate to="/" replace />;
   }
   
   return children;
@@ -78,11 +88,11 @@ function App() {
         <Route path="/recuperar-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         
-        {/* Rutas protegidas */}
+        {/* Rutas protegidas para representantes */}
         <Route 
           path="/dashboard/representante" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['representante', 'adminWeb', 'owner']}>
               <RepresentanteDashboard />
             </ProtectedRoute>
           } 
@@ -90,7 +100,7 @@ function App() {
         <Route 
           path="/inscripcion/nuevo-estudiante" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['representante', 'adminWeb', 'owner']}>
               <NuevoEstudiante />
             </ProtectedRoute>
           } 
@@ -112,6 +122,32 @@ function App() {
           } 
         />
         
+        {/* Rutas del panel de administrador */}
+        <Route 
+          path="/admin/dashboard" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/estudiantes" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <EstudiantesList />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/cupos" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <CuposManager />
+            </ProtectedRoute>
+          } 
+        />
+        
         {/* Ruta para cualquier otra dirección no definida */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -121,14 +157,17 @@ function App() {
 
 export default App;
 
-
-// import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-// import { useState, useEffect } from 'react';
-
-// // Importa solo los componentes que ya existen
-// import NavBar from './components/NavBar';
-// import Carrusel from './components/Carrusel';
-// import InfoHome from './components/InfoHome';
+// // Componente para proteger rutas
+// const ProtectedRoute = ({ children }) => {
+//   const token = localStorage.getItem('token');
+  
+  
+//   if (!token) {
+//     return <Navigate to="/login" replace />;
+//   }
+  
+//   return children;
+// };
 
 // // Componente para la página de inicio que usa tus componentes existentes
 // const HomePage = () => {
@@ -142,11 +181,57 @@ export default App;
 // };
 
 // function App() {
+//   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+//   useEffect(() => {
+//     const token = localStorage.getItem('token');
+//     setIsAuthenticated(!!token);
+//   }, []);
+
 //   return (
 //     <Router>
 //       <Routes>
-//         {/* Por ahora, solo incluye la ruta principal */}
+//         {/* Rutas públicas */}
 //         <Route path="/" element={<HomePage />} />
+//         <Route path="/register" element={<RegisterForm />} />
+//         <Route path="/verificacion-email" element={<EmailVerification />} />
+//         <Route path="/login" element={<LoginForm />} />
+//         <Route path="/recuperar-password" element={<ForgotPassword />} />
+//         <Route path="/reset-password" element={<ResetPassword />} />
+        
+//         {/* Rutas protegidas */}
+//         <Route 
+//           path="/dashboard/representante" 
+//           element={
+//             <ProtectedRoute>
+//               <RepresentanteDashboard />
+//             </ProtectedRoute>
+//           } 
+//         />
+//         <Route 
+//           path="/inscripcion/nuevo-estudiante" 
+//           element={
+//             <ProtectedRoute>
+//               <NuevoEstudiante />
+//             </ProtectedRoute>
+//           } 
+//         />
+//         <Route 
+//           path="/inscripcion/comprobante/:inscripcionId" 
+//           element={
+//             <ProtectedRoute>
+//               <ComprobanteInscripcion />
+//             </ProtectedRoute>
+//           } 
+//         />
+//         <Route 
+//           path="/estudiante/:estudianteId" 
+//           element={
+//             <ProtectedRoute>
+//               <DetallesEstudiante />
+//             </ProtectedRoute>
+//           } 
+//         />
         
 //         {/* Ruta para cualquier otra dirección no definida */}
 //         <Route path="*" element={<Navigate to="/" replace />} />
