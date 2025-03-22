@@ -33,12 +33,15 @@ const LoginForm = () => {
       
       // Guardar el token en localStorage
       localStorage.setItem('token', response.data.token);
+
+      // Guarda la informacion del usuario en localStorage
+      localStorage.setItem('user', JSON.stringify(response.data.user));
       
       // Redirigir según el tipo de usuario
       const userData = response.data.user;
       if (userData.tipo === 'representante') {
         navigate('/dashboard/representante');
-      } else if (userData.tipo === 'admin') {
+      } else if (userData.tipo === 'adminWeb' ||userData.tipo === 'owner') {
         navigate('/admin/dashboard');
       } else if (userData.tipo === 'profesor') {
         navigate('/profesor/dashboard');
