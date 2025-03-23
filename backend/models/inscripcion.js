@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
       });
       Inscripciones.belongsTo(models.Secciones, {
         foreignKey: 'seccionID',
-        as: 'seccion'
+        as: 'Secciones'
       });
       Inscripciones.hasMany(models.PagoEstudiantes, {
         foreignKey: 'inscripcionID',

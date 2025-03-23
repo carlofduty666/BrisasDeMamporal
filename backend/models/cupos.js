@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
       // Relación con Secciones
       Cupos.belongsTo(models.Secciones, {
         foreignKey: 'seccionID',
-        as: 'seccion'
+        as: 'Secciones'
       });
       
       // Relación con Año Escolar
@@ -73,8 +73,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     sequelize,
-    modelName: 'Cupo',
-    tableName: 'Cupo',
+    modelName: 'Cupos',
+    tableName: 'Cupos',
     freezeTableName: true
   });
   return Cupos;

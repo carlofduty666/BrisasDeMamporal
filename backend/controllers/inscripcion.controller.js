@@ -163,37 +163,42 @@ const inscripcionController = {
   },
   
   // Obtener cupos disponibles por grado
-  getCuposDisponibles: async (req, res) => {
-    try {
-      // Obtener el año escolar activo
-      const annoEscolar = await AnnoEscolar.findOne({
-        where: { activo: true }
-      });
+getCuposDisponibles: async (req, res) => {
+  try {
+    // Obtener el año escolar activo
+    const annoEscolar = await AnnoEscolar.findOne({
+      where: { activo: true }
+    });
+    
+    if (!annoEscolar) {
+      return res.status(404).json({ message: 'No hay un año escolar activo' });
+    }
+    
+    // Obtener todos los grados
+    const grados = await Grados.findAll({
+      include: [
+        {
+          model: Secciones,
+          as: 'Secciones'  // Asegúrate de que este alias coincida con tu modelo
+        }
+      ]
+    });
+    
+    // Calcular cupos disponibles por grado y sección
+    const cuposDisponibles = {};
+    
+    for (const grado of grados) {
+      cuposDisponibles[grado.id] = {
+        nombre: grado.nombre_grado,
+        secciones: {},
+        totalDisponibles: 0
+      };
       
-      if (!annoEscolar) {
-        return res.status(404).json({ message: 'No hay un año escolar activo' });
-      }
+      // Verificar si grado.Secciones existe y es un array
+      const secciones = grado.Secciones || [];
       
-      // Obtener todos los grados
-      const grados = await Grados.findAll({
-        include: [
-          {
-            model: Secciones,
-            as: 'Secciones'
-          }
-        ]
-      });
-      
-      // Calcular cupos disponibles por grado y sección
-      const cuposDisponibles = {};
-      
-      for (const grado of grados) {
-        cuposDisponibles[grado.id] = {
-          nombre: grado.nombre_grado,
-          secciones: {}
-        };
-        
-        for (const seccion of grado.secciones) {
+      if (Array.isArray(secciones) && secciones.length > 0) {
+        for (const seccion of secciones) {
           // Contar estudiantes inscritos en esta sección para el año escolar activo
           const estudiantesInscritos = await Seccion_Personas.count({
             where: {
@@ -202,28 +207,58 @@ const inscripcionController = {
             }
           });
           
+          const capacidad = seccion.capacidad || 30;
+          const disponibles = Math.max(0, capacidad - estudiantesInscritos);
+          
           cuposDisponibles[grado.id].secciones[seccion.id] = {
             nombre: seccion.nombre_seccion,
-            capacidad: seccion.capacidad || 30, // Valor por defecto si no está definido
+            capacidad: capacidad,
             ocupados: estudiantesInscritos,
-            disponibles: (seccion.capacidad || 30) - estudiantesInscritos
+            disponibles: disponibles
           };
+          
+          cuposDisponibles[grado.id].totalDisponibles += disponibles;
         }
+      } else {
+        console.log(`No hay secciones para el grado ${grado.id} o no es un array`);
+        // Si no hay secciones, intentar obtener secciones directamente
+        const seccionesSeparadas = await Secciones.findAll({
+          where: { gradoID: grado.id }
+        });
         
-        // Calcular total de cupos disponibles para el grado
-        cuposDisponibles[grado.id].totalDisponibles = Object.values(cuposDisponibles[grado.id].secciones)
-          .reduce((total, seccion) => total + seccion.disponibles, 0);
+        for (const seccion of seccionesSeparadas) {
+          const estudiantesInscritos = await Seccion_Personas.count({
+            where: {
+              seccionID: seccion.id,
+              annoEscolarID: annoEscolar.id
+            }
+          });
+          
+          const capacidad = seccion.capacidad || 30;
+          const disponibles = Math.max(0, capacidad - estudiantesInscritos);
+          
+          cuposDisponibles[grado.id].secciones[seccion.id] = {
+            nombre: seccion.nombre_seccion,
+            capacidad: capacidad,
+            ocupados: estudiantesInscritos,
+            disponibles: disponibles
+          };
+          
+          cuposDisponibles[grado.id].totalDisponibles += disponibles;
+        }
       }
-      
-      res.json({
-        annoEscolar,
-        cuposDisponibles
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: err.message });
     }
-  },
+    
+    res.json({
+      annoEscolar,
+      cuposDisponibles
+    });
+  } catch (err) {
+    console.error('Error en getCuposDisponibles:', err);
+    res.status(500).json({ message: err.message });
+  }
+},
+
   
   // Crear nueva inscripción
   createInscripcion: async (req, res) => {

@@ -105,15 +105,13 @@ const NuevoEstudiante = () => {
         const response = await axios.get(url);
         setGrados(response.data);
         
-        // Calcular cupos disponibles sin hacer solicitudes adicionales
-        // que podrían fallar
+        // Calcular cupos disponibles con valores predeterminados
         const cuposObj = {};
         for (const grado of response.data) {
-          // Asignar un valor predeterminado de cupos
           cuposObj[grado.id] = 30; // Valor por defecto
         }
         
-        // Intentar obtener cupos reales si es posible
+        // Intentar obtener cupos reales
         try {
           const cuposResponse = await axios.get('http://localhost:5000/cupos/resumen');
           if (cuposResponse.data && cuposResponse.data.resumenCupos) {
@@ -223,7 +221,7 @@ const NuevoEstudiante = () => {
       
       // Enviar datos al servidor
       const response = await axios.post(
-        'http://localhost:5000/inscripcion/nuevo-estudiante',
+        'http://localhost:5000/inscripciones/nuevo-estudiante',
         formDataToSend,
         {
           headers: {
@@ -603,7 +601,7 @@ const NuevoEstudiante = () => {
                             value={grado.id}
                             disabled={!cuposDisponibles[grado.id] || cuposDisponibles[grado.id] <= 0}
                           >
-                            {grado.nombre} {cuposDisponibles[grado.id] ? `(${cuposDisponibles[grado.id]} cupos)` : '(Sin cupos)'}
+                            {grado.nombre_grado} {cuposDisponibles[grado.id] ? `(${cuposDisponibles[grado.id]} cupos)` : '(Sin cupos)'}
                           </option>
                         ))}
                       </select>
