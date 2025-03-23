@@ -25,6 +25,18 @@ const getPersonasByTipo = async (req, res) => {
   }
 };
 
+const getPersonaTipoById = async (req, res) => {
+  const { tipo, id } = req.params;
+  try {
+      const filter = { tipo: tipo, id: id };
+      const personas = await Personas.getAllPersonas(filter);
+      res.json(personas);
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+  }
+};
+
 const getPersonaByCriterio = async (req, res) => {
     const { field, value } = req.params;
   
@@ -40,7 +52,81 @@ const getPersonaByCriterio = async (req, res) => {
       console.error(err);
       res.status(500).json({ message: err.message });
     }
-  };
+};
+
+  const getPersonaById = async (req, res) => {
+    try {
+      const persona = await Personas.findByPk(req.params.id);
+      
+      if (persona) {
+        res.json(persona);
+      } else {
+        res.status(404).json({ message: 'Persona no encontrada' });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+};
+
+// Obtener estudiantes por representante
+const getEstudiantesByRepresentante = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar que el representante existe
+    const representante = await db.Personas.findOne({
+      where: { 
+        id: id,
+        tipo: 'representante'
+      }
+    });
+    
+    if (!representante) {
+      return res.status(404).json({ message: 'Representante no encontrado' });
+    }
+    
+    // Buscar estudiantes asociados a este representante
+    const estudiantes = await db.Personas.findAll({
+      where: { 
+        tipo: 'estudiante'
+      },
+      include: [
+        {
+          model: db.Inscripciones,
+          as: 'inscripciones',
+          where: { representanteID: id },
+          required: true,
+          include: [
+            {
+              model: db.Grados,
+              as: 'grado'
+            },
+            {
+              model: db.Secciones,
+              as: 'Secciones'
+            },
+            {
+              model: db.AnnoEscolar,
+              as: 'annoEscolar'
+            }
+          ]
+        },
+        {
+          model: db.Documentos,
+          as: 'documentos',
+          required: false
+        }
+      ]
+    });
+    
+    res.json(estudiantes);
+  } catch (err) {
+    console.error('Error al obtener estudiantes por representante:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+  
 
 const createPersona = async (req, res) => {
     try {
@@ -174,5 +260,8 @@ module.exports = {
     updatePersona,
     asignarRolAPersona,
     eliminarRolDePersona,
-    getRolesDePersona
+    getRolesDePersona,
+    getPersonaById,
+    getPersonaTipoById,
+    getEstudiantesByRepresentante
 }

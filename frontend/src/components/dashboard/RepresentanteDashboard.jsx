@@ -19,16 +19,17 @@ const RepresentanteDashboard = () => {
         
         // Obtener datos del representante
         const representanteResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/personas/${userData.id}`,
+          `${import.meta.env.VITE_API_URL}/personas/${userData.personaID}`,
           {
             headers: { 'Authorization': `Bearer ${token}` }
           }
         );
         setRepresentante(representanteResponse.data);
+        localStorage.setItem('representanteData', JSON.stringify(representanteResponse.data));
         
         // Obtener estudiantes del representante
         const estudiantesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/personas/representante/${userData.id}/estudiantes`,
+          `${import.meta.env.VITE_API_URL}/personas/representante/${userData.personaID}/estudiantes`,
           {
             headers: { 'Authorization': `Bearer ${token}` }
           }
@@ -37,7 +38,7 @@ const RepresentanteDashboard = () => {
         
         // Obtener inscripciones del representante
         const inscripcionesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/inscripciones/representante/${userData.id}`,
+          `${import.meta.env.VITE_API_URL}/inscripciones/representante/${userData.personaID}`,
           {
             headers: { 'Authorization': `Bearer ${token}` }
           }
@@ -186,7 +187,7 @@ const RepresentanteDashboard = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500">
-                              {inscripcion.grado.nombre_grado} - {inscripcion.seccion.nombre_seccion}
+                            {inscripcion.grado?.nombre_grado} - {inscripcion.seccion?.nombre_seccion || 'Sin sección'}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">

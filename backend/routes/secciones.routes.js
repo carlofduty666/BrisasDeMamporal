@@ -5,7 +5,7 @@ const seccionController = require('../controllers/secciones.controller');
 // Rutas básicas CRUD
 router.get('/secciones', seccionController.getAllSecciones);
 router.get('/secciones/:id', seccionController.getSeccionById);
-router.get('/secciones/grado/:gradoID', seccionController.getSeccionesByGrado);
+router.get('/secciones/grado/:gradoID', seccionController.getSeccionesByGrado); // Nueva ruta para obtener secciones por grado
 router.post('/secciones', seccionController.createSeccion);
 router.put('/secciones/:id', seccionController.updateSeccion);
 router.delete('/secciones/:id', seccionController.deleteSeccion);

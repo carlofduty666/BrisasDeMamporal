@@ -15,7 +15,7 @@ router.get('/inscripciones/cupos-disponibles', inscripcionController.getCuposDis
 
 // Rutas protegidas
 router.get('/inscripciones', authMiddleware.verifyToken, inscripcionController.getAllInscripciones);
-router.get('/inscripciones/representante/:representanteID', authMiddleware.verifyToken, inscripcionController.getInscripcionesByRepresentante);
+router.get('/inscripciones/representante/:representanteID', authMiddleware.verifyToken, inscripcionController.getInscripcionesByRepresentante); // ruta para obtener inscripciones por representante
 router.get('/inscripciones/:id', authMiddleware.verifyToken, inscripcionController.getInscripcionById);
 router.post('/inscripciones', authMiddleware.verifyToken, inscripcionController.createInscripcion);
 router.post('/inscripciones/nuevo-estudiante', authMiddleware.verifyToken, uploadDocumentos, inscripcionController.crearNuevoEstudiante);

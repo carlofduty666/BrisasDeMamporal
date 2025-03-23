@@ -42,7 +42,7 @@ const inscripcionController = {
           },
           {
             model: Secciones,
-            as: 'seccion'
+            as: 'Secciones'
           },
           {
             model: AnnoEscolar,
@@ -82,7 +82,7 @@ const inscripcionController = {
           },
           {
             model: Secciones,
-            as: 'seccion'
+            as: 'Secciones'
           },
           {
             model: AnnoEscolar,
@@ -128,7 +128,7 @@ const inscripcionController = {
           },
           {
             model: Secciones,
-            as: 'seccion'
+            as: 'Secciones'
           },
           {
             model: AnnoEscolar,
@@ -363,7 +363,7 @@ getCuposDisponibles: async (req, res) => {
       const montoInscripcion = arancelInscripcion ? arancelInscripcion.monto : 0;
       
       // Crear la inscripción
-      const nuevaInscripcion = await Inscripcion.create({
+      const nuevaInscripcion = await Inscripciones.create({
         estudianteID,
         representanteID,
         gradoID,
@@ -393,7 +393,7 @@ getCuposDisponibles: async (req, res) => {
       await transaction.commit();
       
       // Obtener la inscripción completa con sus relaciones
-      const inscripcionCompleta = await Inscripcion.findByPk(nuevaInscripcion.id, {
+      const inscripcionCompleta = await Inscripciones.findByPk(nuevaInscripcion.id, {
         include: [
           {
             model: Personas,
@@ -411,7 +411,7 @@ getCuposDisponibles: async (req, res) => {
           },
           {
             model: Secciones,
-            as: 'seccion'
+            as: 'Secciones'
           },
           {
             model: AnnoEscolar,
@@ -589,7 +589,7 @@ getCuposDisponibles: async (req, res) => {
       const montoInscripcion = arancelInscripcion ? arancelInscripcion.monto : 0;
       
       // Crear la inscripción
-      const nuevaInscripcion = await Inscripcion.create({
+      const nuevaInscripcion = await Inscripciones.create({
         estudianteID: nuevoEstudiante.id,
         representanteID: representante.id,
         gradoID,
@@ -639,7 +639,7 @@ getCuposDisponibles: async (req, res) => {
       const { id } = req.params;
       const { estado, observaciones } = req.body;
       
-      const inscripcion = await Inscripcion.findByPk(id);
+      const inscripcion = await Inscripciones.findByPk(id);
       
       if (!inscripcion) {
         return res.status(404).json({ message: 'Inscripción no encontrada' });
@@ -673,7 +673,7 @@ getCuposDisponibles: async (req, res) => {
       const { id } = req.params;
       const { metodoPagoID, referencia, monto, fecha } = req.body;
       
-      const inscripcion = await Inscripcion.findByPk(id);
+      const inscripcion = await Inscripciones.findByPk(id);
       
       if (!inscripcion) {
         await transaction.rollback();
@@ -737,7 +737,7 @@ getCuposDisponibles: async (req, res) => {
     try {
       const { id } = req.params;
       
-      const inscripcion = await Inscripcion.findByPk(id, {
+      const inscripcion = await Inscripciones.findByPk(id, {
         include: [
           {
             model: Personas,
@@ -755,7 +755,7 @@ getCuposDisponibles: async (req, res) => {
           },
           {
             model: Secciones,
-            as: 'seccion'
+            as: 'Secciones'
           },
           {
             model: AnnoEscolar,
@@ -805,7 +805,7 @@ getCuposDisponibles: async (req, res) => {
     try {
       const { id } = req.params;
       
-      const inscripcion = await Inscripcion.findByPk(id);
+      const inscripcion = await Inscripciones.findByPk(id);
       
       if (!inscripcion) {
         await transaction.rollback();
