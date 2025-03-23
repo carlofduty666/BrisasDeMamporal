@@ -1,5 +1,5 @@
 const db = require('../models');
-const Cupo = db.Cupo;
+const Cupo = db.Cupos;
 const Grados = db.Grados;
 const Secciones = db.Secciones;
 const AnnoEscolar = db.AnnoEscolar;
@@ -24,7 +24,7 @@ const cupoController = {
           },
           {
             model: Secciones,
-            as: 'seccion'
+            as: 'Secciones'
           },
           {
             model: AnnoEscolar,
@@ -150,7 +150,7 @@ const cupoController = {
         include: [
           {
             model: Secciones,
-            as: 'secciones'
+            as: 'Secciones'
           }
         ],
         order: [['nombre_grado', 'ASC']]
@@ -217,81 +217,129 @@ const cupoController = {
     }
   },
   
-  // Crear o actualizar cupo
-  createOrUpdateCupo: async (req, res) => {
-    try {
-      const { gradoID, seccionID, annoEscolarID, capacidad } = req.body;
+  // // Crear o actualizar cupo
+  // createOrUpdateCupo: async (req, res) => {
+  //   try {
+  //     const { gradoID, seccionID, annoEscolarID, capacidad } = req.body;
       
-      // Validar datos
-      if (!gradoID || !seccionID || !annoEscolarID || capacidad === undefined) {
-        return res.status(400).json({ message: 'Todos los campos son requeridos' });
-      }
+  //     // Validar datos
+  //     if (!gradoID || !seccionID || !annoEscolarID || capacidad === undefined) {
+  //       return res.status(400).json({ message: 'Todos los campos son requeridos' });
+  //     }
       
-      // Validar que el grado existe
-      const grado = await Grados.findByPk(gradoID);
-      if (!grado) {
-        return res.status(404).json({ message: 'Grado no encontrado' });
-      }
+  //     // Validar que el grado existe
+  //     const grado = await Grados.findByPk(gradoID);
+  //     if (!grado) {
+  //       return res.status(404).json({ message: 'Grado no encontrado' });
+  //     }
       
-      // Validar que la sección existe
-      const seccion = await Secciones.findByPk(seccionID);
-      if (!seccion) {
-        return res.status(404).json({ message: 'Sección no encontrada' });
-      }
+  //     // Validar que la sección existe
+  //     const seccion = await Secciones.findByPk(seccionID);
+  //     if (!seccion) {
+  //       return res.status(404).json({ message: 'Sección no encontrada' });
+  //     }
       
-      // Validar que el año escolar existe
-      const annoEscolar = await AnnoEscolar.findByPk(annoEscolarID);
-      if (!annoEscolar) {
-        return res.status(404).json({ message: 'Año escolar no encontrado' });
-      }
+  //     // Validar que el año escolar existe
+  //     const annoEscolar = await AnnoEscolar.findByPk(annoEscolarID);
+  //     if (!annoEscolar) {
+  //       return res.status(404).json({ message: 'Año escolar no encontrado' });
+  //     }
       
-      // Contar estudiantes inscritos
-      const estudiantesInscritos = await Seccion_Personas.count({
-        where: {
-          seccionID,
-          annoEscolarID
-        }
-      });
+  //     // Contar estudiantes inscritos
+  //     const estudiantesInscritos = await Seccion_Personas.count({
+  //       where: {
+  //         seccionID,
+  //         annoEscolarID
+  //       }
+  //     });
       
-      // Validar que la capacidad no sea menor que los estudiantes inscritos
-      if (capacidad < estudiantesInscritos) {
-        return res.status(400).json({ 
-          message: `La capacidad no puede ser menor que el número de estudiantes inscritos (${estudiantesInscritos})` 
-        });
-      }
+  //     // Validar que la capacidad no sea menor que los estudiantes inscritos
+  //     if (capacidad < estudiantesInscritos) {
+  //       return res.status(400).json({ 
+  //         message: `La capacidad no puede ser menor que el número de estudiantes inscritos (${estudiantesInscritos})` 
+  //       });
+  //     }
       
-      // Buscar si ya existe un cupo para esta combinación
-      const [cupo, created] = await Cupo.findOrCreate({
-        where: {
-          gradoID,
-          seccionID,
-          annoEscolarID
-        },
-        defaults: {
-          capacidad,
-          ocupados: estudiantesInscritos,
-          disponibles: capacidad - estudiantesInscritos
-        }
-      });
+  //     // Buscar si ya existe un cupo para esta combinación
+  //     const [cupo, created] = await Cupo.findOrCreate({
+  //       where: {
+  //         gradoID,
+  //         seccionID,
+  //         annoEscolarID
+  //       },
+  //       defaults: {
+  //         capacidad,
+  //         ocupados: estudiantesInscritos,
+  //         disponibles: capacidad - estudiantesInscritos
+  //       }
+  //     });
       
-      if (!created) {
-        // Actualizar cupo existente
-        await cupo.update({
-          capacidad,
-          ocupados: estudiantesInscritos,
-          disponibles: capacidad - estudiantesInscritos
-        });
-      }
+  //     if (!created) {
+  //       // Actualizar cupo existente
+  //       await cupo.update({
+  //         capacidad,
+  //         ocupados: estudiantesInscritos,
+  //         disponibles: capacidad - estudiantesInscritos
+  //       });
+  //     }
       
-      res.status(created ? 201 : 200).json({
-        message: created ? 'Cupo creado correctamente' : 'Cupo actualizado correctamente',
-        cupo
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: err.message });
+  //     res.status(created ? 201 : 200).json({
+  //       message: created ? 'Cupo creado correctamente' : 'Cupo actualizado correctamente',
+  //       cupo
+  //     });
+  //   } catch (err) {
+  //     console.error(err);
+  //     res.status(500).json({ message: err.message });
+  //   }
+  // },
+
+  // En cupos.controller.js
+createCupo: async (req, res) => {
+  try {
+    const { gradoID, seccionID,	annoEscolarID, capacidad,	ocupados, disponibles	 } = req.body;
+    
+    // Validar datos
+    if (!gradoID || !seccionID || !annoEscolarID || !capacidad || !ocupados || !disponibles === undefined) {
+      return res.status(400).json({ message: 'Todos los campos son requeridos' });
     }
-  },
+    
+    // Verificar si ya existe un registro para este grado, sección y año escolar
+    const cupoExistente = await db.Cupo.findOne({
+      where: { gradoID, seccionID, annoEscolarID }
+    });
+    
+    if (cupoExistente) {
+      // Actualizar el registro existente
+      await cupoExistente.update({
+        disponibles,
+        ocupados: ocupados || cupoExistente.ocupados
+      });
+      
+      return res.json({
+        message: 'Cupos actualizados correctamente',
+        cupo: cupoExistente
+      });
+    }
+    
+    // Crear nuevo registro de cupos
+    const nuevoCupo = await db.Cupo.create({
+      gradoID,
+      seccionID,
+      annoEscolarID,
+      capacidad,
+      ocupados,
+      disponibles	
+    });
+    
+    res.status(201).json({
+      message: 'Cupos creados correctamente',
+      cupo: nuevoCupo
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+},
   
   // Actualizar capacidad de cupo
   updateCapacidadCupo: async (req, res) => {

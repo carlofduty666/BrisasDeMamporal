@@ -1,5 +1,5 @@
 const db = require('../models');
-const Inscripcion = db.Inscripcion;
+const Inscripciones = db.Inscripciones;
 const Personas = db.Personas;
 const Grados = db.Grados;
 const Secciones = db.Secciones;
@@ -23,7 +23,7 @@ const inscripcionController = {
       if (annoEscolarID) whereClause.annoEscolarID = annoEscolarID;
       if (estado) whereClause.estado = estado;
       
-      const inscripciones = await Inscripcion.findAll({
+      const inscripciones = await Inscripciones.findAll({
         where: whereClause,
         include: [
           {
@@ -68,7 +68,7 @@ const inscripcionController = {
       const whereClause = { representanteID };
       if (annoEscolarID) whereClause.annoEscolarID = annoEscolarID;
       
-      const inscripciones = await Inscripcion.findAll({
+      const inscripciones = await Inscripciones.findAll({
         where: whereClause,
         include: [
           {
@@ -104,7 +104,7 @@ const inscripcionController = {
     try {
       const { id } = req.params;
       
-      const inscripcion = await Inscripcion.findByPk(id, {
+      const inscripcion = await Inscripciones.findByPk(id, {
         include: [
           {
             model: Personas,
@@ -140,11 +140,11 @@ const inscripcionController = {
             include: [
               {
                 model: db.Aranceles,
-                as: 'arancel'
+                as: 'aranceles'
               },
               {
                 model: db.MetodoPagos,
-                as: 'metodoPago'
+                as: 'metodoPagos'
               }
             ]
           }
@@ -179,7 +179,7 @@ const inscripcionController = {
         include: [
           {
             model: Secciones,
-            as: 'secciones'
+            as: 'Secciones'
           }
         ]
       });
@@ -275,7 +275,7 @@ const inscripcionController = {
       }
       
       // Verificar si ya existe una inscripción para este estudiante en este año escolar
-      const inscripcionExistente = await Inscripcion.findOne({
+      const inscripcionExistente = await Inscripciones.findOne({
         where: {
           estudianteID,
           annoEscolarID
@@ -401,11 +401,25 @@ const inscripcionController = {
     const transaction = await db.sequelize.transaction();
     
     try {
+      // Extraer datos del estudiante
       const { 
         cedula, nombre, apellido, fechaNacimiento, 
         lugarNacimiento, genero, direccion, gradoID, 
-        observaciones, representanteID 
+        observaciones
       } = req.body;
+      
+      // Datos del representante (con prefijo rep_)
+      const representanteData = {
+        cedula: req.body.rep_cedula,
+        nombre: req.body.rep_nombre,
+        apellido: req.body.rep_apellido,
+        telefono: req.body.rep_telefono,
+        email: req.body.rep_email,
+        direccion: req.body.rep_direccion,
+        profesion: req.body.rep_profesion,
+        // lugarTrabajo: req.body.rep_lugarTrabajo,
+        tipo: 'representante'
+      };
       
       // Obtener el año escolar activo
       const annoEscolar = await AnnoEscolar.findOne({
@@ -427,14 +441,13 @@ const inscripcionController = {
         return res.status(400).json({ message: 'Ya existe un estudiante con esta cédula' });
       }
       
-      // Validar que el representante existe
-      const representante = await Personas.findOne({
-        where: { id: representanteID, tipo: 'representante' }
+      // Verificar si el representante ya existe o crear uno nuevo
+      let representante = await Personas.findOne({
+        where: { cedula: representanteData.cedula, tipo: 'representante' }
       });
       
       if (!representante) {
-        await transaction.rollback();
-        return res.status(404).json({ message: 'Representante no encontrado' });
+        representante = await Personas.create(representanteData, { transaction });
       }
       
       // Validar que el grado existe
@@ -455,47 +468,50 @@ const inscripcionController = {
         genero,
         direccion,
         tipo: 'estudiante',
-        representanteID,
+        representanteID: representante.id,
         observaciones
       }, { transaction });
       
       // Procesar documentos
       const documentosSubidos = [];
-      const uploadDir = path.join(__dirname, '../uploads/documentos');
       
-      // Asegurarse de que la carpeta existe
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      
-      // Procesar cada documento
+      // Procesar documentos del estudiante
       if (req.files) {
+        // Iterar sobre todos los archivos subidos
         for (const fieldName in req.files) {
-          if (fieldName.startsWith('documento_')) {
-            const file = req.files[fieldName];
-            const tipoDocumento = fieldName.replace('documento_', '');
-            
-            // Generar nombre único para el archivo
-            const uniqueFilename = `${uuidv4()}${path.extname(file.name)}`;
-            const filePath = path.join(uploadDir, uniqueFilename);
-            
-            // Guardar el archivo
-            await new Promise((resolve, reject) => {
-              fs.writeFile(filePath, file.data, (err) => {
-                if (err) reject(err);
-                else resolve();
-              });
-            });
-            
-            // Crear registro en la base de datos
-            const documento = await Documentos.create({
-              personaID: nuevoEstudiante.id,
-              tipoDocumento,
-              urlDocumento: `/uploads/documentos/${uniqueFilename}`,
-              descripcion: `Documento de inscripción: ${tipoDocumento}`
-            }, { transaction });
-            
-            documentosSubidos.push(documento);
+          if (fieldName.startsWith('documento_') && !fieldName.includes('representante')) {
+            const files = req.files[fieldName];
+            if (files && files.length > 0) {
+              const file = files[0]; // Tomamos el primer archivo
+              const tipoDocumento = fieldName.replace('documento_', '');
+              
+              // Crear registro en la base de datos
+              const documento = await Documentos.create({
+                personaID: nuevoEstudiante.id,
+                tipoDocumento,
+                urlDocumento: file.path.replace(/\\/g, '/').replace('backend/', '/'),
+                descripcion: `Documento de inscripción: ${tipoDocumento}`
+              }, { transaction });
+              
+              documentosSubidos.push(documento);
+            }
+          }
+          
+          // Procesar documentos del representante
+          if (fieldName.includes('documento_representante')) {
+            const files = req.files[fieldName];
+            if (files && files.length > 0) {
+              const file = files[0]; // Tomamos el primer archivo
+              const tipoDocumento = fieldName.replace('documento_representante_', '');
+              
+              // Crear registro en la base de datos
+              await Documentos.create({
+                personaID: representante.id,
+                tipoDocumento,
+                urlDocumento: file.path.replace(/\\/g, '/').replace('backend/', '/'),
+                descripcion: `Documento de representante: ${tipoDocumento}`
+              }, { transaction });
+            }
           }
         }
       }
@@ -540,7 +556,7 @@ const inscripcionController = {
       // Crear la inscripción
       const nuevaInscripcion = await Inscripcion.create({
         estudianteID: nuevoEstudiante.id,
-        representanteID,
+        representanteID: representante.id,
         gradoID,
         seccionID: seccionAsignada.id,
         annoEscolarID: annoEscolar.id,
@@ -580,6 +596,7 @@ const inscripcionController = {
       res.status(500).json({ message: err.message });
     }
   },
+  
   
   // Actualizar estado de inscripción
   updateEstadoInscripcion: async (req, res) => {

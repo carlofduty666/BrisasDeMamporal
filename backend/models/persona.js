@@ -119,7 +119,11 @@ module.exports = (sequelize, DataTypes) => {
     email: DataTypes.STRING,
     tipo: DataTypes.ENUM('estudiante', 'representante', 'profesor', 'administrativo', 'obrero', 'owner', 'adminWeb'),
     username: DataTypes.STRING,
-    password: DataTypes.STRING
+    password: DataTypes.STRING,
+    profesion: DataTypes.STRING,
+    genero: DataTypes.ENUM('M', 'F'),
+    observaciones: DataTypes.TEXT,
+    direccion: DataTypes.TEXT,
   }, {
     sequelize,
     modelName: 'Personas'

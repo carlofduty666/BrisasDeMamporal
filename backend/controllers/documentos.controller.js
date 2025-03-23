@@ -390,6 +390,30 @@ updateDocumento: async (req, res) => {
                 { id: 'constanciaTrabajo', nombre: 'Constancia Laboral', obligatorio: true },
                 { id: 'solvenciaPago', nombre: 'Solvencia de Pagos', obligatorio: true },
                 { id: 'fotoCarnet', nombre: 'Foto Carnet', obligatorio: false }
+            ],
+            profesor: [
+                { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
+                { id: 'curriculumVitae', nombre: 'Currículum Vitae', obligatorio: true },
+                { id: 'titulo', nombre: 'Título Profesional', obligatorio: true },
+                { id: 'certificadoSalud', nombre: 'Certificado de Salud', obligatorio: true },
+                { id: 'foniatrico', nombre: 'Foniatría', obligatorio: true },
+                { id: 'psicomental', nombre: 'Psicomental', obligatorio: true },
+                { id: 'constanciaEstudio6toSemestre', nombre: 'Constancia de Estudio 6to Semestre', obligatorio: true },
+                { id: 'fotoCarta', nombre: 'Foto Carta', obligatorio: true }
+            ],
+            administrativo: [
+                { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
+                { id: 'curriculumVitae', nombre: 'Currículum Vitae', obligatorio: true },
+                { id: 'certificadoSalud', nombre: 'Certificado de Salud', obligatorio: true },
+                { id: 'psicomental', nombre: 'Psicomental', obligatorio: true },
+                { id: 'titulo', nombre: 'Título Profesional', obligatorio: true },
+                { id: 'fotoCarta', nombre: 'Foto Carta', obligatorio: true }
+            ],
+            obrero: [
+                { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
+                { id: 'curriculumVitae', nombre: 'Currículum Vitae', obligatorio: true },
+                { id: 'certificadoSalud', nombre: 'Certificado de Salud', obligatorio: true },
+                { id: 'fotoCarta', nombre: 'Foto Carta', obligatorio: true }
             ]
         };
 

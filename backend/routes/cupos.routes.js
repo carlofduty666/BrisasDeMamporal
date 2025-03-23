@@ -5,11 +5,11 @@ const authMiddleware = require('../middleware/auth.middleware');
 
 // Rutas públicas
 router.get('/cupos/resumen', cuposController.getResumenCupos);
+router.get('/cupos/grado/:gradoID', cuposController.getCuposByGrado);
 
 // Rutas protegidas
 router.get('/cupos', authMiddleware.verifyToken, cuposController.getAllCupos);
-router.get('/cupos/grado/:gradoID', authMiddleware.verifyToken, cuposController.getCuposByGrado);
-router.post('/cupos', authMiddleware.verifyToken, cuposController.createOrUpdateCupo);
+router.post('/cupos', cuposController.createCupo);
 router.put('/cupos/:id/capacidad', authMiddleware.verifyToken, cuposController.updateCapacidadCupo);
 router.delete('/cupos/:id', authMiddleware.verifyToken, cuposController.deleteCupo);
 
