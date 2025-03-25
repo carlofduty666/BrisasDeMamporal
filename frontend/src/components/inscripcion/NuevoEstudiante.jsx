@@ -8,6 +8,8 @@ const NuevoEstudiante = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Estados para documentos
   const [documentosEstudiante, setDocumentosEstudiante] = useState([]);
@@ -306,59 +308,44 @@ const NuevoEstudiante = () => {
       const formDataToSend = new FormData();
       
       // Añadir datos del estudiante
-      formDataToSend.append('cedula', formData.estudiante.cedula);
-      formDataToSend.append('nombre', formData.estudiante.nombre);
-      formDataToSend.append('apellido', formData.estudiante.apellido);
-      formDataToSend.append('fechaNacimiento', formData.estudiante.fechaNacimiento);
-      formDataToSend.append('lugarNacimiento', formData.estudiante.lugarNacimiento || '');
-      formDataToSend.append('genero', formData.estudiante.genero || 'M');
-      formDataToSend.append('direccion', formData.estudiante.direccion);
-      formDataToSend.append('observaciones', formData.estudiante.observaciones || '');
-      
-      // Si tenemos el ID del representante, lo enviamos directamente
-      if (formData.representante.id) {
-        formDataToSend.append('representanteID', formData.representante.id);
-      }
+      Object.entries(formData.estudiante).forEach(([key, value]) => {
+        formDataToSend.append(key, value || '');
+      });
       
       // Añadir datos del representante con prefijo rep_
-      formDataToSend.append('rep_cedula', formData.representante.cedula);
-      formDataToSend.append('rep_nombre', formData.representante.nombre);
-      formDataToSend.append('rep_apellido', formData.representante.apellido);
-      formDataToSend.append('rep_telefono', formData.representante.telefono);
-      formDataToSend.append('rep_email', formData.representante.email);
-      formDataToSend.append('rep_direccion', formData.representante.direccion);
-      formDataToSend.append('rep_profesion', formData.representante.profesion || '');
+      Object.entries(formData.representante).forEach(([key, value]) => {
+        formDataToSend.append(`rep_${key}`, value || '');
+      });
       
       // Añadir grado y año escolar
       formDataToSend.append('gradoID', formData.gradoID);
       formDataToSend.append('annoEscolarID', annoEscolar.id);
       
-      // Añadir archivos del formulario
-      const formElement = formRef.current;
-      if (formElement) {
-        const fileInputs = formElement.querySelectorAll('input[type="file"]');
-        fileInputs.forEach(input => {
-          if (input.files.length > 0) {
-            formDataToSend.append(input.name, input.files[0]);
-          }
-        });
-      }
+      // IMPORTANTE: Adjuntar archivos correctamente
+      const fileInputs = formRef.current.querySelectorAll('input[type="file"]');
+      fileInputs.forEach(input => {
+        if (input.files.length > 0) {
+          console.log(`Adjuntando archivo: ${input.name}`, input.files[0]);
+          formDataToSend.append(input.name, input.files[0]);
+        }
+      });
       
-      console.log("Form data being sent:");
-      for (let [key, value] of formDataToSend.entries()) {
-        console.log(`${key}: ${value}`);
-      }
+      console.log('FormData creado, enviando al servidor...');
       
       // Enviar datos al servidor
       const response = await axios.post(
-        'http://localhost:5000/inscripciones/nuevo-estudiante',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/nuevo-estudiante`,
         formDataToSend,
         {
           headers: {
-            'Content-Type': 'multipart/form-data'
-          }
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          },
+          timeout: 60000 // 60 segundos
         }
       );
+      
+      console.log('Respuesta del servidor:', response.data);
       
       setSuccess('Estudiante inscrito correctamente');
       
@@ -367,10 +354,33 @@ const NuevoEstudiante = () => {
       
     } catch (err) {
       console.error('Error al enviar formulario:', err);
-      setError(err.response?.data?.message || 'Error al procesar la inscripción. Por favor, intente nuevamente.');
+      if (err.code === 'ERR_NETWORK') {
+        setError('Error de conexión con el servidor. Por favor, intente nuevamente.');
+      } else if (err.response) {
+        setError(err.response.data.message || 'Error en el servidor.');
+      } else {
+        setError('Error al procesar la inscripción. Por favor, intente nuevamente.');
+      }
       setLoading(false);
     }
   };
+  
+  
+
+// Añadir componente de barra de progreso en el JSX
+{isUploading && (
+  <div className="mt-4">
+    <p className="text-sm font-medium text-gray-700">
+      Subiendo archivos: {uploadProgress}%
+    </p>
+    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1">
+      <div 
+        className="bg-indigo-600 h-2.5 rounded-full" 
+        style={{ width: `${uploadProgress}%` }}
+      ></div>
+    </div>
+  </div>
+)}
   
 // Renderizado condicional según el paso actual
 return (

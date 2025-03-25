@@ -10,6 +10,7 @@ import DetallesEstudiante from './components/estudiante/DetallesEstudiante';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 import RegistrarPago from './components/pagos/RegistrarPago';
+import FileUploadTest from './components/test/FileUploadTest';
 
 // Componentes de administrador
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -134,6 +135,15 @@ function App() {
               <CuposManager />
             </ProtectedRoute>
           } 
+        />
+
+        <Route
+        path="/test/file-upload"
+        element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <FileUploadTest />
+            </ProtectedRoute>
+        }   
         />
         
         {/* Ruta para cualquier otra dirección no definida */}

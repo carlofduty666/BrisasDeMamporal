@@ -27,22 +27,39 @@ const liquidacionRoutes = require('./routes/liquidacion.routes')
 const inscripcionRoutes = require('./routes/inscripcion.routes')
 const cuposRoutes = require('./routes/cupos.routes')
 const authRoutes = require('./routes/auth.routes');
+// Importar la ruta de prueba
+const testRoutes = require('./routes/test.routes');
 
 
 
 
-// Middlewares
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
 // Servir archivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
+// Middlewares
+app.use(cors());
+// Configurar CORS
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:5173'], // Ajusta según tus necesidades
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+// app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+
 // Ruta de prueba
 app.get('/', (req, res) => {
-    res.send('API del Sistema de Gestión Escolar - Brisas de Mamporal');
+  res.send('API del Sistema de Gestión Escolar - Brisas de Mamporal');
 });
+
+// Usar la ruta de prueba
+app.use('/api/test', testRoutes);
 
 // Usar rutas
 app.use('/', personaRoutes);

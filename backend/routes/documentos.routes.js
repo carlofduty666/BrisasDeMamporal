@@ -9,7 +9,7 @@ router.get('/documentos/persona/:personaID', documentosController.getDocumentosB
 router.get('/documentos/verificar/:personaID/:tipoPersona?', documentosController.verificarDocumentosRequeridos); // Nueva ruta para verificar documentos requeridos
 router.get('/documentos/descargar/:id', documentosController.downloadDocumento);
 
-router.post('/documentos', documentosController.uploadMiddleware, documentosController.uploadDocumento);
+router.post('/documentos/upload', documentosController.uploadMiddleware, documentosController.uploadDocumento);
 
 router.put('/documentos/:id', documentosController.uploadMiddleware, documentosController.updateDocumento);
 

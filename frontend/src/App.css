@@ -3,6 +3,76 @@
 @tailwind components;
 @tailwind utilities;
 
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0.5cm ;
+  }
+
+  /* * {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  } */
+  
+  body {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .print-container {
+    page-break-inside: avoid !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+  }
+  
+  .print-compact {
+    margin-bottom: 0rem !important;
+  }
+  
+  .print-hidden {
+    display: none !important;
+  }
+  
+  /* Reducir espaciado */
+  .py-6 {
+    padding-top: 0rem !important;
+    padding-bottom: 0rem !important;
+  }
+  
+  .mt-4 {
+    margin-top: 0rem !important;
+  }
+  
+  .mb-6 {
+    margin-bottom: 0rem !important;
+  }
+  
+  /* Ajustar tamaños de texto */
+  .text-xl {
+    font-size: 1.25rem !important;
+  }
+  
+  .text-lg {
+    font-size: 1.125rem !important;
+  }
+  
+  .text-md {
+    font-size: 1rem !important;
+  }
+  
+  .text-sm {
+    font-size: 0.875rem !important;
+  }
+  
+  .text-xs {
+    font-size: 0.75rem !important;
+  }
+}
+
+
 #root {
   margin: 0;
   padding: 0;
