@@ -1,14 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const inscripcionController = require('../controllers/inscripcion.controller');
-const uploadMiddleware = require('../middleware/upload.middleware');
+// const uploadMiddleware = require('../middleware/upload.middleware');
 const authMiddleware= require('../middleware/auth.middleware'); // Importar el middleware de autenticación
-
-// // Configurar para múltiples campos de archivo
-// const uploadDocumentos = upload.fields([
-//   { name: /^documento_\d+$/, maxCount: 1 },
-//   { name: /^documento_representante_\d+$/, maxCount: 1 }
-// ]);
 
 // Rutas públicas
 router.get('/inscripciones/cupos-disponibles', inscripcionController.getCuposDisponibles);
@@ -24,11 +18,7 @@ router.post(
   authMiddleware.verifyToken,
   (req, res, next) => {
     console.log('Procesando solicitud de nueva inscripción');
-    next();
-  },
-  uploadMiddleware.upload.any(), // Acepta cualquier campo de archivo
-  (req, res, next) => {
-    console.log('Archivos recibidos:', req.files);
+    console.log('Headers:', req.headers);
     next();
   },
   inscripcionController.crearNuevoEstudiante

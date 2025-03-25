@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 
 const FileUploadTest = () => {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const formRef = useRef(null);
   
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -27,7 +28,7 @@ const FileUploadTest = () => {
       setMessage('');
       
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/test/upload-test`,
+        'http://localhost:5000/api/test/upload-test',
         formData,
         {
           headers: {
@@ -49,7 +50,7 @@ const FileUploadTest = () => {
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-6">Prueba de Subida de Archivos</h1>
       
-      <form onSubmit={handleSubmit}>
+      <form ref={formRef} onSubmit={handleSubmit} encType="multipart/form-data">
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2">
             Selecciona un archivo:

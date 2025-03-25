@@ -292,78 +292,83 @@ const NuevoEstudiante = () => {
   };
   
   // Manejar envío del formulario
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+// Modificar la función handleSubmit en NuevoEstudiante.jsx
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (step < 3) {
+    handleNextStep();
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    setError('');
     
-    if (step < 3) {
-      handleNextStep();
-      return;
-    }
+    // Crear un nuevo FormData
+    const formDataToSend = new FormData();
     
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Crear FormData para enviar datos y archivos
-      const formDataToSend = new FormData();
-      
-      // Añadir datos del estudiante
-      Object.entries(formData.estudiante).forEach(([key, value]) => {
-        formDataToSend.append(key, value || '');
-      });
-      
-      // Añadir datos del representante con prefijo rep_
-      Object.entries(formData.representante).forEach(([key, value]) => {
-        formDataToSend.append(`rep_${key}`, value || '');
-      });
-      
-      // Añadir grado y año escolar
-      formDataToSend.append('gradoID', formData.gradoID);
-      formDataToSend.append('annoEscolarID', annoEscolar.id);
-      
-      // IMPORTANTE: Adjuntar archivos correctamente
-      const fileInputs = formRef.current.querySelectorAll('input[type="file"]');
-      fileInputs.forEach(input => {
-        if (input.files.length > 0) {
-          console.log(`Adjuntando archivo: ${input.name}`, input.files[0]);
-          formDataToSend.append(input.name, input.files[0]);
-        }
-      });
-      
-      console.log('FormData creado, enviando al servidor...');
-      
-      // Enviar datos al servidor
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/nuevo-estudiante`,
-        formDataToSend,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`
-          },
-          timeout: 60000 // 60 segundos
-        }
-      );
-      
-      console.log('Respuesta del servidor:', response.data);
-      
-      setSuccess('Estudiante inscrito correctamente');
-      
-      // Redirigir al comprobante
-      navigate(`/inscripcion/comprobante/${response.data.inscripcionId}`);
-      
-    } catch (err) {
-      console.error('Error al enviar formulario:', err);
-      if (err.code === 'ERR_NETWORK') {
-        setError('Error de conexión con el servidor. Por favor, intente nuevamente.');
-      } else if (err.response) {
-        setError(err.response.data.message || 'Error en el servidor.');
-      } else {
-        setError('Error al procesar la inscripción. Por favor, intente nuevamente.');
+    // Añadir datos del estudiante
+    Object.entries(formData.estudiante).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formDataToSend.append(key, value);
       }
-      setLoading(false);
+    });
+    
+    // Añadir datos del representante con prefijo rep_
+    Object.entries(formData.representante).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formDataToSend.append(`rep_${key}`, value);
+      }
+    });
+    
+    // Añadir grado y año escolar
+    formDataToSend.append('gradoID', formData.gradoID);
+    formDataToSend.append('annoEscolarID', annoEscolar.id);
+    
+    // Añadir archivos manualmente
+    const fileInputs = formRef.current.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+      if (input.files.length > 0) {
+        formDataToSend.append(input.name, input.files[0]);
+        console.log(`Añadiendo archivo ${input.name}:`, input.files[0].name);
+      }
+    });
+    
+    // Depurar el FormData
+    console.log("Contenido del FormData:");
+    for (let [key, value] of formDataToSend.entries()) {
+      console.log(`${key}: ${value instanceof File ? `File: ${value.name}` : value}`);
     }
-  };
+    
+    console.log('FormData creado, enviando al servidor...');
+    
+    // Enviar datos al servidor
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/nuevo-estudiante`,
+      formDataToSend,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+    
+    console.log('Respuesta del servidor:', response.data);
+    
+    setSuccess('Estudiante inscrito correctamente');
+    
+    // Redirigir al comprobante
+    navigate(`/inscripcion/comprobante/${response.data.inscripcionId}`);
+    
+  } catch (err) {
+    console.error('Error al enviar formulario:', err);
+    setError(err.response?.data?.message || 'Error al procesar la inscripción. Por favor, intente nuevamente.');
+    setLoading(false);
+  }
+};
+
   
   
 
@@ -448,7 +453,7 @@ return (
         )}
         
         {/* Formulario */}
-        <form ref={formRef} onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="px-4 py-5 sm:p-6" encType="multipart/form-data">
           {/* Paso 1: Datos Personales */}
           {step === 1 && (
             <div className="space-y-6">
@@ -892,16 +897,9 @@ return (
                                 file:bg-indigo-50 file:text-indigo-700
                                 hover:file:bg-indigo-100"
                               accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => console.log(`Archivo seleccionado para ${doc.nombre}:`, e.target.files[0]?.name)}
                             />
                           </div>
-                          {doc.subido && (
-                            <div className="mt-2 flex items-center text-sm text-green-600">
-                              <svg className="h-5 w-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                              Documento subido
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -916,34 +914,27 @@ return (
                     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                       {documentosRepresentante.map((doc) => (
                         <div key={doc.id} className={`border rounded-lg p-4 ${doc.subido ? 'bg-green-50 border-green-200' : 'border-gray-200'}`}>
-                        <label className="block text-sm font-medium text-gray-700">
-                          {doc.nombre} {doc.obligatorio && <span className="text-red-500">*</span>}
-                        </label>
-                        <div className="mt-2">
-                          <input
-                            type="file"
-                            name={`documento_representante_${doc.id}`}
-                            className="block w-full text-sm text-gray-500
-                              file:mr-4 file:py-2 file:px-4
-                              file:rounded-full file:border-0
-                              file:text-sm file:font-semibold
-                              file:bg-indigo-50 file:text-indigo-700
-                              hover:file:bg-indigo-100"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                          />
-                        </div>
-                        {doc.subido && (
-                          <div className="mt-2 flex items-center text-sm text-green-600">
-                            <svg className="h-5 w-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            Documento subido
+                          <label className="block text-sm font-medium text-gray-700">
+                            {doc.nombre} {doc.obligatorio && <span className="text-red-500">*</span>}
+                          </label>
+                          <div className="mt-2">
+                            <input
+                              type="file"
+                              name={`documento_representante_${doc.id}`}
+                              className="block w-full text-sm text-gray-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-full file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-indigo-50 file:text-indigo-700
+                                hover:file:bg-indigo-100"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => console.log(`Archivo seleccionado para representante ${doc.nombre}:`, e.target.files[0]?.name)}
+                            />
                           </div>
-                        )}
-                      </div>
-                    ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
                 
                 {errorDocumentos && (
                   <div className="bg-red-50 border-l-4 border-red-400 p-4">

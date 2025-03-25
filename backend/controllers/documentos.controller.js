@@ -3,50 +3,15 @@ const Documentos = db.Documentos;
 const Personas = db.Personas;
 const fs = require('fs');
 const path = require('path');
-const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 
-// Configuración de multer para subir archivos
-const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    const dir = './uploads/documentos';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: function(req, file, cb) {
-    const uniqueFilename = `${uuidv4()}-${file.originalname}`;
-    cb(null, uniqueFilename);
-  }
-});
-
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB límite
-  fileFilter: function(req, file, cb) {
-    // Validar tipos de archivo permitidos
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error('Tipo de archivo no permitido. Solo se permiten PDF, JPEG, JPG y PNG.'), false);
-    }
-    cb(null, true);
-  }
-}).single('documento');
+// Asegurar que el directorio de uploads existe
+const uploadDir = path.join(__dirname, '../uploads/documentos');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const documentosController = {
-  // Middleware para manejar la subida de archivos
-  uploadMiddleware: (req, res, next) => {
-    upload(req, res, function(err) {
-      if (err instanceof multer.MulterError) {
-        return res.status(400).json({ message: `Error de Multer: ${err.message}` });
-      } else if (err) {
-        return res.status(400).json({ message: err.message });
-      }
-      next();
-    });
-  },
-  
   // Obtener todos los documentos
   getAllDocumentos: async (req, res) => {
     try {
@@ -115,56 +80,39 @@ const documentosController = {
       res.status(500).json({ message: err.message });
     }
   },
-
-  
   
   // Subir un documento
   uploadDocumento: async (req, res) => {
     try {
-      if (!req.file) {
+      if (!req.files || Object.keys(req.files).length === 0) {
         return res.status(400).json({ message: 'No se ha subido ningún archivo' });
       }
       
       const { personaID, tipoDocumento, descripcion } = req.body;
+      const archivo = req.files.documento; // 'documento' es el nombre del campo en el formulario
       
       // Verificar que la persona existe
       const persona = await Personas.findByPk(personaID);
       if (!persona) {
-        // Eliminar el archivo subido
-        fs.unlinkSync(req.file.path);
         return res.status(404).json({ message: 'Persona no encontrada' });
       }
       
-      // Verificar si ya existe un documento del mismo tipo para esta persona
-      const documentoExistente = await Documentos.findOne({
-        where: { personaID, tipoDocumento }
-      });
+      // Generar nombre único para el archivo
+      const uniqueFilename = `${Date.now()}-${uuidv4()}-${archivo.name.replace(/\s+/g, '_')}`;
+      const uploadPath = path.join(uploadDir, uniqueFilename);
       
-      if (documentoExistente) {
-        // Eliminar el archivo anterior
-        const rutaAnterior = path.join(__dirname, '..', documentoExistente.urlDocumento);
-        if (fs.existsSync(rutaAnterior)) {
-          fs.unlinkSync(rutaAnterior);
-        }
-        
-        // Actualizar el documento existente
-        await documentoExistente.update({
-          urlDocumento: `/uploads/documentos/${req.file.filename}`,
-          descripcion: descripcion || documentoExistente.descripcion
-        });
-        
-        return res.json({
-          message: 'Documento actualizado correctamente',
-          documento: documentoExistente
-        });
-      }
+      // Mover el archivo al directorio de uploads
+      await archivo.mv(uploadPath);
       
-      // Crear un nuevo documento
+      // Crear un nuevo documento en la base de datos
       const nuevoDocumento = await Documentos.create({
         personaID,
         tipoDocumento,
-        urlDocumento: `/uploads/documentos/${req.file.filename}`,
-        descripcion
+        urlDocumento: `/uploads/documentos/${uniqueFilename}`,
+        nombre_archivo: archivo.name,
+        tamano: archivo.size,
+        tipo_archivo: archivo.mimetype,
+        descripcion: descripcion || `Documento: ${tipoDocumento}`
       });
       
       res.status(201).json({
@@ -172,10 +120,6 @@ const documentosController = {
         documento: nuevoDocumento
       });
     } catch (err) {
-      // Si hay un error y se subió un archivo, eliminarlo
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
       console.error(err);
       res.status(500).json({ message: err.message });
     }
@@ -207,51 +151,60 @@ const documentosController = {
       res.status(500).json({ message: err.message });
     }
   },
-
+  
   // Actualizar un documento
-updateDocumento: async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No se ha subido ningún archivo' });
+  updateDocumento: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { descripcion } = req.body;
+      
+      const documento = await Documentos.findByPk(id);
+      if (!documento) {
+        return res.status(404).json({ message: 'Documento no encontrado' });
+      }
+      
+      if (!req.files || !req.files.documento) {
+        // Solo actualizar la descripción
+        await documento.update({ descripcion });
+        return res.json({
+          message: 'Descripción del documento actualizada correctamente',
+          documento
+        });
+      }
+      
+      const archivo = req.files.documento;
+      
+      // Eliminar el archivo anterior
+      const rutaAnterior = path.join(__dirname, '..', documento.urlDocumento);
+      if (fs.existsSync(rutaAnterior)) {
+        fs.unlinkSync(rutaAnterior);
+      }
+      
+      // Generar nombre único para el nuevo archivo
+      const uniqueFilename = `${Date.now()}-${uuidv4()}-${archivo.name.replace(/\s+/g, '_')}`;
+      const uploadPath = path.join(uploadDir, uniqueFilename);
+      
+      // Mover el nuevo archivo al directorio de uploads
+      await archivo.mv(uploadPath);
+      
+      // Actualizar el documento
+      await documento.update({
+        urlDocumento: `/uploads/documentos/${uniqueFilename}`,
+        nombre_archivo: archivo.name,
+        tamano: archivo.size,
+        tipo_archivo: archivo.mimetype,
+        descripcion: descripcion || documento.descripcion
+      });
+      
+      res.json({
+        message: 'Documento actualizado correctamente',
+        documento
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
     }
-    
-    const { id } = req.params;
-    const { descripcion } = req.body;
-    
-    // Verificar que el documento existe
-    const documento = await Documentos.findByPk(id);
-    if (!documento) {
-      // Eliminar el archivo subido
-      fs.unlinkSync(req.file.path);
-      return res.status(404).json({ message: 'Documento no encontrado' });
-    }
-    
-    // Eliminar el archivo anterior
-    const rutaAnterior = path.join(__dirname, '..', documento.urlDocumento);
-    if (fs.existsSync(rutaAnterior)) {
-      fs.unlinkSync(rutaAnterior);
-    }
-    
-    // Actualizar el documento
-    await documento.update({
-      urlDocumento: `/uploads/documentos/${req.file.filename}`,
-      descripcion: descripcion || documento.descripcion
-    });
-    
-    res.json({
-      message: 'Documento actualizado correctamente',
-      documento
-    });
-  } catch (err) {
-    // Si hay un error y se subió un archivo, eliminarlo
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
-    console.error(err);
-    res.status(500).json({ message: err.message });
-  }
-},
-
+  },
   
   // Descargar un documento
   downloadDocumento: async (req, res) => {
@@ -270,186 +223,95 @@ updateDocumento: async (req, res) => {
         return res.status(404).json({ message: 'El archivo físico no existe' });
       }
       
-      // Obtener el nombre original del archivo
-      const nombreArchivo = path.basename(documento.urlDocumento);
-      
-      res.download(rutaArchivo, nombreArchivo);
+      res.download(rutaArchivo, documento.nombre_archivo);
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: err.message });
     }
   },
 
+// Verificar documentos requeridos
+verificarDocumentosRequeridos: async (req, res) => {
+  try {
+    const { personaID, tipoPersona } = req.params;
+    
+    // Configuración completa de documentos con estructura de objetos
+    const documentosConfig = {
+      estudiante: [
+        { id: 'cedula', nombre: 'Cédula Escolar', obligatorio: false },
+        { id: 'partidaNacimiento', nombre: 'Partida de Nacimiento', obligatorio: true },
+        { id: 'boletin', nombre: 'Boletín de Calificaciones', obligatorio: true },
+        { id: 'notasCertificadas', nombre: 'Notas Certificadas', obligatorio: true },
+        { id: 'fotoCarnet', nombre: 'Foto Carnet', obligatorio: true },
+        { id: 'boletinRetiroPlantel', nombre: 'Boleta de Retiro', obligatorio: false }
+      ],
+      representante: [
+        { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
+        { id: 'constanciaTrabajo', nombre: 'Constancia Laboral', obligatorio: true },
+        { id: 'solvenciaPago', nombre: 'Solvencia de Pagos', obligatorio: true },
+        { id: 'fotoCarnet', nombre: 'Foto Carnet', obligatorio: false }
+      ],
+      profesor: [
+        { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
+        { id: 'curriculumVitae', nombre: 'Currículum Vitae', obligatorio: true },
+        { id: 'titulo', nombre: 'Título Profesional', obligatorio: true },
+        { id: 'certificadoSalud', nombre: 'Certificado de Salud', obligatorio: true },
+        { id: 'foniatrico', nombre: 'Foniatría', obligatorio: true },
+        { id: 'psicomental', nombre: 'Psicomental', obligatorio: true },
+        { id: 'constanciaEstudio6toSemestre', nombre: 'Constancia de Estudio 6to Semestre', obligatorio: true },
+        { id: 'fotoCarta', nombre: 'Foto Carta', obligatorio: true }
+      ],
+      administrativo: [
+        { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
+        { id: 'curriculumVitae', nombre: 'Currículum Vitae', obligatorio: true },
+        { id: 'certificadoSalud', nombre: 'Certificado de Salud', obligatorio: true },
+        { id: 'psicomental', nombre: 'Psicomental', obligatorio: true },
+        { id: 'titulo', nombre: 'Título Profesional', obligatorio: true },
+        { id: 'fotoCarta', nombre: 'Foto Carta', obligatorio: true }
+      ],
+      obrero: [
+        { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
+        { id: 'curriculumVitae', nombre: 'Currículum Vitae', obligatorio: true },
+        { id: 'certificadoSalud', nombre: 'Certificado de Salud', obligatorio: true },
+        { id: 'fotoCarta', nombre: 'Foto Carta', obligatorio: true }
+      ]
+    };
 
-  // verificarDocumentosRequeridos: async (req, res) => {
-  //   try {
-  //     const { personaID, tipoPersona } = req.params;
-      
-  //     // Verificar que la persona existe
-  //     const persona = await Personas.findByPk(personaID);
-  //     if (!persona) {
-  //       return res.status(404).json({ message: 'Persona no encontrada' });
-  //     }
-      
-  //     // Definir documentos requeridos según el tipo de persona
-  //     let documentosRequeridos = [];
-      
-  //     switch (tipoPersona || persona.tipo) {
-  //       case 'estudiante':
-  //         documentosRequeridos = [
-  //           'cedula',
-  //           'partidaNacimiento',
-  //           'boletin',
-  //           'notasCertificadas',
-  //           'fotoCarnet',
-  //           'cedula',
-  //           'boletinRetiroPlantel',
-  //           'notasCertificadas',
-  //           'fotoCarnet'
-  //         ];
-  //         break;
-  //       case 'representante':
-  //         documentosRequeridos = [
-  //           'cedula',
-  //           'constanciaTrabajo',
-  //           'solvenciaPago',
-  //           'fotoCarnet'
-  //         ];
-  //         break;
-  //       case 'profesor':
-  //         documentosRequeridos = [
-  //           'cedula',
-  //           'curriculumVitae',
-  //           'titulo',
-  //           'certificadoSalud',
-  //           'foniatrico',
-  //           'psicomental',
-  //           'constanciaEstudio6toSemestre',
-  //           'fotoCarta'
-  //         ];
-  //         break;
-  //       case 'administrativo':
-  //         documentosRequeridos = [
-  //           'cedula',
-  //           'curriculumVitae',
-  //           'certificadoSalud',
-  //           'psicomental',
-  //           'titulo',
-  //           'fotoCarta'
-  //         ];
-  //         break;
-  //       case 'obrero':
-  //         documentosRequeridos = [
-  //           'cedula',
-  //           'curriculumVitae',
-  //           'certificadoSalud',
-  //           'fotoCarta'
-  //         ];
-  //         break;
-  //       default:
-  //         return res.status(400).json({ message: 'Tipo de persona no válido' });
-  //     }
-      
-  //     // Obtener documentos de la persona
-  //     const documentosPersona = await Documentos.findAll({
-  //       where: { personaID }
-  //     });
-      
-  //     // Verificar cuáles documentos están presentes y cuáles faltan
-  //     const documentosPresentes = documentosPersona.map(doc => doc.tipoDocumento);
-  //     const documentosFaltantes = documentosRequeridos.filter(doc => !documentosPresentes.includes(doc));
-      
-  //     res.json({
-  //       completo: documentosFaltantes.length === 0,
-  //       documentosRequeridos,
-  //       documentosPresentes,
-  //       documentosFaltantes
-  //     });
-  //   } catch (err) {
-  //     console.error(err);
-  //     res.status(500).json({ message: err.message });
-  //   }
-  // }
-
-  verificarDocumentosRequeridos: async (req, res) => {
-    try {
-        const { personaID, tipoPersona } = req.params;
-        
-        // Configuración completa de documentos con estructura de objetos
-        const documentosConfig = {
-            estudiante: [
-                { id: 'cedula', nombre: 'Cédula Escolar', obligatorio: false },
-                { id: 'partidaNacimiento', nombre: 'Partida de Nacimiento', obligatorio: true },
-                { id: 'boletin', nombre: 'Boletín de Calificaciones', obligatorio: true },
-                { id: 'notasCertificadas', nombre: 'Notas Certificadas', obligatorio: true },
-                { id: 'fotoCarnet', nombre: 'Foto Carnet', obligatorio: true },
-                { id: 'boletinRetiroPlantel', nombre: 'Boleta de Retiro', obligatorio: false }
-            ],
-            representante: [
-                { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
-                { id: 'constanciaTrabajo', nombre: 'Constancia Laboral', obligatorio: true },
-                { id: 'solvenciaPago', nombre: 'Solvencia de Pagos', obligatorio: true },
-                { id: 'fotoCarnet', nombre: 'Foto Carnet', obligatorio: false }
-            ],
-            profesor: [
-                { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
-                { id: 'curriculumVitae', nombre: 'Currículum Vitae', obligatorio: true },
-                { id: 'titulo', nombre: 'Título Profesional', obligatorio: true },
-                { id: 'certificadoSalud', nombre: 'Certificado de Salud', obligatorio: true },
-                { id: 'foniatrico', nombre: 'Foniatría', obligatorio: true },
-                { id: 'psicomental', nombre: 'Psicomental', obligatorio: true },
-                { id: 'constanciaEstudio6toSemestre', nombre: 'Constancia de Estudio 6to Semestre', obligatorio: true },
-                { id: 'fotoCarta', nombre: 'Foto Carta', obligatorio: true }
-            ],
-            administrativo: [
-                { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
-                { id: 'curriculumVitae', nombre: 'Currículum Vitae', obligatorio: true },
-                { id: 'certificadoSalud', nombre: 'Certificado de Salud', obligatorio: true },
-                { id: 'psicomental', nombre: 'Psicomental', obligatorio: true },
-                { id: 'titulo', nombre: 'Título Profesional', obligatorio: true },
-                { id: 'fotoCarta', nombre: 'Foto Carta', obligatorio: true }
-            ],
-            obrero: [
-                { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
-                { id: 'curriculumVitae', nombre: 'Currículum Vitae', obligatorio: true },
-                { id: 'certificadoSalud', nombre: 'Certificado de Salud', obligatorio: true },
-                { id: 'fotoCarta', nombre: 'Foto Carta', obligatorio: true }
-            ]
-        };
-
-        if (personaID === '0') {
-          if (!documentosConfig[tipoPersona]) {
-            return res.status(400).json({ message: 'Tipo de persona no válido' });
-          }
-          return res.json({ documentosRequeridos: documentosConfig[tipoPersona] });
-        }
-    
-        // Caso para persona existente (personaID válido)
-        const persona = await Personas.findByPk(personaID);
-        if (!persona) return res.status(404).json({ message: 'Persona no encontrada' });
-    
-        const tipo = tipoPersona || persona.tipo;
-        if (!documentosConfig[tipo]) return res.status(400).json({ message: 'Tipo no válido' });
-    
-        const documentosPersona = await Documentos.findAll({ where: { personaID } });
-        const documentosPresentes = documentosPersona.map(doc => doc.tipoDocumento);
-    
-        const documentosRequeridos = documentosConfig[tipo].map(doc => ({
-          ...doc,
-          subido: documentosPresentes.includes(doc.id)
-        }));
-    
-        res.json({
-          completo: documentosRequeridos.every(doc => !doc.obligatorio || doc.subido),
-          documentosRequeridos
-        });
-    
-      } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: err.message });
-      }
+    if (personaID === '0') {
+      // Devuelve TODA la configuración cuando personaID es 0
+      return res.json({ 
+        documentosConfig,
+        documentosRequeridos: documentosConfig[tipoPersona] 
+      });
     }
 
+    // Caso para persona existente (personaID válido)
+    const persona = await Personas.findByPk(personaID);
+    if (!persona) return res.status(404).json({ message: 'Persona no encontrada' });
+
+    const tipo = tipoPersona || persona.tipo;
+    if (!documentosConfig[tipo]) return res.status(400).json({ message: 'Tipo no válido' });
+
+    const documentosPersona = await Documentos.findAll({ where: { personaID } });
+    const documentosPresentes = documentosPersona.map(doc => doc.tipoDocumento);
+
+    const documentosRequeridos = documentosConfig[tipo].map(doc => ({
+      ...doc,
+      subido: documentosPresentes.includes(doc.id)
+    }));
+
+    res.json({
+      completo: documentosRequeridos.every(doc => !doc.obligatorio || doc.subido),
+      documentosRequeridos
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+}
 };
 
 module.exports = documentosController;
+
+
+

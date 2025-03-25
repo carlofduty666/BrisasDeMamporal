@@ -2,9 +2,24 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const fs = require('fs');
 const path = require('path');
+const fileUpload = require('express-fileupload');
 const db = require('./models');
 const app = express();
+
+const directorios = [
+  path.join(__dirname, 'uploads'),
+  path.join(__dirname, 'uploads/documentos'),
+  path.join(__dirname, 'tmp')
+];
+
+directorios.forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`Directorio creado: ${dir}`);
+  }
+});
 
 // Importar rutas
 const personaRoutes = require('./routes/persona.routes');
@@ -27,31 +42,34 @@ const liquidacionRoutes = require('./routes/liquidacion.routes')
 const inscripcionRoutes = require('./routes/inscripcion.routes')
 const cuposRoutes = require('./routes/cupos.routes')
 const authRoutes = require('./routes/auth.routes');
-// Importar la ruta de prueba
+
+// ruta de prueba multer
 const testRoutes = require('./routes/test.routes');
 
 
 
-
-
-// Servir archivos estáticos
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-
-// Middlewares
-app.use(cors());
-// Configurar CORS
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:5173'], // Ajusta según tus necesidades
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-// app.use(bodyParser.json());
+
+// Configurar express-fileupload
+app.use(fileUpload({
+  createParentPath: true,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  useTempFiles: true,
+  tempFileDir: './tmp/',
+  parseNested: true, // Importante para analizar datos anidados
+  debug: true
+}));
+
+// Servir archivos estáticos
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Ruta de prueba
 app.get('/', (req, res) => {
