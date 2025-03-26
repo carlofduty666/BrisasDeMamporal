@@ -14,6 +14,8 @@ router.get('/documentos/verificar/:personaID/:tipoPersona', documentosController
 // Ruta para subir un documento
 router.post('/documentos', authMiddleware.verifyToken, documentosController.uploadDocumento);
 
+router.post('/documentos/upload', documentosController.uploadDocumento);
+
 router.put('/documentos/:id', authMiddleware.verifyToken, documentosController.updateDocumento);
 router.delete('/documentos/:id', authMiddleware.verifyToken, documentosController.deleteDocumento);
 

@@ -28,4 +28,7 @@ router.post('/inscripciones/:id/pago', authMiddleware.verifyToken, inscripcionCo
 router.get('/inscripciones/:id/comprobante', authMiddleware.verifyToken, inscripcionController.getComprobanteInscripcion);
 router.delete('/inscripciones/:id', authMiddleware.verifyToken, inscripcionController.deleteInscripcion);
 
+
+router.patch('/:id/update-estado', inscripcionController.updateInscripcionDocumentos);
+
 module.exports = router;

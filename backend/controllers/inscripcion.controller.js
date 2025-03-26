@@ -436,6 +436,7 @@ crearNuevoEstudiante: async (req, res) => {
   const transaction = await db.sequelize.transaction();
   try {
     console.log("Iniciando creación de nuevo estudiante");
+    console.log("Archivos recibidos:", req.files ? Object.keys(req.files) : "No hay archivos");
     
     // ================== VALIDACIONES INICIALES ==================
     const annoEscolar = await AnnoEscolar.findOne({ 
@@ -451,7 +452,7 @@ crearNuevoEstudiante: async (req, res) => {
     const { 
       cedula, nombre, apellido, fechaNacimiento, 
       lugarNacimiento, genero, direccion, gradoID, 
-      observaciones 
+      observaciones, documentosCompletos
     } = req.body;
 
     // ================== VALIDAR ESTUDIANTE ==================
@@ -498,40 +499,41 @@ crearNuevoEstudiante: async (req, res) => {
       genero,
       direccion,
       tipo: 'estudiante',
-      representanteID: representante.id,
       observaciones
     }, { transaction });
 
     // ================== PROCESAR ARCHIVOS ==================
+    // Convertir el string 'true'/'false' a booleano
+    const tieneDocumentos = documentosCompletos === 'true';
+    
     if (req.files && Object.keys(req.files).length > 0) {
+      console.log("Procesando archivos...");
       const uploadDir = path.join(__dirname, '../uploads/documentos');
-      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
     
       for (const fieldName of Object.keys(req.files)) {
         const file = req.files[fieldName];
         let personaID, tipoDocumento;
+        
+        console.log(`Procesando archivo: ${fieldName}, nombre: ${file.name}`);
     
         try {
           // Procesar representante/estudiante
-          if (fieldName.startsWith('documento_representante_')) {
-            tipoDocumento = fieldName.replace('documento_representante_', '');
+          if (fieldName.includes('representante')) {
+            tipoDocumento = fieldName.split('_').pop();
             personaID = representante.id;
-          } else if (fieldName.startsWith('documento_')) {
-            tipoDocumento = fieldName.replace('documento_', '');
-            personaID = nuevoEstudiante.id;
           } else {
-            continue;
-          }
-    
-          // Validar tipoDocumento
-          if (!tiposValidos.includes(tipoDocumento)) {
-            throw new Error(`Tipo inválido: ${tipoDocumento}`);
+            tipoDocumento = fieldName.split('_').pop();
+            personaID = nuevoEstudiante.id;
           }
     
           // Mover archivo
           const uniqueFilename = `${Date.now()}-${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
           const filePath = path.join(uploadDir, uniqueFilename);
-          await file.mv(filePath); // <-- Si falla, se lanza error
+          
+          await file.mv(filePath);
     
           // Guardar en DB
           await Documentos.create({ 
@@ -540,15 +542,20 @@ crearNuevoEstudiante: async (req, res) => {
             urlDocumento: `/uploads/documentos/${uniqueFilename}`,
             nombre_archivo: file.name,
             tamano: file.size,
-            tipo_archivo: file.mimetype
+            tipo_archivo: file.mimetype,
+            descripcion: `Documento ${tipoDocumento} subido durante inscripción`
           }, { transaction });
     
         } catch (error) {
-          await transaction.rollback(); // <-- Rollback si hay error
-          console.error(`Error en ${fieldName}:`, error);
-          return res.status(500).json({ message: error.message });
+          console.error(`Error procesando archivo ${fieldName}:`, error);
+          await transaction.rollback();
+          return res.status(500).json({ 
+            message: `Error al procesar el archivo ${fieldName}: ${error.message}`
+          });
         }
       }
+    } else {
+      console.log("No se recibieron archivos para procesar");
     }
 
     // ================== ASIGNAR SECCIÓN ==================
@@ -566,22 +573,25 @@ crearNuevoEstudiante: async (req, res) => {
     }
 
     // ================== CREAR INSCRIPCIÓN ==================
-    await Promise.all([
-      Inscripciones.create({
-        estudianteID: nuevoEstudiante.id,
-        representanteID: representante.id,
-        gradoID,
-        seccionID: seccionAsignada.id,
-        annoEscolarID: annoEscolar.id,
-        fechaInscripcion: new Date(),
-        estado: 'pendiente',
-        observaciones,
-        montoInscripcion: (await db.Aranceles.findOne({ 
-          where: { nombre: { [Op.like]: '%inscripci%' }, activo: true }, 
-          transaction 
-        }))?.monto || 0
-      }, { transaction }),
+    // IMPORTANTE: Usar el valor de documentosCompletos que viene del frontend
+    const inscripcion = await Inscripciones.create({
+      estudianteID: nuevoEstudiante.id,
+      representanteID: representante.id,
+      gradoID,
+      seccionID: seccionAsignada.id,
+      annoEscolarID: annoEscolar.id,
+      fechaInscripcion: new Date(),
+      estado: 'pendiente',
+      observaciones,
+      documentosCompletos: tieneDocumentos,
+      pagoInscripcionCompletado: false,
+      montoInscripcion: (await db.Aranceles.findOne({ 
+        where: { nombre: { [Op.like]: '%inscripci%' }, activo: true }, 
+        transaction 
+      }))?.monto || 0
+    }, { transaction });
 
+    await Promise.all([
       Grado_Personas.create({
         personaID: nuevoEstudiante.id,
         gradoID,
@@ -601,12 +611,41 @@ crearNuevoEstudiante: async (req, res) => {
     res.status(201).json({
       message: 'Estudiante inscrito correctamente',
       estudiante: nuevoEstudiante,
-      inscripcionId: nuevoEstudiante.id
+      inscripcionId: inscripcion.id
     });
 
   } catch (err) {
     await transaction.rollback();
     console.error('Error general:', err);
+    res.status(500).json({ 
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+},
+
+// Añadir este método al controlador de inscripciones
+updateInscripcionDocumentos: async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { documentosCompletos } = req.body;
+    
+    const inscripcion = await Inscripciones.findByPk(id);
+    
+    if (!inscripcion) {
+      return res.status(404).json({ message: 'Inscripción no encontrada' });
+    }
+    
+    await inscripcion.update({
+      documentosCompletos: documentosCompletos === true || documentosCompletos === 'true'
+    });
+    
+    res.json({
+      message: 'Estado de documentos actualizado correctamente',
+      inscripcion
+    });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 },

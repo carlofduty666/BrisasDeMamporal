@@ -57,10 +57,10 @@ app.use(cors({
 // Configurar express-fileupload
 app.use(fileUpload({
   createParentPath: true,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
-  useTempFiles: true,
-  tempFileDir: './tmp/',
-  parseNested: true, // Importante para analizar datos anidados
+  limits: { 
+    fileSize: 50 * 1024 * 1024 // 50MB max file size
+  },
+  useTempFiles: false, // Cambiar a false para procesar en memoria
   debug: true
 }));
 
@@ -77,7 +77,7 @@ app.get('/', (req, res) => {
 });
 
 // Usar la ruta de prueba
-app.use('/api/test', testRoutes);
+app.use('/test', testRoutes);
 
 // Usar rutas
 app.use('/', personaRoutes);
