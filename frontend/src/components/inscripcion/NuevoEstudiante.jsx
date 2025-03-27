@@ -135,38 +135,114 @@ const NuevoEstudiante = () => {
   // Cargar documentos requeridos cuando se cambia al paso 2
   useEffect(() => {
     if (step === 2) {
-      cargarDocumentosRequeridos();
+      const cargarTodosDocumentos = async () => {
+        try {
+          setLoadingDocumentos(true);
+          setErrorDocumentos('');
+          
+          // Cargar documentos para estudiante
+          const responseEstudiante = await axios.get('http://localhost:5000/documentos/verificar/0/estudiante');
+          setDocumentosEstudiante(responseEstudiante.data.documentosRequeridos);
+          
+          // Verificar si el representante ya tiene documentos completos
+          if (representanteEncontrado && formData.representante.id) {
+            const representanteDocStatus = await verificarDocumentosRepresentante(formData.representante.id);
+            
+            if (representanteDocStatus.completo) {
+              // Si el representante ya tiene todos los documentos obligatorios, no solicitar más
+              setDocumentosRepresentante([]);
+              console.log('El representante ya tiene todos los documentos obligatorios');
+            } else {
+              // Mostrar solo los documentos que faltan
+              const docsRepresentante = await axios.get('http://localhost:5000/documentos/verificar/0/representante');
+              // Filtrar para mostrar solo los que no están subidos
+              const docsFaltantes = docsRepresentante.data.documentosRequeridos.filter(
+                doc => doc.obligatorio && !representanteDocStatus.documentos.find(
+                  rdoc => rdoc.id === doc.id && rdoc.subido
+                )
+              );
+              setDocumentosRepresentante(docsFaltantes);
+            }
+          } else {
+            // Si es un nuevo representante, cargar todos los documentos requeridos
+            const responseRepresentante = await axios.get('http://localhost:5000/documentos/verificar/0/representante');
+            setDocumentosRepresentante(responseRepresentante.data.documentosRequeridos);
+          }
+          
+          setLoadingDocumentos(false);
+        } catch (err) {
+          console.error('Error al cargar documentos requeridos:', err);
+          setErrorDocumentos('No se pudieron cargar los documentos requeridos. Por favor, intente nuevamente.');
+          setLoadingDocumentos(false);
+        }
+      };
+      
+      cargarTodosDocumentos();
     }
-  }, [step]);
+  }, [step, representanteEncontrado, formData.representante.id]);
+
 
   // Preparar lista completa de documentos cuando se completa la inscripción
   useEffect(() => {
     if (inscripcionCompletada && estudianteCreado) {
-      // Combinar documentos de estudiante y representante
-      const docsEstudiante = documentosEstudiante.map(doc => ({
-        ...doc,
-        tipo: 'estudiante',
-        personaID: estudianteCreado.id
-      }));
+      const prepararDocumentosParaSubir = async () => {
+        try {
+          // Combinar documentos de estudiante
+          const docsEstudiante = documentosEstudiante.map(doc => ({
+            ...doc,
+            tipo: 'estudiante',
+            personaID: estudianteCreado.id
+          }));
+          
+          let docsRepresentante = [];
+          
+          // Verificar si el representante necesita subir documentos
+          if (documentosRepresentante.length > 0) {
+            // Si hay documentos en la lista, significa que necesitan ser subidos
+            docsRepresentante = documentosRepresentante.map(doc => ({
+              ...doc,
+              tipo: 'representante',
+              personaID: formData.representante.id
+            }));
+          } else if (representanteEncontrado && formData.representante.id) {
+            // Verificar si el representante ya tiene todos los documentos obligatorios
+            const representanteDocStatus = await verificarDocumentosRepresentante(formData.representante.id);
+            
+            if (!representanteDocStatus.completo) {
+              // Si faltan documentos obligatorios, incluirlos
+              const docsFaltantes = representanteDocStatus.documentos
+                .filter(doc => doc.obligatorio && !doc.subido)
+                .map(doc => ({
+                  ...doc,
+                  tipo: 'representante',
+                  personaID: formData.representante.id
+                }));
+              
+              docsRepresentante = docsFaltantes;
+            }
+          }
+          
+          const todosLosDocumentos = [...docsEstudiante, ...docsRepresentante];
+          console.log("Documentos a subir:", todosLosDocumentos);
+          setTodosDocumentos(todosLosDocumentos);
+          
+          if (todosLosDocumentos.length > 0) {
+            setDocumentoActual(0);
+            setStep(4); // Avanzar al paso de subida de documentos
+          } else {
+            // Si no hay documentos, ir directamente al comprobante
+            navigate(`/inscripcion/comprobante/${inscripcionId}`);
+          }
+        } catch (error) {
+          console.error("Error al preparar documentos:", error);
+          setError("Error al preparar los documentos para subir");
+        }
+      };
       
-      const docsRepresentante = documentosRepresentante.map(doc => ({
-        ...doc,
-        tipo: 'representante',
-        personaID: formData.representante.id
-      }));
-      
-      const todosLosDocumentos = [...docsEstudiante, ...docsRepresentante];
-      setTodosDocumentos(todosLosDocumentos);
-      
-      if (todosLosDocumentos.length > 0) {
-        setDocumentoActual(0);
-        setStep(4); // Avanzar al paso de subida de documentos
-      } else {
-        // Si no hay documentos, ir directamente al comprobante
-        navigate(`/inscripcion/comprobante/${inscripcionId}`);
-      }
+      prepararDocumentosParaSubir();
     }
   }, [inscripcionCompletada, estudianteCreado, inscripcionId]);
+
 
   useEffect(() => {
     const cargarGrados = async () => {
@@ -229,6 +305,25 @@ const NuevoEstudiante = () => {
       setLoadingDocumentos(false);
     }
   };
+
+  const verificarDocumentosRepresentante = async (representanteID) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/documentos/verificar/${representanteID}/representante`);
+      
+      // Si todos los documentos obligatorios están subidos, retorna true
+      const todosObligatoriosSubidos = response.data.documentosRequeridos
+        .filter(doc => doc.obligatorio)
+        .every(doc => doc.subido);
+      
+      return {
+        completo: todosObligatoriosSubidos,
+        documentos: response.data.documentosRequeridos
+      };
+    } catch (err) {
+      console.error('Error al verificar documentos del representante:', err);
+      return { completo: false, documentos: [] };
+    }
+  };
   
   // Función para buscar representante por cédula
   const buscarRepresentante = async () => {
@@ -270,6 +365,52 @@ const NuevoEstudiante = () => {
       setBuscandoRepresentante(false);
     }
   };
+
+  // Añade esta función junto a las demás funciones de tu componente
+  const saltarDocumentoActual = () => {
+    // Simplemente avanzar al siguiente documento sin hacer solicitudes HTTP
+    if (documentoActual < todosDocumentos.length - 1) {
+      setDocumentoActual(documentoActual + 1);
+      setArchivoSeleccionado(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } else {
+      // Si es el último documento, finalizar sin hacer solicitudes HTTP
+      navigate(`/inscripcion/comprobante/${inscripcionId}`);
+    }
+  };
+
+  // Finalizar proceso de subida de documentos
+  const finalizarSubidaDocumentos = async () => {
+    try {
+      setLoading(true);
+      
+      // Actualizar el estado de documentosCompletos en la inscripción si hay documentos subidos
+      if (documentosSubidos.length > 0) {
+        await axios.put(
+          `http://localhost:5000/inscripciones/${inscripcionId}/update-estado`,
+          { documentosCompletos: true },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      }
+      
+      // Redirigir al comprobante
+      navigate(`/inscripcion/comprobante/${inscripcionId}`);
+      
+    } catch (err) {
+      console.error('Error al finalizar proceso:', err);
+      setError(err.response?.data?.message || 'Error al finalizar el proceso. Por favor, intente nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   
   // Manejar cambios en el formulario
   const handleChange = (e, section) => {
@@ -402,7 +543,7 @@ const NuevoEstudiante = () => {
     }
   };
   
-  // Subir documento actual
+  // Modificar la función subirDocumentoActual
   const subirDocumentoActual = async () => {
     if (!archivoSeleccionado) {
       setError('Por favor, seleccione un archivo para subir');
@@ -421,102 +562,100 @@ const NuevoEstudiante = () => {
       formData.append('tipoDocumento', documentoActualObj.id);
       formData.append('descripcion', `Documento ${documentoActualObj.nombre} subido durante inscripción`);
       
-      const response = await axios.post(
-        'http://localhost:5000/documentos/upload',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      
-      console.log('Documento subido:', response.data);
-      
-      // Añadir a la lista de documentos subidos
-      setDocumentosSubidos(prev => [
-        ...prev, 
-        {
-          ...documentoActualObj,
-          documentoID: response.data.documento.id,
-          nombreArchivo: archivoSeleccionado.name
-        }
-      ]);
-      
-      // Limpiar selección de archivo
-      setArchivoSeleccionado(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      
-      // Avanzar al siguiente documento o finalizar
-      if (documentoActual < todosDocumentos.length - 1) {
-        setDocumentoActual(documentoActual + 1);
-      } else {
-        // Actualizar el estado de documentosCompletos en la inscripción
-        await axios.put(
-          `http://localhost:5000/inscripciones/${inscripcionId}/update-estado`,
-          { documentosCompletos: true },
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          }
+      // Verificar si ya existe un documento de este tipo para esta persona
+      try {
+        const checkResponse = await axios.get(
+          `http://localhost:5000/documentos/persona/${documentoActualObj.personaID}`
         );
         
-        // Redirigir al comprobante
-        navigate(`/inscripcion/comprobante/${inscripcionId}`);
+        const documentoExistente = checkResponse.data.find(
+          doc => doc.tipoDocumento === documentoActualObj.id
+        );
+        
+        let response;
+        
+        if (documentoExistente) {
+          // Si existe, actualizar en lugar de crear
+          console.log(`Actualizando documento existente ID: ${documentoExistente.id}`);
+          response = await axios.put(
+            `http://localhost:5000/documentos/${documentoExistente.id}`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+        } else {
+          // Si no existe, crear nuevo
+          response = await axios.post(
+            'http://localhost:5000/documentos/upload',
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+        }
+
+        // Actualizar el estado para marcar el documento como subido
+        const documentosActualizados = todosDocumentos.map((doc, index) => {
+          if (index === documentoActual) {
+            return { ...doc, subido: true };
+          }
+          return doc;
+        });
+        setTodosDocumentos(documentosActualizados);
+
+        // Añadir a la lista de documentos subidos
+        setDocumentosSubidos(prev => [
+          ...prev, 
+          {
+            ...documentoActualObj,
+            documentoID: response.data.documento.id,
+            nombreArchivo: archivoSeleccionado.name,
+            subido: true
+          }
+        ]);
+        
+        console.log('Respuesta del servidor:', response.data);
+        
+        // Limpiar selección de archivo
+        setArchivoSeleccionado(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        
+        // Avanzar al siguiente documento o finalizar
+        if (documentoActual < todosDocumentos.length - 1) {
+          setDocumentoActual(documentoActual + 1);
+        } else {
+          // Actualizar el estado de documentosCompletos en la inscripción
+          await axios.put(
+            `http://localhost:5000/inscripciones/${inscripcionId}/update-estado`,
+            { documentosCompletos: true },
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+          
+          // Redirigir al comprobante
+          navigate(`/inscripcion/comprobante/${inscripcionId}`);
+        }
+      } catch (checkError) {
+        console.error("Error al verificar o actualizar documentos:", checkError);
+        setError("Error al procesar el documento. Por favor, intente nuevamente.");
       }
-      
     } catch (err) {
       console.error('Error al subir documento:', err);
       setError(err.response?.data?.message || 'Error al subir el documento. Por favor, intente nuevamente.');
     } finally {
       setSubiendoDocumento(false);
-    }
-  };
-  
-  // Saltar documento actual
-  const saltarDocumentoActual = () => {
-    if (documentoActual < todosDocumentos.length - 1) {
-      setDocumentoActual(documentoActual + 1);
-      setArchivoSeleccionado(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    } else {
-      // Redirigir al comprobante
-      navigate(`/inscripcion/comprobante/${inscripcionId}`);
-    }
-  };
-
-  // Finalizar proceso de subida de documentos
-  const finalizarSubidaDocumentos = async () => {
-    try {
-      setLoading(true);
-      
-      // Actualizar el estado de documentosCompletos en la inscripción si hay documentos subidos
-      if (documentosSubidos.length > 0) {
-        await axios.patch(
-          `http://localhost:5000/inscripciones/${inscripcionId}/update-estado`,
-          { documentosCompletos: true },
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          }
-        );
-      }
-      
-      // Redirigir al comprobante
-      navigate(`/inscripcion/comprobante/${inscripcionId}`);
-      
-    } catch (err) {
-      console.error('Error al finalizar proceso:', err);
-      setError(err.response?.data?.message || 'Error al finalizar el proceso. Por favor, intente nuevamente.');
-    } finally {
-      setLoading(false);
     }
   };
   
@@ -1066,35 +1205,56 @@ const NuevoEstudiante = () => {
                     
                     <div className="pt-6 border-t border-gray-200">
                       <h3 className="text-lg font-medium text-gray-900">Documentos del Representante</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Por favor, revise los documentos requeridos para el representante. Los documentos marcados con * son obligatorios.
-                        Estos documentos se subirán después de completar la inscripción.
-                      </p>
                       
-                      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        {documentosRepresentante.map((doc) => (
-                          <div key={doc.id} className="border rounded-lg p-4 border-gray-200">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0">
-                                {doc.obligatorio ? (
-                                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100">
-                                    <span className="text-red-600 text-xs font-medium">*</span>
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-gray-100">
-                                    <span className="text-gray-600 text-xs font-medium">+</span>
-                                  </span>
-                                )}
-                              </div>
-                              <div className="ml-3">
-                                <h4 className="text-sm font-medium text-gray-900">{doc.nombre}</h4>
-                                <p className="text-xs text-gray-500">{doc.obligatorio ? 'Obligatorio' : 'Opcional'}</p>
-                              </div>
+                      {documentosRepresentante.length === 0 && representanteEncontrado ? (
+                        <div className="mt-2 bg-green-50 p-4 rounded-lg">
+                          <div className="flex">
+                            <div className="flex-shrink-0">
+                              <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <div className="ml-3">
+                              <p className="text-sm text-green-700">
+                                El representante ya tiene todos los documentos obligatorios subidos.
+                              </p>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-500 mt-1">
+                            Por favor, revise los documentos requeridos para el representante. Los documentos marcados con * son obligatorios.
+                            Estos documentos se subirán después de completar la inscripción.
+                          </p>
+                          
+                          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            {documentosRepresentante.map((doc) => (
+                              <div key={doc.id} className="border rounded-lg p-4 border-gray-200">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0">
+                                    {doc.obligatorio ? (
+                                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100">
+                                        <span className="text-red-600 text-xs font-medium">*</span>
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-gray-100">
+                                        <span className="text-gray-600 text-xs font-medium">+</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="ml-3">
+                                    <h4 className="text-sm font-medium text-gray-900">{doc.nombre}</h4>
+                                    <p className="text-xs text-gray-500">{doc.obligatorio ? 'Obligatorio' : 'Opcional'}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
+
                   
                     {errorDocumentos && (
                       <div className="bg-red-50 border-l-4 border-red-400 p-4">

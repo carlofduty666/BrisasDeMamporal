@@ -57,12 +57,17 @@ app.use(cors({
 // Configurar express-fileupload
 app.use(fileUpload({
   createParentPath: true,
-  limits: { 
-    fileSize: 50 * 1024 * 1024 // 50MB max file size
-  },
-  useTempFiles: false, // Cambiar a false para procesar en memoria
-  debug: true
+  limits: { fileSize: 50 * 1024 * 1024 },
+  abortOnLimit: true,
+  responseOnLimit: 'Archivo demasiado grande',
+  useTempFiles: true,
+  tempFileDir: '/tmp/',
+  // Añadir esta opción para verificar si la solicitud debe usar fileupload
+  isFileUploadDisabled: function(req) {
+    return req.disableFileUpload === true;
+  }
 }));
+
 
 // Servir archivos estáticos
 app.use(express.json());

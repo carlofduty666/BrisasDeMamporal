@@ -4,6 +4,11 @@ const inscripcionController = require('../controllers/inscripcion.controller');
 // const uploadMiddleware = require('../middleware/upload.middleware');
 const authMiddleware= require('../middleware/auth.middleware'); // Importar el middleware de autenticación
 
+const disableFileUpload = (req, res, next) => {
+  req.disableFileUpload = true;
+  next();
+};
+
 // Rutas públicas
 router.get('/inscripciones/cupos-disponibles', inscripcionController.getCuposDisponibles);
 
@@ -29,6 +34,10 @@ router.get('/inscripciones/:id/comprobante', authMiddleware.verifyToken, inscrip
 router.delete('/inscripciones/:id', authMiddleware.verifyToken, inscripcionController.deleteInscripcion);
 
 
-router.patch('/:id/update-estado', inscripcionController.updateInscripcionDocumentos);
+router.put('/inscripciones/:id/update-estado', 
+  disableFileUpload, 
+  authMiddleware.verifyToken, 
+  inscripcionController.updateInscripcionDocumentos
+);
 
 module.exports = router;
