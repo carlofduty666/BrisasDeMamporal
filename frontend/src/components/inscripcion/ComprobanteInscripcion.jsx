@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { formatearFecha, formatearNombreGrado } from '../../utils/formatters';
 
 const ComprobanteInscripcion = () => {
   const { inscripcionId } = useParams();
@@ -164,7 +165,7 @@ const ComprobanteInscripcion = () => {
               <div>
                 <span className="text-sm font-medium text-gray-500">Fecha de Nacimiento:</span>
                 <p className="mt-1">
-                  {estudiante?.fechaNacimiento ? new Date(estudiante.fechaNacimiento).toLocaleDateString() : 'N/A'}
+                  {formatearFecha(estudiante?.fechaNacimiento)}
                 </p>
               </div>
               <div>
@@ -179,7 +180,7 @@ const ComprobanteInscripcion = () => {
             <div className="grid grid-cols-1 gap-y-2 sm:grid-cols-2">
               <div>
                 <span className="text-sm font-medium text-gray-500">Grado:</span>
-                <p className="mt-1">{grado?.nombre_grado}</p>
+                <p className="mt-1">{formatearNombreGrado(grado?.nombre_grado)}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Sección:</span>

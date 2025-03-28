@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha, calcularEdad } from '../../utils/formatters.js';
+
 
 const DetallesEstudiante = () => {
   const { estudianteId } = useParams();
@@ -53,6 +55,30 @@ const DetallesEstudiante = () => {
     
     fetchData();
   }, [estudianteId]);
+
+  // Añade este objeto de mapeo al inicio de tu componente
+  const tipoDocumentoFormateado = {
+    'cedula': 'Cédula de Identidad',
+    'partidaNacimiento': 'Partida de Nacimiento',
+    'boletin': 'Boletín de Calificaciones',
+    'notasCertificadas': 'Notas Certificadas',
+    'fotoCarnet': 'Foto Carnet',
+    'fotoCarta': 'Foto Tamaño Carta',
+    'boletaRetiroPlantel': 'Boleta de Retiro del Plantel',
+    'constanciaTrabajo': 'Constancia de Trabajo',
+    'solvenciaPago': 'Solvencia de Pago',
+    'foniatrico': 'Informe Foniátrico',
+    'psicomental': 'Evaluación Psicomental',
+    'certificadoSalud': 'Certificado de Salud',
+    'curriculumVitae': 'Curriculum Vitae',
+    'constanciaEstudio6toSemestre': 'Constancia de Estudio 6to Semestre',
+    'titulo': 'Título Académico'
+  };
+
+  // Función para formatear nombres de grados
+  const formatearNombreGrado = (nombreGrado) => {
+    return nombreGrado.replace(/_/g, ' ');
+  };
 
   if (loading) {
     return (
@@ -114,12 +140,12 @@ const DetallesEstudiante = () => {
                 
                 <div className="text-sm font-medium text-gray-500">Fecha de nacimiento:</div>
                 <div className="text-sm text-gray-900">
-                  {new Date(estudiante.fechaNacimiento).toLocaleDateString()}
+                  {formatearFecha(estudiante?.fechaNacimiento)}
                 </div>
                 
                 <div className="text-sm font-medium text-gray-500">Edad:</div>
                 <div className="text-sm text-gray-900">
-                  {new Date().getFullYear() - new Date(estudiante.fechaNacimiento).getFullYear()} años
+                  {estudiante?.fechaNacimiento ? `${calcularEdad(estudiante.fechaNacimiento)} años` : 'No disponible'}
                 </div>
                 
                 <div className="text-sm font-medium text-gray-500">Género:</div>
@@ -161,10 +187,10 @@ const DetallesEstudiante = () => {
                             <div className="text-sm text-gray-900">{inscripcion.annoEscolar.periodo}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{inscripcion.grado.nombre_grado}</div>
+                            <div className="text-sm text-gray-900">  {inscripcion.grado ? formatearNombreGrado(inscripcion.grado.nombre_grado) : 'No asignado'}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{inscripcion.seccion.nombre_seccion}</div>
+                            <div className="text-sm text-gray-900">{inscripcion.Secciones.nombre_seccion}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -202,7 +228,7 @@ const DetallesEstudiante = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {documentos.map((documento) => (
                     <div key={documento.id} className="border rounded-lg p-4">
-                      <h3 className="font-medium text-gray-900 mb-2">{documento.tipoDocumento}</h3>
+                      <h3 className="font-medium text-gray-900 mb-2">{documento.tipoDocumento ? tipoDocumentoFormateado[documento.tipoDocumento] || documento.tipoDocumento : 'No especificado'}</h3>
                       <p className="text-sm text-gray-500 mb-3">
                         Subido el {new Date(documento.createdAt).toLocaleDateString()}
                       </p>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha } from '../../utils/formatters';
+
 
 const NuevoEstudiante = () => {
   const navigate = useNavigate();
@@ -30,6 +32,29 @@ const NuevoEstudiante = () => {
   const [subiendoDocumento, setSubiendoDocumento] = useState(false);
   const [todosDocumentos, setTodosDocumentos] = useState([]);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
+
+  const tipoDocumentoFormateado = {
+    'cedula': 'Cédula de Identidad',
+    'partidaNacimiento': 'Partida de Nacimiento',
+    'boletin': 'Boletín de Calificaciones',
+    'notasCertificadas': 'Notas Certificadas',
+    'fotoCarnet': 'Foto Carnet',
+    'fotoCarta': 'Foto Tamaño Carta',
+    'boletaRetiroPlantel': 'Boleta de Retiro del Plantel',
+    'constanciaTrabajo': 'Constancia de Trabajo',
+    'solvenciaPago': 'Solvencia de Pago',
+    'foniatrico': 'Informe Foniátrico',
+    'psicomental': 'Evaluación Psicomental',
+    'certificadoSalud': 'Certificado de Salud',
+    'curriculumVitae': 'Curriculum Vitae',
+    'constanciaEstudio6toSemestre': 'Constancia de Estudio 6to Semestre',
+    'titulo': 'Título Académico'
+  };
+  
+  // Función para formatear nombres de grados
+  const formatearNombreGrado = (nombreGrado) => {
+    return nombreGrado.replace(/_/g, ' ');
+  };
 
   const token = localStorage.getItem('token');
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
