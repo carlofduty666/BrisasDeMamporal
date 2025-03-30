@@ -1,21 +1,24 @@
 const express = require('express'); 
 const router = express.Router();
 const gradosController = require('../controllers/grados.controller');
+const authMiddleware = require('../middleware/auth.middleware');
 
-router.get('/grados', gradosController.getAllGrados); // Para obtener todos los grados
-router.get('/grados/:id', gradosController.getGradoById); // Para obtener un grado por id
-router.get('/grados/nivel/:nombre_nivel', gradosController.getGradosByNivel); // Para obtener un grado por nivel
-router.get('/grados/:id/materias', gradosController.getMateriasByGrado); // Para obtener las materias de un grado
-router.get('/grados/:id/profesores', gradosController.getProfesoresByGrado); // Para obtener los profesores de un grado
-router.get('/grados/:id/estudiantes', gradosController.getEstudiantesByGrado); // Para obtener los estudiantes de un grado
+// Rutas públicas (si las hay)
+router.get('/grados/nivel/:nombre_nivel', gradosController.getGradosByNivel); // Si esta debe ser pública
 
-router.post('/grados', gradosController.createGrado); // Para crear un nuevo grado
-router.post('/grados/asignar-estudiante', gradosController.asignarEstudianteAGrado); // Para asignar un estudiante a un grado
+// Rutas protegidas
+router.get('/grados', authMiddleware.verifyToken, gradosController.getAllGrados);
+router.get('/grados/:id', authMiddleware.verifyToken, gradosController.getGradoById);
+router.get('/grados/:id/materias', authMiddleware.verifyToken, gradosController.getMateriasByGrado);
+router.get('/grados/:id/profesores', authMiddleware.verifyToken, gradosController.getProfesoresByGrado);
+router.get('/grados/:id/estudiantes', authMiddleware.verifyToken, gradosController.getEstudiantesByGrado);
 
-router.put('/grados/:id', gradosController.updateGrado); // Para actualizar un grado por ID
+router.post('/grados', authMiddleware.verifyToken, gradosController.createGrado);
+router.post('/grados/asignar-estudiante', authMiddleware.verifyToken, gradosController.asignarEstudianteAGrado);
 
-router.delete('/grados/:gradoID/estudiantes/:estudianteID/:annoEscolarID', gradosController.eliminarEstudianteDeGrado);
-router.delete('/grados/:id', gradosController.deleteGrado); // Para eliminar un grado por ID
+router.put('/grados/:id', authMiddleware.verifyToken, gradosController.updateGrado);
 
+router.delete('/grados/:gradoID/estudiantes/:estudianteID/:annoEscolarID', authMiddleware.verifyToken, gradosController.eliminarEstudianteDeGrado);
+router.delete('/grados/:id', authMiddleware.verifyToken, gradosController.deleteGrado);
 
 module.exports = router;

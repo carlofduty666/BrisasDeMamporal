@@ -48,6 +48,70 @@ const materiasController = {
             res.status(500).json({message: err.message})
         }
     },
+    // Asegúrate de que este método exista y esté correctamente implementado
+    getMateriasByGrado: async (req, res) => {
+      try {
+        const { id } = req.params; // ID del grado
+        const { annoEscolarID, limit } = req.query;
+        
+        // Validar que el grado existe
+        const grado = await db.Grados.findByPk(id);
+        if (!grado) {
+          return res.status(404).json({ message: 'Grado no encontrado' });
+        }
+        
+        // Construir las opciones de consulta
+        const options = {
+          include: [
+            {
+              model: db.Grados,
+              as: 'Grados',
+              where: { id },
+              through: { attributes: [] }
+            }
+          ],
+          order: [['asignatura', 'ASC']]
+        };
+        
+        // Si se especifica un límite y es mayor que 0, aplicarlo
+        if (limit && parseInt(limit) > 0) {
+          options.limit = parseInt(limit);
+        }
+        
+        // Obtener las materias
+        const materias = await db.Materias.findAll(options);
+        
+        // Para cada materia, obtener los profesores asignados
+        const materiasConProfesores = await Promise.all(
+          materias.map(async (materia) => {
+            const profesores = await db.Personas.findAll({
+              attributes: ['id', 'nombre', 'apellido', 'cedula', 'email', 'telefono'],
+              include: [
+                {
+                  model: db.Materias,
+                  as: 'materiasImpartidas',
+                  where: { id: materia.id },
+                  through: {
+                    model: db.Profesor_Materia_Grados,
+                    where: { gradoID: id }
+                  }
+                }
+              ]
+            });
+            
+            return {
+              ...materia.get({ plain: true }),
+              profesoresAsignados: profesores
+            };
+          })
+        );
+        
+        res.json(materiasConProfesores);
+      } catch (err) {
+        console.error('Error al obtener materias por grado:', err);
+        res.status(500).json({ message: err.message });
+      }
+    },
     getMateriasByEstudiante: async (req, res) => {
         try {
             const personaID = req.params.id;

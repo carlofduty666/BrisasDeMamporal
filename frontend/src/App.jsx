@@ -10,7 +10,10 @@ import DetallesEstudiante from './components/estudiante/DetallesEstudiante';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 import RegistrarPago from './components/pagos/RegistrarPago';
-// import FileUploadTest from './components/test/FileUploadTest';
+import GradosList from './components/admin/academico/GradosList';
+import EditarGrado from './components/admin/academico/EditarGrado';
+import MateriasList from './components/admin/academico/MateriasList';
+import SeccionesList from './components/admin/academico/SeccionesList';
 import TestUpload from './components/test/TestUpload';
 
 // Componentes de administrador
@@ -134,6 +137,42 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
               <CuposManager />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/academico/grados" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <GradosList />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/academico/grados/:id/editar" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <EditarGrado />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/academico/materias" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <MateriasList />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/academico/secciones" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <SeccionesList />
             </ProtectedRoute>
           } 
         />

@@ -1,21 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const seccionController = require('../controllers/secciones.controller');
+const seccionesController = require('../controllers/secciones.controller');
+const authMiddleware = require('../middleware/auth.middleware');
 
-// Rutas básicas CRUD
-router.get('/secciones', seccionController.getAllSecciones);
-router.get('/secciones/:id', seccionController.getSeccionById);
-router.get('/secciones/grado/:gradoID', seccionController.getSeccionesByGrado); // Nueva ruta para obtener secciones por grado
-router.post('/secciones', seccionController.createSeccion);
-router.put('/secciones/:id', seccionController.updateSeccion);
-router.delete('/secciones/:id', seccionController.deleteSeccion);
+// Middleware para verificar roles de administrador
+const isAdmin = (req, res, next) => {
+  if (!req.user || !req.user.roles.some(role => ['owner', 'adminWeb'].includes(role))) {
+    return res.status(403).json({ message: 'Acceso denegado. Se requieren permisos de administrador.' });
+  }
+  next();
+};
 
-// Rutas para gestionar estudiantes en secciones
-router.post('/secciones/asignar-estudiante', seccionController.asignarEstudianteASeccion);
-router.delete('/secciones/:seccionID/estudiantes/:estudianteID/anno/:annoEscolarID', seccionController.eliminarEstudianteDeSeccion);
-router.get('/secciones/:seccionID/estudiantes', seccionController.getEstudiantesBySeccion);
+// Rutas públicas (si las hay)
+router.get('/secciones/publicas', seccionesController.getSeccionesPublicas);
 
-// Rutas para gestionar profesores en secciones
-router.post('/secciones/asignar-profesor-materia', seccionController.asignarProfesorASeccionMateria);
+// Rutas protegidas - solo lectura
+router.get('/secciones', authMiddleware.verifyToken, seccionesController.getAllSecciones);
+router.get('/secciones/:id', authMiddleware.verifyToken, seccionesController.getSeccionById);
+router.get('/secciones/grado/:gradoID', authMiddleware.verifyToken, seccionesController.getSeccionesByGrado);
+router.get('/secciones/:id/estudiantes', authMiddleware.verifyToken, seccionesController.getEstudiantesBySeccion);
+
+// Rutas protegidas - requieren permisos de administrador
+router.post('/secciones', authMiddleware.verifyToken, isAdmin, seccionesController.createSeccion);
+router.put('/secciones/:id', authMiddleware.verifyToken, isAdmin, seccionesController.updateSeccion);
+router.delete('/secciones/:id', authMiddleware.verifyToken, isAdmin, seccionesController.deleteSeccion);
+
+// Rutas para asignar/desasignar estudiantes
+router.post('/secciones/asignar-estudiante', authMiddleware.verifyToken, isAdmin, seccionesController.asignarEstudianteASeccion);
+router.delete('/secciones/:seccionID/estudiantes/:estudianteID/anno/:annoEscolarID', authMiddleware.verifyToken, isAdmin, seccionesController.removeEstudianteFromSeccion);
 
 module.exports = router;

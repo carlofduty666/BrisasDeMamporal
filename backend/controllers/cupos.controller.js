@@ -201,8 +201,6 @@ const cupoController = {
     }
   },
   
-  // Obtener resumen de cupos por grado
-  // Obtener resumen de cupos por grado
 // Obtener resumen de cupos por grado
 getResumenCupos: async (req, res) => {
   try {
@@ -245,11 +243,13 @@ getResumenCupos: async (req, res) => {
     if (!grados || grados.length === 0) {
       return res.json({
         annoEscolarID: annoEscolarActivo,
-        resumenCupos: []
+        resumenCupos: [],
+        cuposPorGrado: {} // Añadido para compatibilidad con el frontend
       });
     }
     
     const resumenCupos = [];
+    const cuposPorGrado = {}; // Nuevo objeto para la estructura que espera el frontend
     
     for (const grado of grados) {
       let totalCapacidad = 0;
@@ -318,6 +318,7 @@ getResumenCupos: async (req, res) => {
         }
       }
       
+      // Añadir al array de resumen
       resumenCupos.push({
         gradoID: grado.id,
         nombre_grado: grado.nombre_grado,
@@ -326,11 +327,21 @@ getResumenCupos: async (req, res) => {
         totalDisponibles,
         porcentajeOcupacion: totalCapacidad > 0 ? Math.round((totalOcupados / totalCapacidad) * 100) : 0
       });
+      
+      // Añadir al objeto cuposPorGrado para compatibilidad con el frontend
+      cuposPorGrado[grado.id] = {
+        capacidadTotal: totalCapacidad,
+        ocupados: totalOcupados,
+        disponibles: totalDisponibles,
+        nombre: grado.nombre_grado,
+        porcentajeOcupacion: totalCapacidad > 0 ? Math.round((totalOcupados / totalCapacidad) * 100) : 0
+      };
     }
     
     res.json({
       annoEscolarID: annoEscolarActivo,
-      resumenCupos
+      resumenCupos,
+      cuposPorGrado // Añadido para compatibilidad con el frontend
     });
   } catch (err) {
     console.error('Error en getResumenCupos:', err);
@@ -340,6 +351,7 @@ getResumenCupos: async (req, res) => {
     });
   }
 },
+
 
   
   // Crear cupo

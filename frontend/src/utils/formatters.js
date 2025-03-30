@@ -113,4 +113,9 @@ export const tipoDocumentoFormateado = {
     
     return edad;
   };
+
+  export const formatearNombreNivel = (nivel) => {
+    if (!nivel || !nivel.nombre_nivel) return 'No especificado';
+    return nivel.nombre_nivel.charAt(0).toUpperCase() + nivel.nombre_nivel.slice(1);
+  };
   

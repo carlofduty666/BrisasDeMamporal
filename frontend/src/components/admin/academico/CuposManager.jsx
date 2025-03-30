@@ -18,10 +18,16 @@ const CuposManager = () => {
   // Obtener token de autenticación
   const token = localStorage.getItem('token');
   
+  // En el useEffect inicial de CuposManager.jsx
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        
+        // Obtener parámetros de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const gradoIDParam = urlParams.get('gradoID');
+        const seccionIDParam = urlParams.get('seccionID');
         
         // Obtener año escolar activo
         const annoResponse = await axios.get(
@@ -38,10 +44,20 @@ const CuposManager = () => {
         setGrados(gradosResponse.data);
         
         // Obtener secciones
-        const seccionesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+        let seccionesResponse;
+        if (gradoIDParam) {
+          // Si hay un grado específico, obtener solo las secciones de ese grado
+          seccionesResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/grado/${gradoIDParam}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+        } else {
+          // Si no, obtener todas las secciones
+          seccionesResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+        }
         setSecciones(seccionesResponse.data);
         
         // Obtener cupos
@@ -49,25 +65,27 @@ const CuposManager = () => {
           `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/cupos`,
           { 
             headers: { 'Authorization': `Bearer ${token}` },
-            params: { annoEscolarID: annoResponse.data.id }
+            params: { 
+              annoEscolarID: annoResponse.data.id,
+              gradoID: gradoIDParam,
+              seccionID: seccionIDParam
+            }
           }
         );
         
         // Procesar los datos de cupos
         const cuposData = cuposResponse.data;
         
-        // Si no hay cupos registrados o hay menos cupos que secciones, preparar estructura inicial
-        if (cuposData.length === 0 || cuposData.length < seccionesResponse.data.length) {
-          const cuposIniciales = await prepararCuposIniciales(
-            gradosResponse.data, 
-            seccionesResponse.data, 
-            annoResponse.data.id,
-            cuposData
-          );
-          setCupos(cuposIniciales);
-        } else {
-          setCupos(cuposData);
+        // Si hay un grado o sección específica, filtrar los cupos
+        let cuposFiltrados = cuposData;
+        if (gradoIDParam) {
+          cuposFiltrados = cuposData.filter(cupo => cupo.gradoID == gradoIDParam);
         }
+        if (seccionIDParam) {
+          cuposFiltrados = cuposFiltrados.filter(cupo => cupo.seccionID == seccionIDParam);
+        }
+        
+        setCupos(cuposFiltrados);
         
         setLoading(false);
       } catch (error) {
@@ -82,6 +100,7 @@ const CuposManager = () => {
     
     fetchData();
   }, [token]);
+
   
   // Función para preparar cupos iniciales si no existen
   const prepararCuposIniciales = async (grados, secciones, annoEscolarID, cuposExistentes = []) => {

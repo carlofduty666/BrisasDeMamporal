@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       Niveles.hasMany(models.Grados, {
         foreignKey: 'nivelID',
-        as: 'grados'
+        as: 'Grados'
       })
     }
     static async getAllNiveles() {

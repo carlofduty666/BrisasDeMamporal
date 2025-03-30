@@ -1,18 +1,23 @@
 import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
 import { 
   FaUserGraduate, FaChalkboardTeacher, FaUsers, FaUserTie, 
   FaMoneyBillWave, FaClipboardList, FaBook, FaSchool, 
-  FaCog, FaHome, FaSignOutAlt
+  FaCog, FaHome, FaSignOutAlt, FaChevronDown, FaChevronUp,
+  FaGraduationCap, FaChalkboard
 } from 'react-icons/fa';
 import { logout } from '../../../services/auth.service';
 
 const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
+
+  const [showAcademicoSubmenu, setShowAcademicoSubmenu] = useState(false);
+  
   const handleLogout = () => {
     logout();
     window.location.href = '/login';
   };
   
-  const isOwner = userRole === 'owner';
+  const isOwner = userRole === 'owner' || userRole === 'adminWeb';
   
   return (
     <div className={`bg-indigo-800 text-white ${isOpen ? 'w-64' : 'w-20'} transition-all duration-300 flex flex-col`}>
@@ -124,15 +129,62 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
           </li>
           
           <li>
-            <NavLink 
-              to="/admin/academico" 
-              className={({ isActive }) => 
-                `flex items-center p-2 rounded-lg ${isActive ? 'bg-indigo-700' : 'hover:bg-indigo-700'}`
-              }
-            >
-              <FaBook className="w-5 h-5" />
-              {isOpen && <span className="ml-3">Académico</span>}
-            </NavLink>
+            <div>
+              <button
+                onClick={() => setShowAcademicoSubmenu(!showAcademicoSubmenu)}
+                className={`flex items-center justify-between w-full p-2 rounded-lg hover:bg-indigo-700 ${
+                  showAcademicoSubmenu ? 'bg-indigo-700' : ''
+                }`}
+              >
+                <div className="flex items-center">
+                  <FaBook className="w-5 h-5" />
+                  {isOpen && <span className="ml-3">Académico</span>}
+                </div>
+                {isOpen && (
+                  <div>
+                    {showAcademicoSubmenu ? <FaChevronUp className="w-4 h-4" /> : <FaChevronDown className="w-4 h-4" />}
+                  </div>
+                )}
+              </button>
+              
+              {showAcademicoSubmenu && isOpen && (
+                <ul className="mt-2 space-y-1 pl-7">
+                  <li>
+                    <NavLink 
+                      to="/admin/academico/grados" 
+                      className={({ isActive }) => 
+                        `flex items-center p-2 rounded-lg ${isActive ? 'bg-indigo-600' : 'hover:bg-indigo-600'}`
+                      }
+                    >
+                      <FaGraduationCap className="w-4 h-4" />
+                      <span className="ml-3">Grados</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink 
+                      to="/admin/academico/materias" 
+                      className={({ isActive }) => 
+                        `flex items-center p-2 rounded-lg ${isActive ? 'bg-indigo-600' : 'hover:bg-indigo-600'}`
+                      }
+                    >
+                      <FaBook className="w-4 h-4" />
+                      <span className="ml-3">Materias</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink 
+                      to="/admin/academico/secciones" 
+                      className={({ isActive }) => 
+                        `flex items-center p-2 rounded-lg ${isActive ? 'bg-indigo-600' : 'hover:bg-indigo-600'}`
+                      }
+                    >
+                      <FaChalkboard className="w-4 h-4" />
+                      <span className="ml-3">Secciones</span>
+                    </NavLink>
+                  </li>
+                </ul>
+              )}
+            </div>
           </li>
           
           <li>

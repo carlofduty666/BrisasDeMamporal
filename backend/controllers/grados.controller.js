@@ -9,13 +9,23 @@ const AnnoEscolar = db.AnnoEscolar;
 
 const gradosController = {
     getAllGrados: async (req, res) => {
-        try {
-            const grados = await Grados.findAll();
-            res.json(grados);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: err.message });
-        }
+      try {
+        const grados = await db.Grados.findAll({
+          include: [
+            {
+              model: db.Niveles,
+              as: 'Niveles', // Este alias debe coincidir con el definido en el modelo
+              attributes: ['id', 'nombre_nivel']
+            }
+          ],
+          order: [['nombre_grado', 'ASC']]
+        });
+        
+        res.json(grados);
+      } catch (err) {
+        console.error('Error al obtener grados:', err);
+        res.status(500).json({ message: err.message });
+      }
     },
     getGradoById: async (req, res) => {
         try {
@@ -122,36 +132,42 @@ const gradosController = {
         }
     },
     getEstudiantesByGrado: async (req, res) => {
-        try {
-          const { id } = req.params;
-          const { annoEscolarID } = req.query;
-          
-          if (!annoEscolarID) {
-            return res.status(400).json({ message: 'Se requiere el ID del año escolar' });
-          }
-          
-          const grado = await Grados.findByPk(id, {
-            include: [{
-              model: db.Personas,
-              as: 'personas',
+      try {
+        const { id } = req.params;
+        const { annoEscolarID } = req.query;
+        
+        if (!annoEscolarID) {
+          return res.status(400).json({ message: 'Se requiere el ID del año escolar' });
+        }
+        
+        // Verificar que el grado existe
+        const grado = await db.Grados.findByPk(id);
+        if (!grado) {
+          return res.status(404).json({ message: 'Grado no encontrado' });
+        }
+        
+        // Obtener estudiantes asignados al grado en el año escolar especificado
+        const estudiantes = await db.Personas.findAll({
+          attributes: ['id', 'nombre', 'apellido', 'cedula', 'fechaNacimiento', 'genero'],
+          include: [
+            {
+              model: db.Grados,
+              as: 'grados',
+              where: { id },
               through: {
+                model: db.Grado_Personas,
                 where: { annoEscolarID },
                 attributes: []
-              },
-              where: { tipo: 'estudiante' },
-              attributes: ['id', 'nombre', 'apellido', 'cedula', 'fechaNacimiento', 'email', 'telefono']
-            }]
-          });
-          
-          if (!grado) {
-            return res.status(404).json({ message: 'Grado no encontrado' });
-          }
-          
-          res.json(grado.personas);
-        } catch (err) {
-          console.error(err);
-          res.status(500).json({ message: err.message });
-        }
+              }
+            }
+          ]
+        });
+        
+        res.json(estudiantes);
+      } catch (err) {
+        console.error('Error al obtener estudiantes por grado:', err);
+        res.status(500).json({ message: err.message });
+      }
     },
     asignarEstudianteAGrado: async (req, res) => {
         try {
