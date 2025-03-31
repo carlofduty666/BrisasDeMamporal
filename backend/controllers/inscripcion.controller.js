@@ -664,7 +664,7 @@ updateInscripcionDocumentos: async (req, res) => {
       }
       
       // Validar estado
-      if (!['pendiente', 'aprobada', 'rechazada'].includes(estado)) {
+      if (!['pendiente', 'inscrito', 'retirado', 'graduado', 'aprobado', 'rechazado'].includes(estado)) {
         return res.status(400).json({ message: 'Estado no válido' });
       }
       
@@ -674,7 +674,7 @@ updateInscripcionDocumentos: async (req, res) => {
       });
       
       res.json({
-        message: `Inscripción ${estado} correctamente`,
+        message: `Estudiante ${estado} correctamente`,
         inscripcion
       });
     } catch (err) {

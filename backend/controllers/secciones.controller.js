@@ -8,27 +8,26 @@ const { Op } = require('sequelize');
 
 const seccionesController = {
   // Obtener todas las secciones
-// Obtener todas las secciones
-getAllSecciones: async (req, res) => {
-  try {
-    const secciones = await Secciones.findAll({
-      include: [
-        {
-          model: Grados,
-          as: 'Grados',
-          include: [
-            {
-              model: db.Niveles,
-              as: 'Niveles'
-            }
-          ]
-        }
-      ],
-      order: [
-        ['gradoID', 'ASC'],
-        ['nombre_seccion', 'ASC']
-      ]
-    });
+  getAllSecciones: async (req, res) => {
+    try {
+      const secciones = await Secciones.findAll({
+        include: [
+          {
+            model: Grados,
+            as: 'Grados',
+            include: [
+              {
+                model: db.Niveles,
+                as: 'Niveles'
+              }
+            ]
+          }
+        ],
+        order: [
+          ['gradoID', 'ASC'],
+          ['nombre_seccion', 'ASC']
+        ]
+      });
     
     // Enriquecer los datos con información adicional
     const seccionesConInfo = secciones.map(seccion => {
@@ -52,6 +51,7 @@ getAllSecciones: async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 },
+
 
 
   

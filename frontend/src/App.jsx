@@ -14,6 +14,8 @@ import GradosList from './components/admin/academico/GradosList';
 import EditarGrado from './components/admin/academico/EditarGrado';
 import MateriasList from './components/admin/academico/MateriasList';
 import SeccionesList from './components/admin/academico/SeccionesList';
+import InscripcionesList from './components/admin/inscripciones/InscripcionesList'
+import InscripcionDetail from './components/admin/inscripciones/InscripcionDetail'
 import TestUpload from './components/test/TestUpload';
 
 // Componentes de administrador
@@ -173,6 +175,24 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
               <SeccionesList />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/inscripciones" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <InscripcionesList />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/inscripciones/:id" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <InscripcionDetail />
             </ProtectedRoute>
           } 
         />

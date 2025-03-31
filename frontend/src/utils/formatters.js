@@ -114,8 +114,12 @@ export const tipoDocumentoFormateado = {
     return edad;
   };
 
-  export const formatearNombreNivel = (nivel) => {
-    if (!nivel || !nivel.nombre_nivel) return 'No especificado';
-    return nivel.nombre_nivel.charAt(0).toUpperCase() + nivel.nombre_nivel.slice(1);
+  // Esta función debería existir en tu componente
+  export const formatearNombreNivel = (nombreNivel) => {
+    if (!nombreNivel) return 'No asignado';
+    
+    // Convertir 'primaria' a 'Primaria' y 'secundaria' a 'Secundaria'
+    return nombreNivel.charAt(0).toUpperCase() + nombreNivel.slice(1);
   };
+
   

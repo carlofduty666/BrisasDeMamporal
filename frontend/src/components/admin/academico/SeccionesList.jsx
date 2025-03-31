@@ -22,6 +22,7 @@ const SeccionesList = () => {
   const [estudiantesSeccion, setEstudiantesSeccion] = useState([]);
   const [annoEscolar, setAnnoEscolar] = useState(null);
   const [niveles, setNiveles] = useState([]);
+  const [gradoNivelMap, setGradoNivelMap] = useState({});
 
   // Estado para formularios
   const [newSeccion, setNewSeccion] = useState({
@@ -109,20 +110,39 @@ const SeccionesList = () => {
     fetchData();
   }, [navigate]);
 
+  // useEffect(() => {
+  //   if (grados.length > 0 && niveles.length > 0) {
+  //     console.log("Estructura de un grado:", grados[0]);
+  //     console.log("Estructura de un nivel:", niveles[0]);
+      
+  //     // Verificar la relación entre grados y niveles
+  //     const gradoConNivel = grados.find(g => g.nivelID);
+  //     if (gradoConNivel) {
+  //       console.log("Grado con nivel:", gradoConNivel);
+  //       const nivelRelacionado = niveles.find(n => n.id === gradoConNivel.nivelID);
+  //       console.log("Nivel relacionado:", nivelRelacionado);
+  //     } else {
+  //       console.warn("No se encontró ningún grado con nivelID");
+  //     }
+  //   }
+  // }, [grados, niveles]);
+
   useEffect(() => {
     if (grados.length > 0 && niveles.length > 0) {
-      console.log("Estructura de un grado:", grados[0]);
-      console.log("Estructura de un nivel:", niveles[0]);
+      const mapGradoNivel = {};
       
-      // Verificar la relación entre grados y niveles
-      const gradoConNivel = grados.find(g => g.nivelID);
-      if (gradoConNivel) {
-        console.log("Grado con nivel:", gradoConNivel);
-        const nivelRelacionado = niveles.find(n => n.id === gradoConNivel.nivelID);
-        console.log("Nivel relacionado:", nivelRelacionado);
-      } else {
-        console.warn("No se encontró ningún grado con nivelID");
-      }
+      grados.forEach(grado => {
+        const nivel = niveles.find(n => n.id === grado.nivelID);
+        if (nivel) {
+          mapGradoNivel[grado.id] = {
+            nombreGrado: grado.nombre_grado,
+            nombreNivel: nivel.nombre_nivel
+          };
+        }
+      });
+      
+      setGradoNivelMap(mapGradoNivel);
+      console.log("Mapa de grado-nivel creado:", mapGradoNivel);
     }
   }, [grados, niveles]);
   
@@ -587,7 +607,7 @@ const handleOpenEstudiantesModal = async (seccion) => {
             <thead className="bg-gray-50">
             <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nombre
+                Sección
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Grado
@@ -626,47 +646,31 @@ const handleOpenEstudiantesModal = async (seccion) => {
                 </tr>
             ) : (
                 filteredSecciones.map((seccion) => {
-                    const grado = grados.find(g => g.id === seccion.gradoID);
-                    let nivelNombre = 'No asignado';
-                    
-                    if (grado) {
-                      // Imprimir el grado para ver su estructura
-                      console.log("Grado de la sección:", grado);
-                      
-                      // Intentar diferentes nombres de campo para la relación con nivel
-                      const nivelID = grado.nivelID || grado.nivel_id || (grado.nivel && grado.nivel.id);
-                      
-                      if (nivelID) {
-                        const nivel = niveles.find(n => n.id === nivelID);
-                        if (nivel) {
-                          nivelNombre = formatearNombreNivel(nivel.nombre_nivel);
-                        }
-                      } else if (grado.nivel && grado.nivel.nombre_nivel) {
-                        // Si el nivel viene incluido en el grado
-                        nivelNombre = formatearNombreNivel(grado.nivel.nombre_nivel);
-                      }
-                    }
-                
+                  const grado = grados.find(g => g.id === seccion.gradoID);
+                  const nivel = grado ? niveles.find(n => n.id === grado.nivelID) : null;
+    
                 return (
-                    <tr key={seccion.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {seccion.nombre_seccion}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {(() => {
-                        const grado = grados.find(g => g.id === seccion.gradoID);
-                        return grado ? formatearNombreGrado(grado.nombre_grado) : 'No asignado';
-                    })()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {(() => {
-                        const grado = grados.find(g => g.id === seccion.gradoID);
-                        if (!grado) return 'No asignado';
-                        
-                        const nivel = niveles.find(n => n.id === grado.nivelID);
-                        return nivel ? formatearNombreNivel(nivel.nombre_nivel) : 'No asignado';
-                    })()}
-                    </td>
+                  <tr key={seccion.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {seccion.nombre_seccion}
+                  </td>
+                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {grado ? formatearNombreGrado(grado.nombre_grado) : 'No asignado'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {nivel ? formatearNombreNivel(nivel.nombre_nivel) : 'No asignado'}
+                  </td> */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {gradoNivelMap[seccion.gradoID]?.nombreGrado ? 
+                      formatearNombreGrado(gradoNivelMap[seccion.gradoID].nombreGrado) : 
+                      'No asignado'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {gradoNivelMap[seccion.gradoID]?.nombreNivel ? 
+                      formatearNombreNivel(gradoNivelMap[seccion.gradoID].nombreNivel) : 
+                      'No asignado'}
+                  </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {seccion.capacidad}
                     </td>
