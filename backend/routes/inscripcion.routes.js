@@ -17,6 +17,9 @@ router.get('/inscripciones', authMiddleware.verifyToken, inscripcionController.g
 router.get('/inscripciones/representante/:representanteID', authMiddleware.verifyToken, inscripcionController.getInscripcionesByRepresentante); // ruta para obtener inscripciones por representante
 router.get('/inscripciones/:id', authMiddleware.verifyToken, inscripcionController.getInscripcionById);
 router.post('/inscripciones', authMiddleware.verifyToken, inscripcionController.createInscripcion);
+router.get('/inscripciones/estudiante/:estudianteID/actual', authMiddleware.verifyToken, inscripcionController.getInscripcionActualByEstudiante);
+
+
 // Ruta para crear nuevo estudiante e inscripción
 router.post(
   '/inscripciones/nuevo-estudiante', 

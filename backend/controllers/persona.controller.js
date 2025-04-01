@@ -17,13 +17,14 @@ const getPersonasByTipo = async (req, res) => {
   const { tipo } = req.params;
   try {
       const filter = { tipo: tipo };
-      const personas = await Personas.getAllPersonas(filter);
+      const personas = await Personas.findAll({ where: filter });
       res.json(personas);
   } catch (err) {
       console.error(err);
       res.status(500).json({ message: err.message });
   }
 };
+
 
 const getPersonaTipoById = async (req, res) => {
   const { tipo, id } = req.params;

@@ -161,6 +161,53 @@ const inscripcionController = {
       res.status(500).json({ message: err.message });
     }
   },
+
+    getInscripcionActualByEstudiante: async (req, res) => {
+      try {
+        const { estudianteID } = req.params;
+        
+        // Obtener el año escolar activo
+        const annoEscolar = await AnnoEscolar.findOne({
+          where: { activo: true }
+        });
+        
+        if (!annoEscolar) {
+          return res.status(404).json({ message: 'No hay un año escolar activo' });
+        }
+        
+        // Buscar la inscripción del estudiante en el año escolar activo
+        const inscripcion = await Inscripciones.findOne({
+          where: {
+            estudianteID,
+            annoEscolarID: annoEscolar.id
+          },
+          include: [
+            {
+              model: Grados,
+              as: 'grado'
+            },
+            {
+              model: Secciones,
+              as: 'Secciones'
+            },
+            {
+              model: AnnoEscolar,
+              as: 'annoEscolar'
+            }
+          ]
+        });
+        
+        if (!inscripcion) {
+          return res.status(404).json({ message: 'No se encontró inscripción para este estudiante en el año escolar activo' });
+        }
+        
+        res.json(inscripcion);
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
+      }
+    },
+
   
   // Obtener cupos disponibles por grado
 getCuposDisponibles: async (req, res) => {

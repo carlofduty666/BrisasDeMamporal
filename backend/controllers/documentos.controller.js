@@ -243,7 +243,7 @@ verificarDocumentosRequeridos: async (req, res) => {
         { id: 'boletin', nombre: 'Boletín de Calificaciones', obligatorio: true },
         { id: 'notasCertificadas', nombre: 'Notas Certificadas', obligatorio: true },
         { id: 'fotoCarnet', nombre: 'Foto Carnet', obligatorio: true },
-        { id: 'boletinRetiroPlantel', nombre: 'Boleta de Retiro', obligatorio: false }
+        { id: 'boletaRetiroPlantel', nombre: 'Boleta de Retiro', obligatorio: false }
       ],
       representante: [
         { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
@@ -312,6 +312,3 @@ verificarDocumentosRequeridos: async (req, res) => {
 };
 
 module.exports = documentosController;
-
-
-

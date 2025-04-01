@@ -110,23 +110,6 @@ const SeccionesList = () => {
     fetchData();
   }, [navigate]);
 
-  // useEffect(() => {
-  //   if (grados.length > 0 && niveles.length > 0) {
-  //     console.log("Estructura de un grado:", grados[0]);
-  //     console.log("Estructura de un nivel:", niveles[0]);
-      
-  //     // Verificar la relación entre grados y niveles
-  //     const gradoConNivel = grados.find(g => g.nivelID);
-  //     if (gradoConNivel) {
-  //       console.log("Grado con nivel:", gradoConNivel);
-  //       const nivelRelacionado = niveles.find(n => n.id === gradoConNivel.nivelID);
-  //       console.log("Nivel relacionado:", nivelRelacionado);
-  //     } else {
-  //       console.warn("No se encontró ningún grado con nivelID");
-  //     }
-  //   }
-  // }, [grados, niveles]);
-
   useEffect(() => {
     if (grados.length > 0 && niveles.length > 0) {
       const mapGradoNivel = {};

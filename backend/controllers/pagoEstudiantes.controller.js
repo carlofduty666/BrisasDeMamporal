@@ -856,6 +856,80 @@ const storage = multer.diskStorage({
       console.error(err);
       res.status(500).json({ message: err.message });
     }
+  },
+
+  // Verificar estado de pagos de un estudiante
+  verificarEstadoPagosEstudiante: async (req, res) => {
+    try {
+      const { estudianteID } = req.params;
+      
+      // Obtener el año escolar activo
+      const annoEscolar = await AnnoEscolar.findOne({
+        where: { activo: true }
+      });
+      
+      if (!annoEscolar) {
+        return res.status(404).json({ message: 'No hay un año escolar activo' });
+      }
+      
+      // Obtener pagos pendientes o vencidos del estudiante en el año escolar actual
+      const pagosPendientes = await PagoEstudiantes.findAll({
+        where: {
+          estudianteID,
+          annoEscolarID: annoEscolar.id,
+          estado: {
+            [Op.in]: ['pendiente', 'vencido']
+          }
+        }
+      });
+      
+      // Verificar si hay pagos de mensualidad pendientes
+      const mensualidadesPendientes = await PagoEstudiantes.findAll({
+        where: {
+          estudianteID,
+          annoEscolarID: annoEscolar.id,
+          estado: {
+            [Op.in]: ['pendiente', 'vencido']
+          }
+        },
+        include: [
+          {
+            model: Aranceles,
+            as: 'aranceles',
+            where: {
+              nombre: {
+                [Op.like]: '%mensualidad%'
+              }
+            }
+          }
+        ]
+      });
+      
+      // Obtener el último pago realizado
+      const ultimoPago = await PagoEstudiantes.findOne({
+        where: {
+          estudianteID,
+          annoEscolarID: annoEscolar.id,
+          estado: 'pagado'
+        },
+        order: [['fechaPago', 'DESC']]
+      });
+      
+      res.json({
+        estudianteID,
+        alDia: pagosPendientes.length === 0,
+        pagosPendientes: pagosPendientes.length,
+        mensualidadesPendientes: mensualidadesPendientes.length,
+        ultimoPago: ultimoPago ? {
+          id: ultimoPago.id,
+          fecha: ultimoPago.fechaPago,
+          monto: ultimoPago.montoTotal
+        } : null
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
   }
 };
 

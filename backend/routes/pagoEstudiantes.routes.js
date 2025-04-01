@@ -8,6 +8,7 @@ router.get('/pagos/estudiante/:estudianteID', pagoEstudiantesController.getPagos
 router.get('/pagos/representante/:representanteID', pagoEstudiantesController.getPagosByRepresentante);
 router.get('/pagos/:id', pagoEstudiantesController.getPagoById);
 router.get('/pagos/reporte', pagoEstudiantesController.generarReportePagos);
+router.get('/pagos/estudiante/:estudianteID/estado', pagoEstudiantesController.verificarEstadoPagosEstudiante);
 router.get('/pagos/verificar-vencidos', pagoEstudiantesController.verificarPagosVencidos);
 
 router.post('/pagos', pagoEstudiantesController.uploadMiddleware, pagoEstudiantesController.createPago);

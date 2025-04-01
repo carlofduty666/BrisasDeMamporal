@@ -1,27 +1,35 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+
+
+// Componentes de authentication
 import RegisterForm from './components/auth/RegisterForm';
 import EmailVerification from './components/auth/EmailVerification';
 import LoginForm from './components/auth/LoginForm';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
+import RegistrarPago from './components/pagos/RegistrarPago';
+
+// Componentes de representante
 import RepresentanteDashboard from './components/dashboard/RepresentanteDashboard';
 import NuevoEstudiante from './components/inscripcion/NuevoEstudiante';
 import ComprobanteInscripcion from './components/inscripcion/ComprobanteInscripcion';
 import DetallesEstudiante from './components/estudiante/DetallesEstudiante';
-import ForgotPassword from './components/auth/ForgotPassword';
-import ResetPassword from './components/auth/ResetPassword';
-import RegistrarPago from './components/pagos/RegistrarPago';
+import TestUpload from './components/test/TestUpload';
+
+// Componentes de administrador
+import AdminDashboard from './components/admin/AdminDashboard';
+import CuposManager from './components/admin/academico/CuposManager';
 import GradosList from './components/admin/academico/GradosList';
 import EditarGrado from './components/admin/academico/EditarGrado';
 import MateriasList from './components/admin/academico/MateriasList';
 import SeccionesList from './components/admin/academico/SeccionesList';
 import InscripcionesList from './components/admin/inscripciones/InscripcionesList'
 import InscripcionDetail from './components/admin/inscripciones/InscripcionDetail'
-import TestUpload from './components/test/TestUpload';
-
-// Componentes de administrador
-import AdminDashboard from './components/admin/AdminDashboard';
 import EstudiantesList from './components/admin/estudiantes/EstudiantesList';
-import CuposManager from './components/admin/academico/CuposManager';
+import RepresentanteList from './components/admin/representantes/RepresentanteList';
+import RepresentanteDetail from './components/admin/representantes/RepresentanteDetail';
+import RepresentanteForm from './components/admin/representantes/RepresentanteForm';
 
 // Importando tus componentes existentes
 import NavBar from './components/NavBar';
@@ -193,6 +201,42 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
               <InscripcionDetail />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/estudiantes" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <EstudiantesList />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/representantes"
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <RepresentanteList />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/representantes/nuevo"
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <RepresentanteForm />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/representantes/:id"
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <RepresentanteDetail />
             </ProtectedRoute>
           } 
         />
