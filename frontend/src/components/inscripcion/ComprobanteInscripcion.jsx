@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { formatearFecha, formatearNombreGrado } from '../../utils/formatters';
+import * as jwt_decode from "jwt-decode";
 
 const ComprobanteInscripcion = () => {
   const { inscripcionId } = useParams();
@@ -15,14 +16,74 @@ const ComprobanteInscripcion = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [metodosPago, setMetodosPago] = useState([]);
+  const [userRole, setUserRole] = useState('');
   
   // Obtener token del localStorage
   const token = localStorage.getItem('token');
+
+  const getReturnPath = () => {
+    switch(userRole) {
+      case 'owner':
+      case 'adminweb':
+        return '/admin/dashboard';
+      case 'representante':
+        return '/dashboard/representante';
+      // case 'docente':
+      //   return '/dashboard/docente'
+    }
+  };
   
   // Función simple para imprimir usando la API nativa
   const handlePrint = () => {
     window.print();
   };
+
+  useEffect(() => {
+    // Determinar el rol del usuario desde el token
+    if (token) {
+      try {
+        const decodedToken = jwt_decode(token);
+        setUserRole(decodedToken.rol);
+      } catch (error) {
+        console.error("Error decodificando el token:", error);
+      }
+    }
+    
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Configurar axios con el token
+        const config = {
+          headers: { 'Authorization': `Bearer ${token}` }
+        };
+        
+        // Obtener datos de la inscripción
+        const inscripcionRes = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${inscripcionId}`, 
+          config
+        );
+        setInscripcion(inscripcionRes.data);
+        
+        // Extraer IDs necesarios
+        const estudianteID = inscripcionRes.data.estudianteID;
+        const representanteID = inscripcionRes.data.representanteID;
+        const gradoID = inscripcionRes.data.gradoID;
+        const seccionID = inscripcionRes.data.seccionID;
+        const annoEscolarID = inscripcionRes.data.annoEscolarID;
+        
+        // Resto del código para obtener datos...
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error al cargar datos:', err);
+        setError('Error al cargar los datos del comprobante. ' + (err.response?.data?.message || err.message));
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [inscripcionId, token]);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -115,12 +176,12 @@ const ComprobanteInscripcion = () => {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md">
           <p className="font-bold">Error</p>
           <p>{error}</p>
-          <button 
-            onClick={() => navigate('/dashboard')} 
-            className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-          >
-            Volver al Dashboard
-          </button>
+          <Link
+              to={getReturnPath()}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Volver al Dashboard
+            </Link>
         </div>
       </div>
     );

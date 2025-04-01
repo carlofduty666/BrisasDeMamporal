@@ -668,8 +668,19 @@ const RepresentanteDetail = () => {
 
         
         {/* Tabla de estudiantes */}
-        <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto mb-5">
+          <div className="flex justify-between items-center pl-6 mb-3">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Estudiantes inscritos
+            </h3>
+            <Link
+              to={`/inscripcion/nuevo-estudiante?repId=${representante?.id}&repCedula=${representante?.cedula}&repNombre=${representante?.nombre}&repApellido=${representante?.apellido}`}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <FaPlus className="mr-2" /> Añadir Estudiante
+            </Link>
+        </div>
+        <table className="min-w-full divide-y divide-gray-200 sm:rounded-lg">
             <thead className="bg-gray-50">
             <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

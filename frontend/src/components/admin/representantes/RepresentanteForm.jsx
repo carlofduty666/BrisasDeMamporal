@@ -314,7 +314,7 @@ const RepresentanteForm = () => {
   // Manejar envío del formulario del estudiante
   const handleSubmitEstudiante = async (e) => {
     e.preventDefault();
-
+  
     console.log('Datos del estudiante a enviar:', estudianteData);
     
     // Validar campos obligatorios
@@ -333,19 +333,24 @@ const RepresentanteForm = () => {
       // Crear un FormData para enviar los datos
       const formDataToSend = new FormData();
       
-      // Añadir datos del estudiante
+      // Añadir datos del estudiante directamente (sin prefijo)
       Object.entries(estudianteData).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           formDataToSend.append(key, value);
         }
       });
       
-      // Añadir ID del representante
+      // Añadir ID del representante con prefijo rep_
       formDataToSend.append('rep_id', representanteCreado.id);
       
       // Añadir año escolar
       formDataToSend.append('annoEscolarID', annoEscolar.id);
       formDataToSend.append('documentosCompletos', 'false');
+      
+      // Imprimir el FormData para depuración
+      for (let pair of formDataToSend.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
       
       // Enviar datos al servidor
       const response = await axios.post(
@@ -372,6 +377,7 @@ const RepresentanteForm = () => {
       setLoading(false);
     }
   };
+  
   
   // Funciones para manejar documentos
   const handleFileChange = (e) => {

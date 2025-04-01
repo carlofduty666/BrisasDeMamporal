@@ -357,7 +357,7 @@ const InscripcionDetail = () => {
       
       await axios.put(
         `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${id}/estado`,
-        { estado: 'aprobada', observaciones: 'Inscripción aprobada' },
+        { estado: 'aprobado', observaciones: 'Inscripción aprobada' },
         config
       );
       
@@ -398,7 +398,7 @@ const InscripcionDetail = () => {
       
       await axios.put(
         `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${id}/estado`,
-        { estado: 'rechazada', observaciones: `Rechazado: ${motivo}` },
+        { estado: 'rechazado', observaciones: `Rechazado: ${motivo}` },
         config
       );
       
@@ -814,8 +814,8 @@ const InscripcionDetail = () => {
                       className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
                     >
                       <option value="pendiente">Pendiente</option>
-                      <option value="aprobada">Aprobada</option>
-                      <option value="rechazada">Rechazada</option>
+                      <option value="aprobado">Aprobado</option>
+                      <option value="rechazado">Rechazado</option>
                       <option value="inscrito">Inscrito</option>
                       <option value="retirado">Retirado</option>
                       <option value="graduado">Graduado</option>

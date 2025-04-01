@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha } from '../../utils/formatters';
 
 
 const NuevoEstudiante = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,11 +51,6 @@ const NuevoEstudiante = () => {
     'constanciaEstudio6toSemestre': 'Constancia de Estudio 6to Semestre',
     'titulo': 'Título Académico'
   };
-  
-  // Función para formatear nombres de grados
-  const formatearNombreGrado = (nombreGrado) => {
-    return nombreGrado.replace(/_/g, ' ');
-  };
 
   const token = localStorage.getItem('token');
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -94,12 +90,68 @@ const NuevoEstudiante = () => {
   // Referencia para el formulario
   const formRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const getQueryParams = () => {
+    const searchParams = new URLSearchParams(location.search);
+    return {
+      repId: searchParams.get('repId'),
+      repCedula: searchParams.get('repCedula'),
+      repNombre: searchParams.get('repNombre'),
+      repApellido: searchParams.get('repApellido')
+    };
+  };
   
   // Cargar datos iniciales
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
+
+        // Obtener parámetros de la URL
+        const { repId, repCedula, repNombre, repApellido } = getQueryParams();
+        
+        // Si hay parámetros del representante en la URL, usarlos
+        if (repId && repCedula) {
+          setFormData(prev => ({
+            ...prev,
+            representante: {
+              ...prev.representante,
+              id: repId,
+              cedula: repCedula,
+              nombre: repNombre || '',
+              apellido: repApellido || ''
+            }
+          }));
+          
+          // Buscar datos completos del representante
+          try {
+            const token = localStorage.getItem('token');
+            const repResponse = await axios.get(
+              `http://localhost:5000/personas/${repId}`,
+              { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+            
+            if (repResponse.data && repResponse.data.tipo === 'representante') {
+              setFormData(prev => ({
+                ...prev,
+                representante: {
+                  ...prev.representante,
+                  id: repResponse.data.id,
+                  cedula: repResponse.data.cedula,
+                  nombre: repResponse.data.nombre,
+                  apellido: repResponse.data.apellido,
+                  telefono: repResponse.data.telefono || '',
+                  email: repResponse.data.email || '',
+                  direccion: repResponse.data.direccion || '',
+                  profesion: repResponse.data.profesion || ''
+                }
+              }));
+              setRepresentanteEncontrado(true);
+            }
+          } catch (error) {
+            console.warn("No se pudo cargar información completa del representante", error);
+          }
+        };
         
         // Obtener año escolar activo
         const annoResponse = await axios.get('http://localhost:5000/anno-escolar/actual');
@@ -155,7 +207,7 @@ const NuevoEstudiante = () => {
     };
     
     fetchInitialData();
-  }, [token]);
+  }, [token], [location.search]);
   
   // Cargar documentos requeridos cuando se cambia al paso 2
   useEffect(() => {
@@ -361,7 +413,7 @@ const NuevoEstudiante = () => {
       setBuscandoRepresentante(true);
       setError('');
       
-      const response = await axios.get(`http://localhost:5000/personas/criterio/cedula/${formData.representante.cedula}`);
+      const response = await axios.get(`http://localhost:5000/personas/cedula/${formData.representante.cedula}`);
       
       if (response.data && response.data.tipo === 'representante') {
         setFormData(prev => ({
@@ -686,6 +738,8 @@ const NuevoEstudiante = () => {
   
   // Renderizado condicional según el paso actual
   return (
+
+    
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
@@ -753,6 +807,24 @@ const NuevoEstudiante = () => {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-green-700">{success}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mensaje informativo cuando se accede desde el detalle del representante */}
+          {representanteEncontrado && getQueryParams().repId && (
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 m-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-blue-700">
+                    Está registrando un nuevo estudiante para el representante {formData.representante.nombre} {formData.representante.apellido}.
+                  </p>
                 </div>
               </div>
             </div>
@@ -905,7 +977,6 @@ const NuevoEstudiante = () => {
                 
                 <div className="pt-6 border-t border-gray-200">
                   <h3 className="text-lg font-medium text-gray-900">Datos del Representante</h3>
-                  
                   {/* Sección para buscar representante por cédula */}
                   <div className="mt-4 flex items-end space-x-4">
                     <div className="flex-grow">
@@ -940,7 +1011,8 @@ const NuevoEstudiante = () => {
                       </button>
                     )}
                     
-                    {representanteEncontrado && (
+                    {/* Botón para cambiar representante - ocultar si viene de RepresentanteDetail */}
+                    {!getQueryParams().repId && (
                       <button
                         type="button"
                         onClick={() => {
@@ -960,7 +1032,7 @@ const NuevoEstudiante = () => {
                             }
                           }));
                         }}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        className="mt-3 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                       >
                         Cambiar
                       </button>
@@ -973,7 +1045,9 @@ const NuevoEstudiante = () => {
                         <svg className="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
-                        <span className="text-sm font-medium text-green-800">Representante encontrado</span>
+                        <span className="text-sm font-medium text-green-800">
+                          {getQueryParams().repId ? 'Representante seleccionado' : 'Representante encontrado'}
+                        </span>
                       </div>
                       
                       <div className="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-2">

@@ -84,7 +84,7 @@ const EstudiantesList = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-gray-800">Estudiantes</h1>
           <Link
-            to="/admin/estudiantes/nuevo"
+            to="/inscripcion/nuevo-estudiante"
             className="bg-indigo-600 text-white px-4 py-2 rounded-md flex items-center"
           >
             <FaPlus className="mr-2" /> Nuevo Estudiante
