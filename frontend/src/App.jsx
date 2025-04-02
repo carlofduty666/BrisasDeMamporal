@@ -30,6 +30,9 @@ import EstudiantesList from './components/admin/estudiantes/EstudiantesList';
 import RepresentanteList from './components/admin/representantes/RepresentanteList';
 import RepresentanteDetail from './components/admin/representantes/RepresentanteDetail';
 import RepresentanteForm from './components/admin/representantes/RepresentanteForm';
+import ProfesoresList from './components/admin/profesores/ProfesoresList';
+import ProfesorDetail from './components/admin/profesores/ProfesorDetail';
+import ProfesorForm from './components/admin/profesores/ProfesorForm';
 
 // Importando tus componentes existentes
 import NavBar from './components/NavBar';
@@ -237,6 +240,33 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
               <RepresentanteDetail />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/profesores"
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <ProfesoresList />
+            </ProtectedRoute>
+          } 
+        />
+
+<Route 
+          path="/admin/profesores/:id"
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <ProfesorDetail />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/profesores/nuevo"
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <ProfesorForm />
             </ProtectedRoute>
           } 
         />

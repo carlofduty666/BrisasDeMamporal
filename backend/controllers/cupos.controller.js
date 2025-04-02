@@ -462,7 +462,7 @@ getResumenCupos: async (req, res) => {
         include: [
           {
             model: Grados,
-            as: 'grado'
+            as: 'Grados'
           }
         ]
       });

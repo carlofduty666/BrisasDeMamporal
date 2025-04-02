@@ -36,17 +36,28 @@ const materiasController = {
         }
     },
     getMateriasByProfesor: async (req, res) => {
-        try {
-            const materias = await Materias.findAll(req.params.id);
-            if (!materias) {
-                res.status (400).json({message: 'Parece que este profesor no imparte materias'})
-            } else {
-                res.json(materias);
+      try {
+        const { profesorID } = req.params;
+        
+        // Corregir esta línea:
+        // De: const materias = await Materias.findAll(profesorID);
+        // A:
+        const materias = await Materias.findAll({
+          where: { profesorID: profesorID },
+          include: [
+            {
+              model: db.Grados,
+              as: 'Grados',
+              attributes: ['id', 'nombre_grado']
             }
-        } catch (err) {
-            console.error(err)
-            res.status(500).json({message: err.message})
-        }
+          ]
+        });
+        
+        res.status(200).json(materias);
+      } catch (error) {
+        console.error('Error al obtener materias por profesor:', error);
+        res.status(500).json({ message: error.message });
+      }
     },
     // Asegúrate de que este método exista y esté correctamente implementado
     getMateriasByGrado: async (req, res) => {

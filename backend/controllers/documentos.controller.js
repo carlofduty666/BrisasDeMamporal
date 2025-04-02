@@ -243,13 +243,13 @@ verificarDocumentosRequeridos: async (req, res) => {
         { id: 'boletin', nombre: 'Boletín de Calificaciones', obligatorio: true },
         { id: 'notasCertificadas', nombre: 'Notas Certificadas', obligatorio: true },
         { id: 'fotoCarnet', nombre: 'Foto Carnet', obligatorio: true },
-        { id: 'boletaRetiroPlantel', nombre: 'Boleta de Retiro', obligatorio: false }
+        { id: 'boletaRetiroPlantel', nombre: 'Boleta de Retiro', obligatorio: true }
       ],
       representante: [
         { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },
         { id: 'constanciaTrabajo', nombre: 'Constancia Laboral', obligatorio: true },
         { id: 'solvenciaPago', nombre: 'Solvencia de Pagos', obligatorio: true },
-        { id: 'fotoCarnet', nombre: 'Foto Carnet', obligatorio: false }
+        { id: 'fotoCarnet', nombre: 'Foto Carnet', obligatorio: true }
       ],
       profesor: [
         { id: 'cedula', nombre: 'Cédula de Identidad', obligatorio: true },

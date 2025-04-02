@@ -131,6 +131,68 @@ const gradosController = {
           res.status(500).json({ message: err.message });
         }
     },
+    // Obtener grados por profesor
+    getGradosByProfesor: async (req, res) => {
+      const { profesorID } = req.params;
+      
+      try {
+        // Verificar que el profesor existe
+        const profesor = await Personas.findOne({
+          where: { id: profesorID, tipo: 'profesor' }
+        });
+        
+        if (!profesor) {
+          return res.status(404).json({ message: 'Profesor no encontrado' });
+        }
+        
+        // Obtener el año escolar activo
+        const annoEscolar = await AnnoEscolar.findOne({
+          where: { activo: true }
+        });
+        
+        if (!annoEscolar) {
+          return res.status(404).json({ message: 'No hay año escolar activo' });
+        }
+        
+        // Obtener los grados asignados al profesor en el año escolar activo
+        const gradosProfesor = await Grado_Personas.findAll({
+          where: {
+            personaID: profesorID,
+            annoEscolarID: annoEscolar.id
+          },
+          include: [
+            {
+              model: Grados,
+              as: 'grado',
+              include: [
+                {
+                  model: Niveles,
+                  as: 'Niveles'
+                }
+              ]
+            },
+            {
+              model: AnnoEscolar,
+              as: 'annoEscolar'
+            }
+          ]
+        });
+        
+        // Mapear los resultados para obtener solo los datos de los grados
+        const grados = gradosProfesor.map(gp => ({
+          id: gp.grado.id,
+          nombre_grado: gp.grado.nombre_grado,
+          nivel: gp.grado.Niveles ? gp.grado.Niveles.nombre_nivel : null,
+          annoEscolar: gp.annoEscolar
+        }));
+        
+        res.json(grados);
+      } catch (err) {
+        console.error('Error al obtener grados por profesor:', err);
+        res.status(500).json({ message: err.message });
+      }
+    },
+
     getEstudiantesByGrado: async (req, res) => {
       try {
         const { id } = req.params;
@@ -210,6 +272,62 @@ const gradosController = {
           console.error(err);
           res.status(500).json({ message: err.message });
         }
+    },
+    // Asignar profesor a un grado
+    asignarProfesor: async (req, res) => {
+      const { gradoID } = req.params;
+      const { profesorID, annoEscolarID } = req.body;
+      
+      if (!gradoID || !profesorID || !annoEscolarID) {
+        return res.status(400).json({ message: 'Faltan datos requeridos' });
+      }
+      
+      try {
+        // Verificar que el grado existe
+        const grado = await Grados.findByPk(gradoID);
+        if (!grado) {
+          return res.status(404).json({ message: 'Grado no encontrado' });
+        }
+        
+        // Verificar que el profesor existe
+        const profesor = await Personas.findOne({
+          where: { id: profesorID, tipo: 'profesor' }
+        });
+        if (!profesor) {
+          return res.status(404).json({ message: 'Profesor no encontrado' });
+        }
+        
+        // Verificar que el año escolar existe
+        const annoEscolar = await AnnoEscolar.findByPk(annoEscolarID);
+        if (!annoEscolar) {
+          return res.status(404).json({ message: 'Año escolar no encontrado' });
+        }
+        
+        // Verificar si ya existe una asignación
+        const asignacionExistente = await Grado_Personas.findOne({
+          where: {
+            gradoID,
+            personaID: profesorID,
+            annoEscolarID
+          }
+        });
+        
+        if (asignacionExistente) {
+          return res.status(400).json({ message: 'El profesor ya está asignado a este grado' });
+        }
+        
+        // Crear la asignación
+        await Grado_Personas.create({
+          gradoID,
+          personaID: profesorID,
+          annoEscolarID
+        });
+        
+        res.status(201).json({ message: 'Profesor asignado correctamente al grado' });
+      } catch (err) {
+        console.error('Error al asignar profesor a grado:', err);
+        res.status(500).json({ message: err.message });
+      }
     },
     createGrado: async (req, res) => {
         try {
