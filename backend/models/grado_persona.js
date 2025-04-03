@@ -7,7 +7,11 @@ module.exports = (sequelize, DataTypes) => {
       Grado_Personas.belongsTo(models.AnnoEscolar, {
         foreignKey: 'annoEscolarID',
         as: 'annoEscolar'
-      })
+      });
+      Grado_Personas.belongsTo(models.Grados, {
+        foreignKey: 'gradoID',
+        as: 'grado'
+      });
     }
   }
   

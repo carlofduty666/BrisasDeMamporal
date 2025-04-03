@@ -479,6 +479,199 @@ getCuposDisponibles: async (req, res) => {
   },
   
 // Crear nuevo estudiante e inscripción en un solo paso
+// crearNuevoEstudiante: async (req, res) => {
+//   const transaction = await db.sequelize.transaction();
+//   try {
+//     console.log("Iniciando creación de nuevo estudiante");
+//     console.log("Archivos recibidos:", req.files ? Object.keys(req.files) : "No hay archivos");
+    
+//     // ================== VALIDACIONES INICIALES ==================
+//     const annoEscolar = await AnnoEscolar.findOne({ 
+//       where: { activo: true },
+//       transaction 
+//     });
+//     if (!annoEscolar) {
+//       await transaction.rollback();
+//       return res.status(404).json({ message: 'No hay año escolar activo' });
+//     }
+
+//     // Extraer datos del body
+//     const { 
+//       cedula, nombre, apellido, fechaNacimiento, 
+//       lugarNacimiento, genero, direccion, gradoID, 
+//       observaciones, documentosCompletos
+//     } = req.body;
+
+//     // ================== VALIDAR ESTUDIANTE ==================
+//     if (await Personas.findOne({ where: { cedula, tipo: 'estudiante' }, transaction })) {
+//       await transaction.rollback();
+//       return res.status(400).json({ message: 'Estudiante ya existe' });
+//     }
+
+//     // ================== REPRESENTANTE ==================
+//     const representanteData = {
+//       cedula: req.body.rep_cedula,
+//       nombre: req.body.rep_nombre,
+//       apellido: req.body.rep_apellido,
+//       telefono: req.body.rep_telefono,
+//       email: req.body.rep_email,
+//       direccion: req.body.rep_direccion,
+//       profesion: req.body.rep_profesion,
+//       tipo: 'representante'
+//     };
+
+//     let representante = await Personas.findOne({
+//       where: { cedula: representanteData.cedula, tipo: 'representante' },
+//       transaction
+//     });
+
+//     if (!representante) {
+//       representante = await Personas.create(representanteData, { transaction });
+//     }
+
+//     // ================== VALIDAR GRADO ==================
+//     const grado = await Grados.findByPk(gradoID, { transaction });
+//     if (!grado) {
+//       await transaction.rollback();
+//       return res.status(404).json({ message: 'Grado no existe' });
+//     }
+
+//     // ================== CREAR ESTUDIANTE ==================
+//     const nuevoEstudiante = await Personas.create({
+//       cedula,
+//       nombre,
+//       apellido,
+//       fechaNacimiento,
+//       lugarNacimiento,
+//       genero,
+//       direccion,
+//       tipo: 'estudiante',
+//       observaciones
+//     }, { transaction });
+
+//     // ================== PROCESAR ARCHIVOS ==================
+//     // Convertir el string 'true'/'false' a booleano
+//     const tieneDocumentos = documentosCompletos === 'true';
+    
+//     if (req.files && Object.keys(req.files).length > 0) {
+//       console.log("Procesando archivos...");
+//       const uploadDir = path.join(__dirname, '../uploads/documentos');
+//       if (!fs.existsSync(uploadDir)) {
+//         fs.mkdirSync(uploadDir, { recursive: true });
+//       }
+    
+//       for (const fieldName of Object.keys(req.files)) {
+//         const file = req.files[fieldName];
+//         let personaID, tipoDocumento;
+        
+//         console.log(`Procesando archivo: ${fieldName}, nombre: ${file.name}`);
+    
+//         try {
+//           // Procesar representante/estudiante
+//           if (fieldName.includes('representante')) {
+//             tipoDocumento = fieldName.split('_').pop();
+//             personaID = representante.id;
+//           } else {
+//             tipoDocumento = fieldName.split('_').pop();
+//             personaID = nuevoEstudiante.id;
+//           }
+    
+//           // Mover archivo
+//           const uniqueFilename = `${Date.now()}-${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
+//           const filePath = path.join(uploadDir, uniqueFilename);
+          
+//           await file.mv(filePath);
+    
+//           // Guardar en DB
+//           await Documentos.create({ 
+//             personaID,
+//             tipoDocumento,
+//             urlDocumento: `/uploads/documentos/${uniqueFilename}`,
+//             nombre_archivo: file.name,
+//             tamano: file.size,
+//             tipo_archivo: file.mimetype,
+//             descripcion: `Documento ${tipoDocumento} subido durante inscripción`
+//           }, { transaction });
+    
+//         } catch (error) {
+//           console.error(`Error procesando archivo ${fieldName}:`, error);
+//           await transaction.rollback();
+//           return res.status(500).json({ 
+//             message: `Error al procesar el archivo ${fieldName}: ${error.message}`
+//           });
+//         }
+//       }
+//     } else {
+//       console.log("No se recibieron archivos para procesar");
+//     }
+
+//     // ================== ASIGNAR SECCIÓN ==================
+//     const seccionAsignada = await Secciones.findOne({
+//       where: {
+//         gradoID,
+//         capacidad: { [Op.gt]: literal('(SELECT COUNT(*) FROM `Seccion_Personas` WHERE `seccionID` = `Secciones`.`id`)') }
+//       },
+//       transaction
+//     });
+
+//     if (!seccionAsignada) {
+//       await transaction.rollback();
+//       return res.status(400).json({ message: 'No hay cupos disponibles' });
+//     }
+
+//     // ================== CREAR INSCRIPCIÓN ==================
+//     // IMPORTANTE: Usar el valor de documentosCompletos que viene del frontend
+//     const inscripcion = await Inscripciones.create({
+//       estudianteID: nuevoEstudiante.id,
+//       representanteID: representante.id,
+//       gradoID,
+//       seccionID: seccionAsignada.id,
+//       annoEscolarID: annoEscolar.id,
+//       fechaInscripcion: new Date(),
+//       estado: 'pendiente',
+//       observaciones,
+//       documentosCompletos: tieneDocumentos,
+//       pagoInscripcionCompletado: false,
+//       montoInscripcion: (await db.Aranceles.findOne({ 
+//         where: { nombre: { [Op.like]: '%inscripci%' }, activo: true }, 
+//         transaction 
+//       }))?.monto || 0
+//     }, { transaction });
+
+//     await Promise.all([
+//       Grado_Personas.create({
+//         personaID: nuevoEstudiante.id,
+//         gradoID,
+//         annoEscolarID: annoEscolar.id
+//       }, { transaction }),
+
+//       Seccion_Personas.create({
+//         personaID: nuevoEstudiante.id,
+//         seccionID: seccionAsignada.id,
+//         annoEscolarID: annoEscolar.id
+//       }, { transaction })
+//     ]);
+
+//     // ================== CONFIRMAR TRANSACCIÓN ==================
+//     await transaction.commit();
+
+//     res.status(201).json({
+//       message: 'Estudiante inscrito correctamente',
+//       estudiante: nuevoEstudiante,
+//       inscripcionId: inscripcion.id
+//     });
+
+//   } catch (err) {
+//     await transaction.rollback();
+//     console.error('Error general:', err);
+//     res.status(500).json({ 
+//       message: err.message,
+//       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+//     });
+//   }
+// },
+
+// Crear nuevo estudiante e inscripción en un solo paso
 crearNuevoEstudiante: async (req, res) => {
   const transaction = await db.sequelize.transaction();
   try {
@@ -620,6 +813,14 @@ crearNuevoEstudiante: async (req, res) => {
     }
 
     // ================== CREAR INSCRIPCIÓN ==================
+    // Obtener el arancel de inscripción
+    const arancelInscripcion = await db.Aranceles.findOne({ 
+      where: { nombre: { [Op.like]: '%inscripci%' }, activo: true }, 
+      transaction 
+    });
+    
+    const montoInscripcion = arancelInscripcion?.monto || 0;
+
     // IMPORTANTE: Usar el valor de documentosCompletos que viene del frontend
     const inscripcion = await Inscripciones.create({
       estudianteID: nuevoEstudiante.id,
@@ -632,10 +833,7 @@ crearNuevoEstudiante: async (req, res) => {
       observaciones,
       documentosCompletos: tieneDocumentos,
       pagoInscripcionCompletado: false,
-      montoInscripcion: (await db.Aranceles.findOne({ 
-        where: { nombre: { [Op.like]: '%inscripci%' }, activo: true }, 
-        transaction 
-      }))?.monto || 0
+      montoInscripcion
     }, { transaction });
 
     await Promise.all([
@@ -651,6 +849,32 @@ crearNuevoEstudiante: async (req, res) => {
         annoEscolarID: annoEscolar.id
       }, { transaction })
     ]);
+
+    // ================== CREAR PAGO PENDIENTE ==================
+    // Verificar si existe un método de pago por defecto para inscripciones
+    const metodoPagoDefault = await db.MetodoPagos.findOne({
+      where: { nombre: { [Op.like]: '%transferencia%' }, activo: true },
+      transaction
+    }) || await db.MetodoPagos.findOne({
+      where: { activo: true },
+      transaction
+    });
+
+    if (arancelInscripcion) {
+      // Crear un pago pendiente para la inscripción
+      await PagoEstudiantes.create({
+        personaID: nuevoEstudiante.id,
+        representanteID: representante.id,
+        arancelID: arancelInscripcion.id,
+        metodoPagoID: metodoPagoDefault ? metodoPagoDefault.id : null,
+        inscripcionID: inscripcion.id,
+        monto: montoInscripcion,
+        fechaPago: new Date(),
+        estado: 'pendiente',
+        observaciones: 'Pago de inscripción pendiente de verificación',
+        annoEscolarID: annoEscolar.id
+      }, { transaction });
+    }
 
     // ================== CONFIRMAR TRANSACCIÓN ==================
     await transaction.commit();
@@ -670,6 +894,7 @@ crearNuevoEstudiante: async (req, res) => {
     });
   }
 },
+
 
 // Añadir este método al controlador de inscripciones
 updateInscripcionDocumentos: async (req, res) => {

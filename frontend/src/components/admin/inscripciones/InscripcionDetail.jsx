@@ -30,7 +30,59 @@ const InscripcionDetail = () => {
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [subiendoDocumento, setSubiendoDocumento] = useState(false);
   const [documentoRepresentanteSeleccionado, setDocumentoRepresentanteSeleccionado] = useState(null);
+
+  // Estado para el modal de pago
+  const [showPagoModal, setShowPagoModal] = useState(false);
+  const [metodoPagos, setMetodoPagos] = useState([]);
+  const [loadingMetodoPagos, setLoadingMetodoPagos] = useState(false);
+  const [comprobante, setComprobante] = useState(null);
+
+  // Estado para el formulario de pago
+  const [formPago, setFormPago] = useState({
+    metodoPagoID: '',
+    referencia: '',
+    monto: '',
+    fechaPago: new Date().toISOString().split('T')[0],
+    observaciones: ''
+  });
   
+  // Función para abrir el modal de pago
+  const handleOpenPagoModal = async () => {
+    try {
+      setLoadingMetodoPagos(true);
+      const token = localStorage.getItem('token');
+      
+      // Cargar métodos de pago
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/metodos-pago`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      setMetodoPagos(response.data.filter(metodo => metodo.activo));
+      
+      // Establecer el monto de inscripción
+      setFormPago({
+        ...formPago,
+        monto: inscripcion.montoInscripcion || 0
+      });
+      
+      setLoadingMetodoPagos(false);
+      setShowPagoModal(true);
+    } catch (err) {
+      console.error('Error al cargar métodos de pago:', err);
+      setError('Error al cargar métodos de pago. Por favor, intente nuevamente.');
+      setLoadingMetodoPagos(false);
+    }
+  };
+
+  // Función para manejar cambios en el formulario de pago
+  const handlePagoChange = (e) => {
+    const { name, value } = e.target;
+    setFormPago({
+      ...formPago,
+      [name]: value
+    });
+  };
 
   const fileInputRef = useRef(null);
   
@@ -478,6 +530,103 @@ const InscripcionDetail = () => {
       setArchivoSeleccionado(null);
     }
   };
+
+  const handleSubmitPago = async (e) => {
+    e.preventDefault();
+    
+    // Validar campos obligatorios
+    if (!formPago.metodoPagoID || !formPago.monto || !formPago.fechaPago) {
+      setError('Por favor, complete todos los campos obligatorios.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError('');
+      
+      const token = localStorage.getItem('token');
+      
+      // Crear FormData para enviar archivos
+      const formDataToSend = new FormData();
+      
+      // Añadir datos del pago
+      Object.entries(formPago).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          formDataToSend.append(key, value);
+        }
+      });
+      
+      // Añadir IDs necesarios
+      formDataToSend.append('personaID', inscripcion.estudianteID);
+      formDataToSend.append('representanteID', inscripcion.representanteID);
+      formDataToSend.append('inscripcionID', inscripcion.id);
+      formDataToSend.append('annoEscolarID', inscripcion.annoEscolarID);
+      
+      // Buscar el arancel de inscripción
+      const arancelesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/aranceles`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      const arancelInscripcion = arancelesResponse.data.find(a => 
+        a.nombre.toLowerCase().includes('inscripci') && a.activo
+      );
+      
+      if (arancelInscripcion) {
+        formDataToSend.append('arancelID', arancelInscripcion.id);
+      }
+      
+      // Añadir comprobante si existe
+      if (comprobante) {
+        formDataToSend.append('comprobante', comprobante);
+      }
+      
+      // Enviar datos al servidor
+      await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/pagos`,
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      // Recargar inscripción
+      fetchInscripcion();
+      
+      // Mostrar mensaje de éxito
+      setSuccess('Pago registrado correctamente. Pendiente de verificación por el administrador.');
+      
+      // Mostrar mensaje de éxito
+      setSuccess('Pago registrado correctamente. Pendiente de verificación por el administrador.');
+        
+      // Cerrar modal y limpiar formulario
+      setShowPagoModal(false);
+      setFormPago({
+        metodoPagoID: '',
+        referencia: '',
+        monto: '',
+        fechaPago: new Date().toISOString().split('T')[0],
+        observaciones: ''
+      });
+      setComprobante(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      setTimeout(() => {
+        setSuccess('');
+      }, 3000);
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error al registrar pago:', err);
+      setError(err.response?.data?.message || 'Error al registrar el pago. Por favor, intente nuevamente.');
+      setLoading(false);
+    }
+    };
   
   // Función para subir/resubir documento
   const handleUploadDocument = async () => {
@@ -1412,20 +1561,212 @@ const InscripcionDetail = () => {
           </div>
         )}
 
-        
-        {/* Pagos */}
-        {inscripcion?.pagos && inscripcion.pagos.length > 0 && (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Pagos Realizados
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Historial de pagos asociados a esta inscripción.
-              </p>
+        {/* Modal para registrar pago */}
+        {showPagoModal && (
+          <div className="fixed z-10 inset-0 overflow-y-auto">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+              </div>
+              
+              <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+              
+              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                        Registrar Pago de Inscripción
+                      </h3>
+                      <div className="mt-2">
+                        <form onSubmit={handleSubmitPago}>
+                          <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                            <div className="sm:col-span-6">
+                              <label htmlFor="metodoPagoID" className="block text-sm font-medium text-gray-700">
+                                Método de Pago <span className="text-red-500">*</span>
+                              </label>
+                              <div className="mt-1">
+                                <select
+                                  id="metodoPagoID"
+                                  name="metodoPagoID"
+                                  value={formPago.metodoPagoID}
+                                  onChange={handlePagoChange}
+                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                  required
+                                >
+                                  <option value="">Seleccione un método de pago</option>
+                                  {loadingMetodoPagos ? (
+                                    <option disabled>Cargando métodos de pago...</option>
+                                  ) : (
+                                    metodoPagos.map(metodo => (
+                                      <option key={metodo.id} value={metodo.id}>
+                                        {metodo.nombre}
+                                      </option>
+                                    ))
+                                  )}
+                                </select>
+                              </div>
+                            </div>
+                            
+                            <div className="sm:col-span-6">
+                              <label htmlFor="referencia" className="block text-sm font-medium text-gray-700">
+                                Referencia
+                              </label>
+                              <div className="mt-1">
+                                <input
+                                  type="text"
+                                  name="referencia"
+                                  id="referencia"
+                                  value={formPago.referencia}
+                                  onChange={handlePagoChange}
+                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                  placeholder="Número de transferencia, referencia, etc."
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="sm:col-span-3">
+                              <label htmlFor="monto" className="block text-sm font-medium text-gray-700">
+                                Monto <span className="text-red-500">*</span>
+                              </label>
+                              <div className="mt-1">
+                                <input
+                                  type="number"
+                                  name="monto"
+                                  id="monto"
+                                  value={formPago.monto}
+                                  onChange={handlePagoChange}
+                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                  required
+                                  step="0.01"
+                                  min="0"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="sm:col-span-3">
+                              <label htmlFor="fechaPago" className="block text-sm font-medium text-gray-700">
+                                Fecha de Pago <span className="text-red-500">*</span>
+                              </label>
+                              <div className="mt-1">
+                                <input
+                                  type="date"
+                                  name="fechaPago"
+                                  id="fechaPago"
+                                  value={formPago.fechaPago}
+                                  onChange={handlePagoChange}
+                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                  required
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="sm:col-span-6">
+                              <label htmlFor="comprobante" className="block text-sm font-medium text-gray-700">
+                                Comprobante de Pago
+                              </label>
+                              <div className="mt-1">
+                                <input
+                                  type="file"
+                                  name="comprobante"
+                                  id="comprobante"
+                                  ref={fileInputRef}
+                                  onChange={handleFileChange}
+                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                />
+                              </div>
+                              <p className="mt-1 text-xs text-gray-500">
+                                Formatos aceptados: PDF, JPG, JPEG, PNG
+                              </p>
+                            </div>
+                            
+                            <div className="sm:col-span-6">
+                              <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700">
+                                Observaciones
+                              </label>
+                              <div className="mt-1">
+                                <textarea
+                                  id="observaciones"
+                                  name="observaciones"
+                                  rows="3"
+                                  value={formPago.observaciones}
+                                  onChange={handlePagoChange}
+                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                ></textarea>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {error && (
+                            <div className="mt-4 bg-red-50 border-l-4 border-red-400 p-4">
+                              <div className="flex">
+                                <div className="flex-shrink-0">
+                                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                                <div className="ml-3">
+                                  <p className="text-sm text-red-700">{error}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    onClick={handleSubmitPago}
+                    disabled={loading}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    {loading ? (
+                      <span className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Guardando...
+                      </span>
+                    ) : (
+                      'Registrar Pago'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPagoModal(false)}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
             </div>
-            
-            <div className="border-t border-gray-200">
+          </div>
+        )}
+
+        
+        {/* Tabla de Pagos Realizados*/}
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Pagos Realizados
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Historial de pagos asociados a esta inscripción.
+            </p>
+          </div>
+          
+          <div className="border-t border-gray-200">
+            {(!inscripcion?.pagos || inscripcion.pagos.length === 0) ? (
+              <div className="px-4 py-5 sm:px-6 text-center">
+                <p className="text-sm text-gray-500">No se han realizado pagos para esta inscripción.</p>
+              </div>
+            ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -1454,7 +1795,7 @@ const InscripcionDetail = () => {
                     {inscripcion.pagos.map((pago) => (
                       <tr key={pago.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatearFecha(pago.fecha)}
+                          {formatearFecha(pago.fechaPago)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {pago.arancel?.nombre || 'Pago de inscripción'}
@@ -1469,7 +1810,7 @@ const InscripcionDetail = () => {
                           ${pago.monto.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${pago.estado === 'procesado' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${pago.estado === 'completado' ? 'bg-green-100 text-green-800' : pago.estado === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
                             {pago.estado.charAt(0).toUpperCase() + pago.estado.slice(1)}
                           </span>
                         </td>
@@ -1478,11 +1819,12 @@ const InscripcionDetail = () => {
                   </tbody>
                 </table>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
+
         
-        {/* Botones de acción */}
+        Botones de acción
         <div className="flex justify-end space-x-4 mt-6">
           <Link
             to={`/admin/estudiantes/${inscripcion?.estudiante?.id}`}
@@ -1507,6 +1849,29 @@ const InscripcionDetail = () => {
             <FaFileDownload className="mr-2" /> Generar Comprobante
           </Link>
         </div>
+        {/* <div className="sm:col-span-1">
+          <dt className="text-sm font-medium text-gray-500">Pago de Inscripción</dt>
+          <dd className="mt-1 text-sm text-gray-900 flex items-center">
+            {inscripcion.pagoInscripcionCompletado ? (
+              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                Completado
+              </span>
+            ) : (
+              <>
+                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 mr-2">
+                  Pendiente
+                </span>
+                <button
+                  type="button"
+                  onClick={handleOpenPagoModal}
+                  className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Registrar Pago
+                </button>
+              </>
+            )}
+          </dd>
+        </div> */}
       </div>
     </AdminLayout>
   );

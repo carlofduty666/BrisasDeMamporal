@@ -37,28 +37,80 @@ const materiasController = {
     },
     getMateriasByProfesor: async (req, res) => {
       try {
-        const { profesorID } = req.params;
+        const { id } = req.params; // ID del profesor
         
-        // Corregir esta línea:
-        // De: const materias = await Materias.findAll(profesorID);
-        // A:
-        const materias = await Materias.findAll({
-          where: { profesorID: profesorID },
+        if (!id) {
+          return res.status(400).json({ message: 'Se requiere el ID del profesor' });
+        }
+        
+        console.log('Buscando materias para el profesor ID:', id);
+        
+        // Obtener el año escolar activo o el especificado en la consulta
+        const annoEscolarID = req.query.annoEscolarID || (await db.AnnoEscolar.findOne({ where: { activo: true } }))?.id;
+        
+        if (!annoEscolarID) {
+          return res.status(404).json({ message: 'No se encontró un año escolar activo' });
+        }
+        
+        // Obtener materias asignadas al profesor
+        const materias = await db.Materias.findAll({
           include: [
             {
               model: db.Grados,
-              as: 'Grados',
-              attributes: ['id', 'nombre_grado']
+              as: 'Grados', // Usa el alias definido en el modelo
+              through: { attributes: [] } // No incluir atributos de la tabla de unión
+            },
+            {
+              model: db.Personas,
+              as: 'profesores', // Usa el alias definido en el modelo
+              where: { 
+                id: id, // ID del profesor
+                tipo: 'profesor' // Asegurarse de que es un profesor
+              },
+              through: { 
+                model: db.Profesor_Materia_Grados,
+                where: { annoEscolarID: annoEscolarID },
+                attributes: [] // No incluir atributos de la tabla de unión
+              },
+              attributes: [], // No incluir atributos del profesor
+              required: true
             }
           ]
         });
         
-        res.status(200).json(materias);
+        // Obtener información adicional de los grados para cada materia
+        const materiasConGrados = await Promise.all(
+          materias.map(async (materia) => {
+            // Obtener los grados en los que el profesor imparte esta materia
+            const gradosProfesor = await db.Profesor_Materia_Grados.findAll({
+              where: {
+                profesorID: id,
+                materiaID: materia.id,
+                annoEscolarID: annoEscolarID
+              },
+              include: [
+                {
+                  model: db.Grados,
+                  as: 'grado',
+                  attributes: ['id', 'nombre_grado', 'nivelID']
+                }
+              ]
+            });
+            
+            return {
+              ...materia.get({ plain: true }),
+              gradosImpartidos: gradosProfesor.map(gp => gp.grado)
+            };
+          })
+        );
+        
+        res.status(200).json(materiasConGrados);
       } catch (error) {
         console.error('Error al obtener materias por profesor:', error);
         res.status(500).json({ message: error.message });
       }
     },
+    
     // Asegúrate de que este método exista y esté correctamente implementado
     getMateriasByGrado: async (req, res) => {
       try {
@@ -316,8 +368,6 @@ const materiasController = {
             res.status(500).json({message: err.message})
         }
     },
-
-    // Añadir al controlador existente
 
 // Asignar materia a sección específica
 asignarMateriaASeccion: async (req, res) => {

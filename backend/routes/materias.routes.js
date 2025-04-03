@@ -7,10 +7,11 @@ const authMiddleware = require('../middleware/auth.middleware');
 // router.get('/materias/publicas', materiaController.getMateriasPublicas);
 
 // Rutas protegidas
-router.get('/materias', authMiddleware.verifyToken, materiaController.getAllMaterias);
-router.get('/materias/:id', authMiddleware.verifyToken, materiaController.getMateriaByID);
 router.get('/materias/profesor/:id', authMiddleware.verifyToken, materiaController.getMateriasByProfesor);
 router.get('/materias/grado/:id', authMiddleware.verifyToken, materiaController.getMateriasByGrado); // Añadida esta ruta
+
+router.get('/materias/:id', authMiddleware.verifyToken, materiaController.getMateriaByID);
+router.get('/materias', authMiddleware.verifyToken, materiaController.getAllMaterias);
 
 router.post('/materias', authMiddleware.verifyToken, materiaController.createMateria);
 router.post('/materias/asignar-a-grado', authMiddleware.verifyToken, materiaController.asignarMateriaAGrado);

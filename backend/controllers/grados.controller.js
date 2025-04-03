@@ -133,11 +133,16 @@ const gradosController = {
     },
     // Obtener grados por profesor
     getGradosByProfesor: async (req, res) => {
-      const { profesorID } = req.params;
-      
       try {
-        // Verificar que el profesor existe
-        const profesor = await Personas.findOne({
+        const { profesorID } = req.params;
+        const { annoEscolarID } = req.query;
+        
+        if (!profesorID) {
+          return res.status(400).json({ message: 'Se requiere el ID del profesor' });
+        }
+        
+        // Verificar si el profesor existe
+        const profesor = await db.Personas.findOne({
           where: { id: profesorID, tipo: 'profesor' }
         });
         
@@ -145,53 +150,69 @@ const gradosController = {
           return res.status(404).json({ message: 'Profesor no encontrado' });
         }
         
-        // Obtener el año escolar activo
-        const annoEscolar = await AnnoEscolar.findOne({
-          where: { activo: true }
-        });
+        // Usar el año escolar de la consulta o el activo
+        const annoEscolar = annoEscolarID 
+          ? await db.AnnoEscolar.findByPk(annoEscolarID)
+          : await db.AnnoEscolar.findOne({ where: { activo: true } });
         
         if (!annoEscolar) {
-          return res.status(404).json({ message: 'No hay año escolar activo' });
+          return res.status(404).json({ message: 'Año escolar no encontrado' });
         }
         
-        // Obtener los grados asignados al profesor en el año escolar activo
-        const gradosProfesor = await Grado_Personas.findAll({
-          where: {
-            personaID: profesorID,
-            annoEscolarID: annoEscolar.id
-          },
+        // Obtener los grados asignados al profesor para el año escolar especificado
+        const grados = await db.Grados.findAll({
           include: [
             {
-              model: Grados,
-              as: 'grado',
-              include: [
-                {
-                  model: Niveles,
-                  as: 'Niveles'
-                }
-              ]
-            },
-            {
-              model: AnnoEscolar,
-              as: 'annoEscolar'
+              model: db.Niveles,
+              as: 'Niveles',
+              attributes: ['id', 'nombre_nivel']
             }
-          ]
+          ],
+          where: {
+            id: {
+              [db.Sequelize.Op.in]: db.Sequelize.literal(`
+                (SELECT DISTINCT gradoID FROM Profesor_Materia_Grados 
+                 WHERE profesorID = ${profesorID} AND annoEscolarID = ${annoEscolar.id})
+              `)
+            }
+          }
         });
         
-        // Mapear los resultados para obtener solo los datos de los grados
-        const grados = gradosProfesor.map(gp => ({
-          id: gp.grado.id,
-          nombre_grado: gp.grado.nombre_grado,
-          nivel: gp.grado.Niveles ? gp.grado.Niveles.nombre_nivel : null,
-          annoEscolar: gp.annoEscolar
-        }));
+        // Para cada grado, obtener las materias que imparte el profesor
+        const gradosConMaterias = await Promise.all(
+          grados.map(async (grado) => {
+            // Obtener las materias que el profesor imparte en este grado
+            const materiasQuery = await db.Profesor_Materia_Grados.findAll({
+              where: { 
+                profesorID: profesorID,
+                gradoID: grado.id,
+                annoEscolarID: annoEscolar.id
+              },
+              include: [
+                {
+                  model: db.Materias,
+                  as: 'materia',
+                  attributes: ['id', 'asignatura']
+                }
+              ]
+            });
+            
+            const materias = materiasQuery.map(item => item.materia);
+            
+            return {
+              ...grado.get({ plain: true }),
+              materiasImpartidas: materias
+            };
+          })
+        );
         
-        res.json(grados);
-      } catch (err) {
-        console.error('Error al obtener grados por profesor:', err);
-        res.status(500).json({ message: err.message });
+        res.status(200).json(gradosConMaterias);
+      } catch (error) {
+        console.error('Error al obtener grados por profesor:', error);
+        res.status(500).json({ message: error.message });
       }
     },
+    
 
     getEstudiantesByGrado: async (req, res) => {
       try {

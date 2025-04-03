@@ -77,10 +77,25 @@ const MateriasList = () => {
         
         // Obtener todos los profesores
         const profesoresResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/tipo/profesor`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas`,
+          { 
+            headers: { 'Authorization': `Bearer ${token}` },
+            params: { tipo: 'profesor' }  // Usar parámetros de consulta
+          }
         );
-        setProfesores(profesoresResponse.data);
+        
+        // Asegurarse de que profesores sea siempre un array
+        if (Array.isArray(profesoresResponse.data)) {
+          setProfesores(profesoresResponse.data.filter(p => p.tipo === 'profesor'));
+        } else if (profesoresResponse.data && typeof profesoresResponse.data === 'object') {
+          if (profesoresResponse.data.tipo === 'profesor') {
+            setProfesores([profesoresResponse.data]);
+          } else {
+            setProfesores([]);
+          }
+        } else {
+          setProfesores([]);
+        }
         
         // Obtener todas las secciones
         const seccionesResponse = await axios.get(
@@ -107,11 +122,12 @@ const MateriasList = () => {
     } else {
       const filtered = materias.filter(materia => 
         materia.asignatura.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (materia.id && materia.id.toLowerCase().includes(searchTerm.toLowerCase()))
+        (materia.id && materia.id.toString().toLowerCase().includes(searchTerm.toLowerCase()))
       );
       setFilteredMaterias(filtered);
     }
   }, [searchTerm, materias]);
+    
   
   // Función para crear una nueva materia
   const handleCreateMateria = async (e) => {
@@ -609,11 +625,15 @@ const MateriasList = () => {
                 onChange={(e) => setAsignProfesorForm({...asignProfesorForm, profesorID: e.target.value})}
               >
                 <option value="">Seleccione un profesor</option>
-                {profesores.map((profesor) => (
-                  <option key={profesor.id} value={profesor.id}>
-                    {profesor.nombre} {profesor.apellido}
-                  </option>
-                ))}
+                {Array.isArray(profesores) && profesores.length > 0 ? (
+                  profesores.map((profesor) => (
+                    <option key={profesor.id} value={profesor.id}>
+                      {profesor.nombre} {profesor.apellido}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">No hay profesores disponibles</option>
+                )}
               </select>
             </div>
             <div>

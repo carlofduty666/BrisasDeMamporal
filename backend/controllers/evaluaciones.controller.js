@@ -151,7 +151,7 @@ const evaluacionesController = {
             archivoURL: `/uploads/evaluaciones/${filename}`,
             nombreArchivo: originalname,
             tipoArchivo: mimetype,
-            // tamanoArchivo: size
+            tamanoArchivo: size
             });
         }
         
@@ -248,7 +248,7 @@ const evaluacionesController = {
             archivoURL: `/uploads/evaluaciones/${filename}`,
             nombreArchivo: originalname,
             tipoArchivo: mimetype,
-            // tamanoArchivo: size
+            tamanoArchivo: size
             });
         }
         
@@ -337,7 +337,7 @@ const evaluacionesController = {
             archivoURL: `/uploads/evaluaciones/${filename}`,
             nombreArchivo: originalname,
             tipoArchivo: mimetype,
-            // tamanoArchivo: size,
+            tamanoArchivo: size,
             descripcion: req.body.descripcion || null
         });
         

@@ -33,6 +33,9 @@ import RepresentanteForm from './components/admin/representantes/RepresentanteFo
 import ProfesoresList from './components/admin/profesores/ProfesoresList';
 import ProfesorDetail from './components/admin/profesores/ProfesorDetail';
 import ProfesorForm from './components/admin/profesores/ProfesorForm';
+import ArancelesManager from './components/admin/pagos/ArancelesManager';
+// import PagosDetail from './components/admin/pagos/PagosDetail';
+import PagosList from './components/admin/pagos/PagosList';
 
 // Importando tus componentes existentes
 import NavBar from './components/NavBar';
@@ -253,7 +256,7 @@ function App() {
           } 
         />
 
-<Route 
+        <Route 
           path="/admin/profesores/:id"
           element={
             <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
@@ -270,6 +273,26 @@ function App() {
             </ProtectedRoute>
           } 
         />
+
+        <Route 
+          path="/admin/pagos"
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <PagosList />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/aranceles"
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <ArancelesManager />
+            </ProtectedRoute>
+          } 
+        />
+
+
 
         <Route
         path="/test/file-upload"
