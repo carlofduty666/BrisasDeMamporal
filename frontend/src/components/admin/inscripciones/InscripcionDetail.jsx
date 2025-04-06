@@ -1807,7 +1807,7 @@ const InscripcionDetail = () => {
                           {pago.referencia || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${pago.monto.toFixed(2)}
+                          ${(Number(pago.monto) || 0).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${pago.estado === 'completado' ? 'bg-green-100 text-green-800' : pago.estado === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>

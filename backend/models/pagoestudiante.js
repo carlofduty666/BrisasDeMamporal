@@ -56,15 +56,15 @@ module.exports = (sequelize, DataTypes) => {
     montoTotal: DataTypes.DECIMAL,
     mesPago: DataTypes.STRING,
     fechaPago: DataTypes.DATE,
-    fechaVencimiento: DataTypes.DATE,
     referencia: DataTypes.STRING,
-    comprobante: DataTypes.STRING,
     estado: {
-      type: DataTypes.ENUM('pendiente', 'pagado', 'vencido', 'anulado'),
+      type: DataTypes.ENUM('pendiente', 'pagado', 'anulado'),
       defaultValue: 'pendiente'
     },
-    stripeSessionID: DataTypes.STRING,
-    stripePaymentID: DataTypes.STRING,
+    urlComprobante: DataTypes.STRING,
+    nombreArchivo: DataTypes.STRING,
+    tipoArchivo: DataTypes.STRING,
+    tamanoArchivo: DataTypes.INTEGER,
     observaciones: DataTypes.TEXT
   }, {
     sequelize,

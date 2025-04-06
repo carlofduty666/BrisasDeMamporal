@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { formatearFecha, formatearNombreGrado } from '../../utils/formatters';
-import * as jwt_decode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
 const ComprobanteInscripcion = () => {
   const { inscripcionId } = useParams();
@@ -42,7 +42,7 @@ const ComprobanteInscripcion = () => {
     // Determinar el rol del usuario desde el token
     if (token) {
       try {
-        const decodedToken = jwt_decode(token);
+        const decodedToken = jwtDecode(token);
         setUserRole(decodedToken.rol);
       } catch (error) {
         console.error("Error decodificando el token:", error);

@@ -863,7 +863,8 @@ crearNuevoEstudiante: async (req, res) => {
     if (arancelInscripcion) {
       // Crear un pago pendiente para la inscripción
       await PagoEstudiantes.create({
-        personaID: nuevoEstudiante.id,
+        // personaID: nuevoEstudiante.id,
+        estudianteID: nuevoEstudiante.id,
         representanteID: representante.id,
         arancelID: arancelInscripcion.id,
         metodoPagoID: metodoPagoDefault ? metodoPagoDefault.id : null,

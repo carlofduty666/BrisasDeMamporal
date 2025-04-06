@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const personaController = require('../controllers/persona.controller');
+const authMiddleware = require('../middleware/auth.middleware');
 
-router.get('/personas', personaController.getAllPersonas); // Para obtener todas las personas
-router.get('/personas/:field/:value', personaController.getPersonaByCriterio); // Para obtener una persona por criterio es decir 
+router.get('/personas', personaController.getPersonasByQuery); // Para obtener todas las personas
+router.get('/personas/criterio/:field/:value', personaController.getPersonaByCriterio); // Para obtener una persona por criterio es decir 
 router.get('/personas/:id/roles', personaController.getRolesDePersona);
 router.get('/personas/:id', personaController.getPersonaById); // Para obtener una persona por ID
 router.get('/personas/tipo/:tipo', personaController.getPersonasByTipo); // Para obtener personas por tipo

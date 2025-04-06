@@ -3,15 +3,15 @@ const Personas = db.Personas;
 const Roles = db.Roles;
 const Persona_Roles = db.Persona_Roles;
 
-const getAllPersonas = async (req, res) => {
-  try {
-      const personas = await Personas.getAllPersonas();
-      res.json(personas);
-  } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: err.message });
-  }
-};
+// const getAllPersonas = async (req, res) => {
+//   try {
+//       const personas = await Personas.getAllPersonas();
+//       res.json(personas);
+//   } catch (err) {
+//       console.error(err);
+//       res.status(500).json({ message: err.message });
+//   }
+// };
 
 const getPersonasByTipo = async (req, res) => {
   const { tipo } = req.params;
@@ -38,36 +38,59 @@ const getPersonaTipoById = async (req, res) => {
   }
 };
 
-const getPersonaByCriterio = async (req, res) => {
-    const { field, value } = req.params;
-  
-    try {
-      const persona = await Personas.getPersonaBy(field, value);
-  
-      if (persona) {
-        res.json(persona);
-      } else {
-        res.status(404).json({ message: `Persona no encontrada con ${field} = ${value}` });
-      }
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: err.message });
-    }
+const getPersonasByQuery = async (req, res) => {
+  try {
+    const { tipo, id } = req.query;
+    
+    // Construir condiciones de filtro
+    const where = {};
+    if (tipo) where.tipo = tipo;
+    if (id) where.id = id;
+    
+    const personas = await Personas.findAll({ where });
+    
+    res.json(personas);
+  } catch (err) {
+    console.error('Error al obtener personas con filtros:', err);
+    res.status(500).json({ message: err.message });
+  }
 };
 
-  const getPersonaById = async (req, res) => {
-    try {
-      const persona = await Personas.findByPk(req.params.id);
-      
-      if (persona) {
-        res.json(persona);
-      } else {
-        res.status(404).json({ message: 'Persona no encontrada' });
-      }
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: err.message });
+// Obtener persona por criterio específico
+const getPersonaByCriterio = async (req, res) => {
+  const { field, value } = req.params;
+
+  try {
+    // Construir condición de filtro dinámica
+    const where = {};
+    where[field] = value;
+    
+    const persona = await Personas.findOne({ where });
+
+    if (persona) {
+      res.json(persona);
+    } else {
+      res.status(404).json({ message: `Persona no encontrada con ${field} = ${value}` });
     }
+  } catch (err) {
+    console.error('Error al buscar persona por criterio:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const getPersonaById = async (req, res) => {
+  try {
+    const persona = await Personas.findByPk(req.params.id);
+    
+    if (persona) {
+      res.json(persona);
+    } else {
+      res.status(404).json({ message: 'Persona no encontrada' });
+    }
+  } catch (err) {
+    console.error('Error al obtener persona por ID:', err);
+    res.status(500).json({ message: err.message });
+  }
 };
 
 // Obtener estudiantes por representante
@@ -253,7 +276,7 @@ const getRolesDePersona = async (req, res) => {
 
 
 module.exports = { 
-    getAllPersonas,
+    getPersonasByQuery,
     getPersonasByTipo,
     getPersonaByCriterio,
     createPersona,
@@ -264,5 +287,6 @@ module.exports = {
     getRolesDePersona,
     getPersonaById,
     getPersonaTipoById,
-    getEstudiantesByRepresentante
+    getEstudiantesByRepresentante,
+    getPersonasByQuery
 }
