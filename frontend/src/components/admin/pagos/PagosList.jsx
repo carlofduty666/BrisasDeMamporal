@@ -42,6 +42,11 @@ const PagosList = () => {
   const [pagosRevisados, setPagosRevisados] = useState([]);
   const [tabActiva, setTabActiva] = useState('pendientes'); // 'pendientes' o 'revisados'
 
+  // Estados para modal de detalles
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedPago, setSelectedPago] = useState(null);
+
+
   
   // Estado para el formulario de nuevo pago
   const [formPago, setFormPago] = useState({
@@ -590,6 +595,42 @@ const PagosList = () => {
     if (monto === null || monto === undefined) return 'N/A';
     return `$${parseFloat(monto).toFixed(2)}`;
   };
+
+  const handlePreviewComprobante = (pago) => {
+    if (pago && pago.urlComprobante) {
+      window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${pago.urlComprobante}`, '_blank');
+    }
+  };
+  // Función para abrir el modal con los detalles del pago
+  const handleOpenDetailModal = async (pagoId) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/pagos/${pagoId}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      setSelectedPago(response.data);
+      setShowDetailModal(true);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error al cargar detalles del pago:', err);
+      setError(err.response?.data?.message || 'Error al cargar los detalles del pago. Por favor, intente nuevamente.');
+      setLoading(false);
+    }
+  };
+
+  // Función para cerrar el modal
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedPago(null);
+  };
+
+  
+
+
   
   return (
     <AdminLayout>
@@ -765,13 +806,13 @@ const PagosList = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
-                          <Link
-                            to={`/admin/pagos/${pago.id}`}
+                          <button
+                            onClick={() => handleOpenDetailModal(pago.id)}
                             className="text-indigo-600 hover:text-indigo-900"
                             title="Ver detalles"
                           >
                             <FaEye />
-                          </Link>
+                          </button>
                           
                           {pago.estado === 'pendiente' && (
                             <button
@@ -794,15 +835,13 @@ const PagosList = () => {
                           )}
                           
                           {pago.urlComprobante && (
-                            <a
-                              href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/pagos/${pago.id}/comprobante`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => handlePreviewComprobante(pago)}
                               className="text-blue-600 hover:text-blue-900"
                               title="Ver comprobante"
                             >
                               <FaFileInvoiceDollar />
-                            </a>
+                            </button>
                           )}
                         </div>
                       </td>
@@ -1242,6 +1281,189 @@ const PagosList = () => {
                     className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                   >
                     Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Detalles del Pago */}
+        {showDetailModal && selectedPago && (
+          <div className="fixed z-10 inset-0 overflow-y-auto">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+              </div>
+              
+              <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+              
+              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                          Detalles del Pago #{selectedPago.id}
+                        </h3>
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          selectedPago.estado === 'pagado' ? 'bg-green-100 text-green-800' : 
+                          selectedPago.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {selectedPago.estado.charAt(0).toUpperCase() + selectedPago.estado.slice(1)}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Información del Estudiante */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="text-md font-medium text-gray-900 mb-2">Información del Estudiante</h4>
+                          {selectedPago.estudiante ? (
+                            <div className="space-y-2">
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">Nombre:</span> {selectedPago.estudiante.nombre} {selectedPago.estudiante.apellido}
+                              </p>
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">Cédula:</span> {selectedPago.estudiante.cedula}
+                              </p>
+                              {selectedPago.inscripcion && selectedPago.inscripcion.grado && (
+                                <p className="text-sm text-gray-700">
+                                  <span className="font-medium">Grado:</span> {selectedPago.inscripcion.grado.nombre_grado}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500">No hay información disponible</p>
+                          )}
+                        </div>
+                        
+                        {/* Información del Pago */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="text-md font-medium text-gray-900 mb-2">Información del Pago</h4>
+                          <div className="space-y-2">
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Concepto:</span> {selectedPago.arancel ? selectedPago.arancel.nombre : selectedPago.concepto || '-'}
+                            </p>
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Monto:</span> {formatMonto(selectedPago.monto)}
+                            </p>
+                            {selectedPago.montoMora > 0 && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">Mora:</span> {formatMonto(selectedPago.montoMora)}
+                              </p>
+                            )}
+                            {selectedPago.descuento > 0 && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">Descuento:</span> {formatMonto(selectedPago.descuento)}
+                              </p>
+                            )}
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Método de Pago:</span> {selectedPago.metodoPago ? selectedPago.metodoPago.nombre : '-'}
+                            </p>
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Referencia:</span> {selectedPago.referencia || '-'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Fechas */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="text-md font-medium text-gray-900 mb-2">Fechas</h4>
+                          <div className="space-y-2">
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Fecha de Pago:</span> {formatDate(selectedPago.fechaPago)}
+                            </p>
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Fecha de Registro:</span> {formatDate(selectedPago.createdAt)}
+                            </p>
+                            {selectedPago.updatedAt && selectedPago.updatedAt !== selectedPago.createdAt && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">Última Actualización:</span> {formatDate(selectedPago.updatedAt)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Observaciones */}
+                        {selectedPago.observaciones && (
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <h4 className="text-md font-medium text-gray-900 mb-2">Observaciones</h4>
+                            <p className="text-sm text-gray-700">{selectedPago.observaciones}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Comprobante de Pago */}
+                      {selectedPago.urlComprobante && (
+                        <div className="mt-6">
+                          <h4 className="text-md font-medium text-gray-900 mb-2">Comprobante de Pago</h4>
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm text-gray-700">
+                                {selectedPago.urlComprobante.split('/').pop()}
+                              </p>
+                              <button
+                                onClick={() => handlePreviewComprobante(selectedPago)}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                              >
+                                <FaEye className="mr-1" /> Ver Comprobante
+                              </button>
+                            </div>
+                            
+                            {/* Vista previa del comprobante (si es una imagen) */}
+                            {selectedPago.urlComprobante && 
+                            (selectedPago.urlComprobante.toLowerCase().endsWith('.jpg') || 
+                              selectedPago.urlComprobante.toLowerCase().endsWith('.jpeg') || 
+                              selectedPago.urlComprobante.toLowerCase().endsWith('.png')) && (
+                              <div className="mt-4 flex justify-center">
+                                <img 
+                                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedPago.urlComprobante}`}
+                                  alt="Comprobante de pago"
+                                  className="max-h-64 object-contain border rounded"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Acciones para el pago */}
+                      {selectedPago.estado === 'pendiente' && (
+                        <div className="mt-6 bg-yellow-50 p-4 rounded-lg">
+                          <h4 className="text-md font-medium text-yellow-800 mb-2">Acciones Disponibles</h4>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => {
+                                handleUpdateEstado(selectedPago.id, 'pagado');
+                                handleCloseDetailModal();
+                              }}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            >
+                              <FaCheck className="mr-2" /> Aprobar Pago
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleUpdateEstado(selectedPago.id, 'anulado');
+                                handleCloseDetailModal();
+                              }}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                              <FaTimes className="mr-2" /> Rechazar Pago
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    onClick={handleCloseDetailModal}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    Cerrar
                   </button>
                 </div>
               </div>
