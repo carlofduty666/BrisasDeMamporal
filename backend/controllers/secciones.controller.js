@@ -133,6 +133,58 @@ const seccionesController = {
       res.status(500).json({ message: err.message });
     }
   },
+  // Obtener secciones por estudiante
+  getSeccionesByEstudiante: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { annoEscolarID } = req.query;
+      
+      if (!annoEscolarID) {
+        return res.status(400).json({ message: 'Se requiere el ID del año escolar' });
+      }
+      
+      // Verificar que el estudiante existe
+      const estudiante = await db.Personas.findOne({
+        where: { id, tipo: 'estudiante' }
+      });
+      
+      if (!estudiante) {
+        return res.status(404).json({ message: 'Estudiante no encontrado' });
+      }
+      
+      // Obtener las secciones del estudiante para el año escolar especificado
+      const secciones = await db.Secciones.findAll({
+        include: [
+          {
+            model: db.Personas,
+            as: 'personas',
+            where: { id },
+            through: {
+              model: db.Seccion_Personas,
+              where: { annoEscolarID },
+              attributes: []
+            },
+            attributes: []
+          },
+          {
+            model: db.Grados,
+            as: 'Grados',
+            include: [
+              {
+                model: db.Niveles,
+                as: 'Niveles'
+              }
+            ]
+          }
+        ]
+      });
+      
+      res.json(secciones);
+    } catch (err) {
+      console.error('Error al obtener secciones por estudiante:', err);
+      res.status(500).json({ message: err.message });
+    }
+  },
   
   // Crear nueva sección
   createSeccion: async (req, res) => {

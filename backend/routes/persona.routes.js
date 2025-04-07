@@ -10,6 +10,7 @@ router.get('/personas/:id', personaController.getPersonaById); // Para obtener u
 router.get('/personas/tipo/:tipo', personaController.getPersonasByTipo); // Para obtener personas por tipo
 router.get('/personas/tipo/:tipo/:id', personaController.getPersonaTipoById); // Para obtener una persona por tipo y ID
 router.get('/personas/representante/:id/estudiantes', personaController.getEstudiantesByRepresentante); // Para obtener estudiantes por representante
+router.get('/personas/estudiante/:id/representante', personaController.getRepresentanteByEstudiante); // Para obtener representate por estudiante
 
 router.post('/personas', personaController.createPersona);
 router.post('/personas/asignar-rol', personaController.asignarRolAPersona);

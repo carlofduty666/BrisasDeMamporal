@@ -1,22 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const calificacionesController = require('../controllers/calificaciones.controller');
+const authMiddleware = require('../middleware/auth.middleware');
 
-// Rutas para calificaciones
-router.get('/calificaciones', calificacionesController.getAllCalificaciones);
-router.get('/calificaciones/:id', calificacionesController.getCalificacionById);
-router.get('/calificaciones/evaluacion/:evaluacionID', calificacionesController.getCalificacionesByEvaluacion);
-router.get('/calificaciones/estudiante/:estudianteID', calificacionesController.getCalificacionesByEstudiante);
-router.get('/calificaciones/notas-lapso', calificacionesController.getNotasByLapso);
-router.get('/calificaciones/notas-definitivas', calificacionesController.getNotasDefinitivas);
+router.get('/calificaciones', authMiddleware.verifyToken, calificacionesController.getAllCalificaciones);
+router.get('/calificaciones/:id', authMiddleware.verifyToken, calificacionesController.getCalificacionById);
+router.get('/calificaciones/evaluacion/:evaluacionID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByEvaluacion);
+router.get('/calificaciones/estudiante/:estudianteID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByEstudiante);
+router.get('/calificaciones/materia/:materiaID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByMateria);
+router.get('/calificaciones/grado/:gradoID/seccion/:seccionID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByGradoSeccion);
+router.get('/calificaciones/resumen/estudiante/:estudianteID', authMiddleware.verifyToken, calificacionesController.getResumenCalificacionesByEstudiante);
 
-router.post('/calificaciones', calificacionesController.createCalificacion);
-router.post('/calificaciones/lote', calificacionesController.registrarCalificacionesLote);
-router.post('/calificaciones/calcular-definitivas', calificacionesController.calcularNotasDefinitivas);
-router.post('/calificaciones/recuperacion', calificacionesController.registrarNotaRecuperacion);
+router.get('/notas/lapso', authMiddleware.verifyToken, calificacionesController.getNotasByLapso);
+router.get('/notas/definitivas', authMiddleware.verifyToken, calificacionesController.getNotasDefinitivas);
 
-router.put('/calificaciones/:id', calificacionesController.updateCalificacion);
+router.post('/calificaciones', authMiddleware.verifyToken, calificacionesController.createCalificacion);
+router.post('/calificaciones/lote', authMiddleware.verifyToken, calificacionesController.registrarCalificacionesLote);
+router.post('/notas/definitivas/calcular', authMiddleware.verifyToken, calificacionesController.calcularNotasDefinitivas);
+router.post('/notas/recuperacion', authMiddleware.verifyToken, calificacionesController.registrarNotaRecuperacion);
 
-router.delete('/calificaciones/:id', calificacionesController.deleteCalificacion);
+router.put('/calificaciones/:id', authMiddleware.verifyToken, calificacionesController.updateCalificacion);
+
+router.delete('/calificaciones/:id', authMiddleware.verifyToken, calificacionesController.deleteCalificacion);
 
 module.exports = router;

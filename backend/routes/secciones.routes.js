@@ -19,6 +19,8 @@ router.get('/secciones', authMiddleware.verifyToken, seccionesController.getAllS
 router.get('/secciones/:id', authMiddleware.verifyToken, seccionesController.getSeccionById);
 router.get('/secciones/grado/:gradoID', authMiddleware.verifyToken, seccionesController.getSeccionesByGrado);
 router.get('/secciones/:id/estudiantes', authMiddleware.verifyToken, seccionesController.getEstudiantesBySeccion);
+router.get('/secciones/estudiante/:id', authMiddleware.verifyToken, seccionesController.getSeccionesByEstudiante);
+
 
 // Rutas protegidas - requieren permisos de administrador
 router.post('/secciones', authMiddleware.verifyToken, seccionesController.createSeccion);

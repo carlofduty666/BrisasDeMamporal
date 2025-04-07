@@ -13,6 +13,8 @@ router.get('/grados/:id/materias', authMiddleware.verifyToken, gradosController.
 router.get('/grados/:id/profesores', authMiddleware.verifyToken, gradosController.getProfesoresByGrado); // Obtener los profesores que imparten en un grado
 router.get('/grados/profesor/:profesorID', authMiddleware.verifyToken, gradosController.getGradosByProfesor); // Obtener los grados en los que imparte un profesor
 router.get('/grados/:id/estudiantes', authMiddleware.verifyToken, gradosController.getEstudiantesByGrado);
+router.get('/grados/estudiante/:id', authMiddleware.verifyToken, gradosController.getGradosByEstudiante);
+
 
 router.post('/grados', authMiddleware.verifyToken, gradosController.createGrado);
 router.post('/grados/asignar-estudiante', authMiddleware.verifyToken, gradosController.asignarEstudianteAGrado);

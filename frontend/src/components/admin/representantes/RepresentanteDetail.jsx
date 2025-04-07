@@ -347,8 +347,6 @@ const RepresentanteDetail = () => {
       setLoadingPago(false);
     }
   };
-
-
   
   // Verificar si un estudiante está al día con los pagos
   const verificarPagosAlDia = async (estudianteId) => {

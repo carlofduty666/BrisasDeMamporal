@@ -150,6 +150,61 @@ const getEstudiantesByRepresentante = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Obtener representante de un estudiante
+const getRepresentanteByEstudiante = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { annoEscolarID } = req.query;
+    
+    // Verificar que el estudiante existe
+    const estudiante = await db.Personas.findOne({
+      where: { 
+        id: id,
+        tipo: 'estudiante'
+      }
+    });
+    
+    if (!estudiante) {
+      return res.status(404).json({ message: 'Estudiante no encontrado' });
+    }
+    
+    // Buscar la inscripción del estudiante para el año escolar especificado
+    let inscripcionQuery = {
+      estudianteID: id
+    };
+    
+    if (annoEscolarID) {
+      inscripcionQuery.annoEscolarID = annoEscolarID;
+    }
+    
+    const inscripcion = await db.Inscripciones.findOne({
+      where: inscripcionQuery,
+      order: [['createdAt', 'DESC']] // Obtener la inscripción más reciente
+    });
+    
+    if (!inscripcion || !inscripcion.representanteID) {
+      return res.status(404).json({ message: 'No se encontró representante para este estudiante' });
+    }
+    
+    // Obtener los datos del representante
+    const representante = await db.Personas.findOne({
+      where: { 
+        id: inscripcion.representanteID,
+        tipo: 'representante'
+      }
+    });
+    
+    if (!representante) {
+      return res.status(404).json({ message: 'Representante no encontrado' });
+    }
+    
+    res.json(representante);
+  } catch (err) {
+    console.error('Error al obtener representante del estudiante:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
   
 
 const createPersona = async (req, res) => {
@@ -288,5 +343,6 @@ module.exports = {
     getPersonaById,
     getPersonaTipoById,
     getEstudiantesByRepresentante,
+    getRepresentanteByEstudiante,
     getPersonasByQuery
 }

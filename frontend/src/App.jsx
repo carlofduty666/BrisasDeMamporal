@@ -27,6 +27,7 @@ import SeccionesList from './components/admin/academico/SeccionesList';
 import InscripcionesList from './components/admin/inscripciones/InscripcionesList'
 import InscripcionDetail from './components/admin/inscripciones/InscripcionDetail'
 import EstudiantesList from './components/admin/estudiantes/EstudiantesList';
+import EstudianteDetail from './components/admin/estudiantes/EstudianteDetail';
 import RepresentanteList from './components/admin/representantes/RepresentanteList';
 import RepresentanteDetail from './components/admin/representantes/RepresentanteDetail';
 import RepresentanteForm from './components/admin/representantes/RepresentanteForm';
@@ -34,7 +35,6 @@ import ProfesoresList from './components/admin/profesores/ProfesoresList';
 import ProfesorDetail from './components/admin/profesores/ProfesorDetail';
 import ProfesorForm from './components/admin/profesores/ProfesorForm';
 import ArancelesManager from './components/admin/pagos/ArancelesManager';
-// import PagosDetail from './components/admin/pagos/PagosDetail';
 import PagosList from './components/admin/pagos/PagosList';
 
 // Importando tus componentes existentes
@@ -216,6 +216,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
               <EstudiantesList />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/estudiantes/:id" 
+          element={
+            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <EstudianteDetail />
             </ProtectedRoute>
           } 
         />

@@ -212,8 +212,6 @@ const gradosController = {
         res.status(500).json({ message: error.message });
       }
     },
-    
-
     getEstudiantesByGrado: async (req, res) => {
       try {
         const { id } = req.params;
@@ -249,6 +247,53 @@ const gradosController = {
         res.json(estudiantes);
       } catch (err) {
         console.error('Error al obtener estudiantes por grado:', err);
+        res.status(500).json({ message: err.message });
+      }
+    },
+    // Obtener grados por estudiante
+    getGradosByEstudiante: async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { annoEscolarID } = req.query;
+        
+        if (!annoEscolarID) {
+          return res.status(400).json({ message: 'Se requiere el ID del año escolar' });
+        }
+        
+        // Verificar que el estudiante existe
+        const estudiante = await db.Personas.findOne({
+          where: { id, tipo: 'estudiante' }
+        });
+        
+        if (!estudiante) {
+          return res.status(404).json({ message: 'Estudiante no encontrado' });
+        }
+        
+        // Obtener los grados del estudiante para el año escolar especificado
+        const grados = await db.Grados.findAll({
+          include: [
+            {
+              model: db.Personas,
+              as: 'personas',
+              where: { id },
+              through: {
+                model: db.Grado_Personas,
+                where: { annoEscolarID },
+                attributes: []
+              },
+              attributes: []
+            },
+            {
+              model: db.Niveles,
+              as: 'Niveles',
+              attributes: ['id', 'nombre_nivel']
+            }
+          ]
+        });
+        
+        res.json(grados);
+      } catch (err) {
+        console.error('Error al obtener grados por estudiante:', err);
         res.status(500).json({ message: err.message });
       }
     },

@@ -16,7 +16,7 @@ const calificacionesController = {
           include: [
             { 
               model: Evaluaciones, 
-              as: 'Evaluacion',
+              as: 'Evaluaciones',
               include: [
                 { model: Materias, as: 'Materias' }
               ]
@@ -45,7 +45,7 @@ const calificacionesController = {
           include: [
             { 
               model: Evaluaciones, 
-              as: 'Evaluacion',
+              as: 'Evaluaciones',
               include: [
                 { model: Materias, as: 'Materias' }
               ]
@@ -113,7 +113,7 @@ const calificacionesController = {
           include: [
             { 
               model: Evaluaciones, 
-              as: 'Evaluacion',
+              as: 'Evaluaciones',
               include: [
                 { model: Materias, as: 'Materias' }
               ],
@@ -124,15 +124,241 @@ const calificacionesController = {
             }
           ],
           order: [
-            [{ model: Evaluaciones, as: 'Evaluacion' }, 'lapso', 'ASC'],
-            [{ model: Evaluaciones, as: 'Evaluacion' }, { model: Materias, as: 'Materias' }, 'asignatura', 'ASC'],
-            [{ model: Evaluaciones, as: 'Evaluacion' }, 'fechaEvaluacion', 'ASC']
+            [{ model: Evaluaciones, as: 'Evaluaciones' }, 'lapso', 'ASC'],
+            [{ model: Evaluaciones, as: 'Evaluaciones' }, { model: Materias, as: 'Materias' }, 'asignatura', 'ASC'],
+            [{ model: Evaluaciones, as: 'Evaluaciones' }, 'fechaEvaluacion', 'ASC']
           ]
         });
         
         res.json(calificaciones);
       } catch (err) {
         console.error(err);
+        res.status(500).json({ message: err.message });
+      }
+    },
+
+    getCalificacionesByMateria: async (req, res) => {
+      try {
+        const { materiaID } = req.params;
+        const { estudianteID, annoEscolarID, lapso } = req.query;
+        
+        const whereClause = { 
+          '$Evaluacion.materiaID$': materiaID 
+        };
+        
+        if (estudianteID) {
+          whereClause.personaID = estudianteID;
+        }
+        
+        if (annoEscolarID) {
+          whereClause['$Evaluacion.annoEscolarID$'] = annoEscolarID;
+        }
+        
+        if (lapso) {
+          whereClause['$Evaluacion.lapso$'] = lapso;
+        }
+        
+        const calificaciones = await Calificaciones.findAll({
+          where: whereClause,
+          include: [
+            { 
+              model: Evaluaciones, 
+              as: 'Evaluaciones',
+              required: true,
+              include: [
+                { model: Materias, as: 'Materias' }
+              ]
+            },
+            { 
+              model: Personas, 
+              as: 'Estudiante',
+              attributes: ['id', 'nombre', 'apellido', 'cedula']
+            }
+          ],
+          order: [
+            [{ model: Evaluaciones, as: 'Evaluaciones' }, 'lapso', 'ASC'],
+            [{ model: Evaluaciones, as: 'Evaluaciones' }, 'fechaEvaluacion', 'ASC']
+          ]
+        });
+        
+        res.json(calificaciones);
+      } catch (err) {
+        console.error('Error al obtener calificaciones por materia:', err);
+        res.status(500).json({ message: err.message });
+      }
+    },
+    
+    // Obtener calificaciones por grado y sección
+    getCalificacionesByGradoSeccion: async (req, res) => {
+      try {
+        const { gradoID, seccionID } = req.params;
+        const { annoEscolarID, lapso, materiaID } = req.query;
+        
+        if (!gradoID || !seccionID) {
+          return res.status(400).json({ message: 'Se requieren los IDs de grado y sección' });
+        }
+        
+        const whereClause = {
+          '$Evaluacion.gradoID$': gradoID,
+          '$Evaluacion.seccionID$': seccionID
+        };
+        
+        if (annoEscolarID) {
+          whereClause['$Evaluacion.annoEscolarID$'] = annoEscolarID;
+        }
+        
+        if (lapso) {
+          whereClause['$Evaluacion.lapso$'] = lapso;
+        }
+        
+        if (materiaID) {
+          whereClause['$Evaluacion.materiaID$'] = materiaID;
+        }
+        
+        const calificaciones = await Calificaciones.findAll({
+          where: whereClause,
+          include: [
+            { 
+              model: Evaluaciones, 
+              as: 'Evaluaciones',
+              required: true,
+              include: [
+                { model: Materias, as: 'Materias' }
+              ]
+            },
+            { 
+              model: Personas, 
+              as: 'Estudiante',
+              attributes: ['id', 'nombre', 'apellido', 'cedula']
+            }
+          ],
+          order: [
+            [{ model: Personas, as: 'Estudiante' }, 'apellido', 'ASC'],
+            [{ model: Personas, as: 'Estudiante' }, 'nombre', 'ASC'],
+            [{ model: Evaluaciones, as: 'Evaluaciones' }, 'lapso', 'ASC'],
+            [{ model: Evaluaciones, as: 'Evaluaciones' }, 'fechaEvaluacion', 'ASC']
+          ]
+        });
+        
+        res.json(calificaciones);
+      } catch (err) {
+        console.error('Error al obtener calificaciones por grado y sección:', err);
+        res.status(500).json({ message: err.message });
+      }
+    },
+    
+    // Obtener resumen de calificaciones por estudiante
+    getResumenCalificacionesByEstudiante: async (req, res) => {
+      try {
+        const { estudianteID } = req.params;
+        const { annoEscolarID } = req.query;
+        
+        if (!estudianteID) {
+          return res.status(400).json({ message: 'Se requiere el ID del estudiante' });
+        }
+        
+        // Verificar que el estudiante existe
+        const estudiante = await Personas.findOne({
+          where: { 
+            id: estudianteID,
+            tipo: 'estudiante'
+          }
+        });
+        
+        if (!estudiante) {
+          return res.status(404).json({ message: 'Estudiante no encontrado' });
+        }
+        
+        // Obtener todas las materias del estudiante para el año escolar
+        const whereClause = {};
+        if (annoEscolarID) {
+          whereClause.annoEscolarID = annoEscolarID;
+        }
+        
+        // Obtener notas por lapso
+        const notasLapso = await NotasLapsos.findAll({
+          where: {
+            estudianteID,
+            ...whereClause
+          },
+          include: [
+            { model: Materias, as: 'Materia' }
+          ],
+          order: [
+            ['lapso', 'ASC'],
+            [{ model: Materias, as: 'Materia' }, 'asignatura', 'ASC']
+          ]
+        });
+        
+        // Obtener notas definitivas
+        const notasDefinitivas = await NotasDefinitivas.findAll({
+          where: {
+            estudianteID,
+            ...whereClause
+          },
+          include: [
+            { model: Materias, as: 'Materia' }
+          ],
+          order: [
+            [{ model: Materias, as: 'Materia' }, 'asignatura', 'ASC']
+          ]
+        });
+        
+        // Agrupar notas por materia
+        const materias = {};
+        
+        // Procesar notas por lapso
+        notasLapso.forEach(nota => {
+          const materiaID = nota.materiaID;
+          if (!materias[materiaID]) {
+            materias[materiaID] = {
+              id: materiaID,
+              asignatura: nota.Materia.asignatura,
+              lapsos: {},
+              definitiva: null,
+              aprobado: null
+            };
+          }
+          
+          materias[materiaID].lapsos[nota.lapso] = {
+            nota: nota.nota,
+            porcentajeEvaluado: nota.porcentajeEvaluado
+          };
+        });
+        
+        // Procesar notas definitivas
+        notasDefinitivas.forEach(nota => {
+          const materiaID = nota.materiaID;
+          if (!materias[materiaID]) {
+            materias[materiaID] = {
+              id: materiaID,
+              asignatura: nota.Materia.asignatura,
+              lapsos: {},
+              definitiva: null,
+              aprobado: null
+            };
+          }
+          
+          materias[materiaID].definitiva = nota.nota;
+          materias[materiaID].aprobado = nota.aprobado;
+          materias[materiaID].recuperacion = nota.recuperacion;
+          materias[materiaID].notaRecuperacion = nota.notaRecuperacion;
+        });
+        
+        // Convertir a array
+        const resumen = Object.values(materias);
+        
+        res.json({
+          estudiante: {
+            id: estudiante.id,
+            nombre: estudiante.nombre,
+            apellido: estudiante.apellido,
+            cedula: estudiante.cedula
+          },
+          materias: resumen
+        });
+      } catch (err) {
+        console.error('Error al obtener resumen de calificaciones:', err);
         res.status(500).json({ message: err.message });
       }
     },
@@ -216,7 +442,7 @@ const calificacionesController = {
         const { calificacion, observaciones } = req.body;
         
         const calificacionExistente = await Calificaciones.findByPk(id, {
-            include: [{ model: Evaluaciones, as: 'Evaluacion' }]
+            include: [{ model: Evaluaciones, as: 'Evaluaciones' }]
         });
         
         if (!calificacionExistente) {
@@ -267,7 +493,7 @@ const calificacionesController = {
         const { id } = req.params;
         
         const calificacion = await Calificaciones.findByPk(id, {
-            include: [{ model: Evaluaciones, as: 'Evaluacion' }]
+            include: [{ model: Evaluaciones, as: 'Evaluaciones' }]
         });
         
         if (!calificacion) {
