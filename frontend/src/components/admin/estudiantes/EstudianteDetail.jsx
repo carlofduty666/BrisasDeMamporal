@@ -212,16 +212,6 @@ const EstudianteDetail = () => {
                   config
                 );
                 
-                if (tiposDocumentosResponse.data && tiposDocumentosResponse.data.documentosRequeridos) {
-                  // Transformar los documentos requeridos al formato esperado
-                  const docsRequeridos = tiposDocumentosResponse.data.documentosRequeridos.map(tipo => ({
-                    id: tipo,
-                    nombre: tipoDocumentoFormateado[tipo] || tipo,
-                    obligatorio: true
-                  }));
-                  setDocumentosRequeridos(docsRequeridos);
-                }
-
                 setDocumentosRequeridos(tiposDocumentosResponse.data.documentosRequeridos);
 
 
@@ -1088,326 +1078,215 @@ const EstudianteDetail = () => {
               )}
               
               {/* Documentos */}
-              {activeTab === 'documentos' && (
-  <div>
-    <h2 className="text-xl font-semibold text-gray-800 mb-4">Documentos</h2>
-    
-    {/* Mensajes de éxito o error */}
-    {success && (
-      <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-4">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm text-green-700">{success}</p>
-          </div>
-        </div>
-      </div>
-    )}
-    
-    {error && (
-      <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        </div>
-      </div>
-    )}
-    
-    <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-      <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-        <div>
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
-            Documentos del Estudiante
-          </h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            Documentos requeridos y subidos.
-          </p>
-        </div>
-      </div>
-      
-      <div className="border-t border-gray-200">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {documentosRequeridos.map((tipoDocumento, index) => {
-              // Buscar si existe un documento subido de este tipo
-              const documentoSubido = documentos.find(d => d.tipo === tipoDocumento.id);
-              
-              return (
-                <div key={`doc-${tipoDocumento.id}-${index}`} className="border rounded-lg overflow-hidden">
-                  <div className={`p-4 ${documentoSubido ? 'bg-green-50' : 'bg-gray-50'}`}>
-                    <div className="flex justify-between items-start">
-                      <h4 className="text-sm font-medium text-gray-900">
-                        {typeof tipoDocumento === 'object' && tipoDocumento.nombre ? tipoDocumento.nombre : 'Documento'}
-                      </h4>
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${documentoSubido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {documentoSubido ? 'Subido' : 'Pendiente'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {documentoSubido ? (
-                    <div className="p-4">
-                      <div className="flex items-center space-x-4">
-                        {/* Miniatura del documento */}
-                        <div className="flex-shrink-0">
-                          {getThumbnail(documentoSubido)}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {documentoSubido.nombre_archivo}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {documentoSubido.tamano ? (documentoSubido.tamano / 1024).toFixed(2) + ' KB' : 'Tamaño desconocido'}
-                          </p>
-                        </div>
-                        
-                        <div className="flex-shrink-0 flex space-x-2">
-                          <button
-                            onClick={() => handlePreviewDocument(documentoSubido)}
-                            className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            title="Ver documento"
-                          >
-                            <FaEye className="h-4 w-4" />
-                          </button>
-                          
-                          <button
-                            onClick={() => handleDownloadDocument(documentoSubido.id)}
-                            className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            title="Descargar documento"
-                          >
-                            <FaFileDownload className="h-4 w-4" />
-                          </button>
-                          
-                          <button
-                            onClick={() => handleDeleteDocument(documentoSubido.id)}
-                            className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                            title="Eliminar documento"
-                          >
-                            <FaTrash className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4 flex justify-end">
-                        <button
-                          onClick={() => handleOpenUploadModal(tipoDocumento)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                          <FaUpload className="mr-1 h-3 w-3" /> Resubir
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-4 flex justify-center">
-                    <button
-                      onClick={() => handleOpenUploadModal(tipoDocumento)}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <FaUpload className="mr-2 h-4 w-4" /> Subir documento
-                    </button>
-                    </div>
-                    )}
-                    </div>
-                    );
-                  })}
-              </div>
-
-{/* Documentos adicionales */}
-{documentos.filter(doc => !documentosRequeridos.some(req => req.id === doc.tipo)).length > 0 && (
-<div className="mt-8">
-  <h3 className="text-lg font-medium text-gray-900 mb-4">Documentos Adicionales</h3>
-  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    {documentos
-      .filter(doc => !documentosRequeridos.some(req => req.id === doc.tipo))
-      .map((doc, index) => (
-        <div key={`doc-adicional-${doc.id}-${index}`} className="border rounded-lg overflow-hidden">
-          <div className="p-4 bg-blue-50">
-            <div className="flex justify-between items-start">
-              <h4 className="text-sm font-medium text-gray-900">
-              {typeof doc.tipo === 'string' || typeof doc.tipo === 'number' 
-                ? (tipoDocumentoFormateado[doc.tipo] || doc.tipo || 'Documento adicional')
-                : 'Documento adicional'}
-              </h4>
-              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                Adicional
-              </span>
-            </div>
-          </div>
-          
-          <div className="p-4">
-            <div className="flex items-center space-x-4">
-              {/* Miniatura del documento */}
-              <div className="flex-shrink-0">
-                {getThumbnail(doc)}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {doc.nombre_archivo}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {doc.tamano ? (doc.tamano / 1024).toFixed(2) + ' KB' : 'Tamaño desconocido'}
-                </p>
-              </div>
-              
-              <div className="flex-shrink-0 flex space-x-2">
-                <button
-                  onClick={() => handlePreviewDocument(doc)}
-                  className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  title="Ver documento"
-                >
-                  <FaEye className="h-4 w-4" />
-                </button>
-                
-                <button
-                  onClick={() => handleDownloadDocument(doc.id)}
-                  className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  title="Descargar documento"
-                >
-                  <FaFileDownload className="h-4 w-4" />
-                </button>
-                
-                <button
-                  onClick={() => handleDeleteDocument(doc.id)}
-                  className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  title="Eliminar documento"
-                >
-                  <FaTrash className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
-  </div>
-</div>
-)}
-</div>
-</div>
-</div>
-</div>
-)}
-
-{/* Modal para subir/resubir documentos */}
-{showModal && (
-<div className="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-  <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-    {/* Overlay de fondo */}
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={handleCloseModal}></div>
-
-    {/* Centrar el modal */}
-    <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-    {/* Modal */}
-    <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-      <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-        <div className="sm:flex sm:items-start">
-          <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-            <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-              {documentoSeleccionado?.documentoExistente ? 'Actualizar documento' : 'Subir documento'}
-            </h3>
-            <div className="mt-2">
-              <p className="text-sm text-gray-500 mb-4">
-                {documentoSeleccionado?.documentoExistente 
-                  ? `Seleccione un nuevo archivo para reemplazar el documento "${documentoSeleccionado.nombre}"`
-                  : `Seleccione un archivo para el documento "${documentoSeleccionado?.nombre}"`}
-              </p>
-              
-              {error && (
-                <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-red-700">{error}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <div className="flex text-sm text-gray-600">
-                    <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                      <span>Seleccionar archivo</span>
-                      <input 
-                        id="file-upload" 
-                        name="file-upload" 
-                        type="file" 
-                        className="sr-only" 
-                        onChange={handleFileChange}
-                        ref={fileInputRef}
-                      />
-                    </label>
-                    <p className="pl-1">o arrastre y suelte</p>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    PNG, JPG, PDF, DOC hasta 10MB
+              <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+                <div className="px-4 py-5 sm:px-6">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Documentos del Estudiante
+                  </h3>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                    Documentos requeridos y subidos por el estudiante.
                   </p>
                 </div>
-              </div>
-              
-              {archivoSeleccionado && (
-                <div className="mt-4 p-2 bg-gray-50 rounded-md">
-                  <div className="flex items-center">
-                    <svg className="h-6 w-6 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span className="text-sm text-gray-900">{archivoSeleccionado.name}</span>
+                
+                <div className="border-t border-gray-200">
+                  <div className="px-4 py-5 sm:p-6">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                      {documentosRequeridos.map((doc) => {
+                        // Buscar si existe un documento subido de este tipo
+                        const documentoSubido = documentos.find(d => d.tipoDocumento === doc.id);
+                        
+                        return (
+                          <div key={doc.id} className="border rounded-lg overflow-hidden">
+                            <div className={`p-4 ${documentoSubido ? 'bg-green-50' : 'bg-gray-50'}`}>
+                              <div className="flex justify-between items-start">
+                                <h4 className="text-sm font-medium text-gray-900">
+                                  {doc.nombre} {doc.obligatorio && <span className="text-red-500">*</span>}
+                                </h4>
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${documentoSubido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                  {documentoSubido ? 'Subido' : 'Pendiente'}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {documentoSubido ? (
+                              <div className="p-4">
+                                <div className="flex items-center space-x-4">
+                                  {/* Miniatura del documento */}
+                                  <div className="flex-shrink-0">
+                                    {getThumbnail(documentoSubido)}
+                                  </div>
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {documentoSubido.nombre_archivo}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                      {(documentoSubido.tamano / 1024).toFixed(2)} KB
+                                    </p>
+                                  </div>
+                                  
+                                  <div className="flex-shrink-0 flex space-x-2">
+                                    <button
+                                      onClick={() => handlePreviewDocument(documentoSubido)}
+                                      className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                      title="Ver documento"
+                                    >
+                                      <FaEye className="h-4 w-4" />
+                                    </button>
+                                    
+                                    <button
+                                      onClick={() => handleDownloadDocument(documentoSubido.id)}
+                                      className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                      title="Descargar documento"
+                                    >
+                                      <FaFileDownload className="h-4 w-4" />
+                                    </button>
+                                    
+                                    <button
+                                      onClick={() => handleOpenUploadModal(doc)}
+                                      className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                      title="Resubir documento"
+                                    >
+                                      <FaUpload className="h-4 w-4" />
+                                    </button>
+                                    
+                                    <button
+                                      onClick={() => handleDeleteDocument(documentoSubido.id)}
+                                      className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                      title="Eliminar documento"
+                                    >
+                                      <FaTrash className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-4">
+                                <button
+                                  onClick={() => handleOpenUploadModal(doc)}
+                                  className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                >
+                                  <FaUpload className="mr-2" /> Subir documento
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
+              </div>
+              
+              {/* Modal para subir/resubir documentos */}
+              {showModal && (
+              <div className="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                  {/* Overlay de fondo */}
+                  <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={handleCloseModal}></div>
+
+                  {/* Centrar el modal */}
+                  <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                  {/* Modal */}
+                  <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                      <div className="sm:flex sm:items-start">
+                        <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                          <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                            {documentoSeleccionado?.documentoExistente ? 'Actualizar documento' : 'Subir documento'}
+                          </h3>
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-500 mb-4">
+                              {documentoSeleccionado?.documentoExistente 
+                                ? `Seleccione un nuevo archivo para reemplazar el documento "${documentoSeleccionado.nombre}"`
+                                : `Seleccione un archivo para el documento "${documentoSeleccionado?.nombre}"`}
+                            </p>
+                            
+                            {error && (
+                              <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+                                <div className="flex">
+                                  <div className="flex-shrink-0">
+                                    <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                  <div className="ml-3">
+                                    <p className="text-sm text-red-700">{error}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                              <div className="space-y-1 text-center">
+                                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <div className="flex text-sm text-gray-600">
+                                  <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                    <span>Seleccionar archivo</span>
+                                    <input 
+                                      id="file-upload" 
+                                      name="file-upload" 
+                                      type="file" 
+                                      className="sr-only" 
+                                      onChange={handleFileChange}
+                                      ref={fileInputRef}
+                                    />
+                                  </label>
+                                  <p className="pl-1">o arrastre y suelte</p>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                  PNG, JPG, PDF, DOC hasta 10MB
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {archivoSeleccionado && (
+                              <div className="mt-4 p-2 bg-gray-50 rounded-md">
+                                <div className="flex items-center">
+                                  <svg className="h-6 w-6 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                  </svg>
+                                  <span className="text-sm text-gray-900">{archivoSeleccionado.name}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                      <button
+                        type="button"
+                        className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+                        onClick={handleUploadDocument}
+                        disabled={subiendoDocumento || !archivoSeleccionado}
+                      >
+                        {subiendoDocumento ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Subiendo...
+                          </>
+                        ) : documentoSeleccionado?.documentoExistente ? 'Actualizar' : 'Subir'}
+                      </button>
+                      <button
+                        type="button"
+                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        onClick={handleCloseModal}
+                        disabled={subiendoDocumento}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               )}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-        <button
-          type="button"
-          className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
-          onClick={handleUploadDocument}
-          disabled={subiendoDocumento || !archivoSeleccionado}
-        >
-          {subiendoDocumento ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Subiendo...
-            </>
-          ) : documentoSeleccionado?.documentoExistente ? 'Actualizar' : 'Subir'}
-        </button>
-        <button
-          type="button"
-          className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-          onClick={handleCloseModal}
-          disabled={subiendoDocumento}
-        >
-          Cancelar
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-)}
               {/* Calificaciones */}
               {activeTab === 'calificaciones' && (
                 <div>
