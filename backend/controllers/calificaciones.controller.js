@@ -171,7 +171,7 @@ const calificacionesController = {
             },
             { 
               model: Personas, 
-              as: 'Estudiante',
+              as: 'Personas',
               attributes: ['id', 'nombre', 'apellido', 'cedula']
             }
           ],

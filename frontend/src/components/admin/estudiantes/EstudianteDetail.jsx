@@ -38,120 +38,122 @@ const EstudianteDetail = () => {
   // Cargar datos del estudiante
   useEffect(() => {
     const fetchEstudianteData = async () => {
-        try {
-          setLoading(true);
-          const token = localStorage.getItem('token');
-          
-          if (!token) {
-            navigate('/login');
-            return;
-          }
-          
-          const config = {
-            headers: { 'Authorization': `Bearer ${token}` }
-          };
-          
-          // Obtener datos del estudiante
-          const estudianteResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${id}`,
-            config
-          );
-          
-          setEstudiante(estudianteResponse.data);
-          
-          // Obtener año escolar activo
-          const annoResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/anno-escolar/actual`,
-            config
-          );
-          
-          setAnnoEscolar(annoResponse.data);
-          
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+        
+        const config = {
+          headers: { 'Authorization': `Bearer ${token}` }
+        };
+        
+        // Obtener datos del estudiante
+        const estudianteResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${id}`,
+          config
+        );
+        
+        setEstudiante(estudianteResponse.data);
+        
+        // Obtener año escolar activo
+        const annoResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/anno-escolar/actual`,
+          config
+        );
+        
+        setAnnoEscolar(annoResponse.data);
+        
         // Obtener información académica del estudiante
+        let gradoData = null;
         try {
-            // Obtener el grado del estudiante directamente
-            const gradoResponse = await axios.get(
+          // Obtener el grado del estudiante directamente
+          const gradoResponse = await axios.get(
             `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/estudiante/${id}`,
             { 
-                ...config,
-                params: { annoEscolarID: annoResponse.data.id }
+              ...config,
+              params: { annoEscolarID: annoResponse.data.id }
             }
-            );
-            
-            if (gradoResponse.data && gradoResponse.data.length > 0) {
+          );
+          
+          if (gradoResponse.data && gradoResponse.data.length > 0) {
             // Tomamos el primer grado (asumiendo que un estudiante está en un solo grado por año escolar)
-            setGrado(gradoResponse.data[0]);
+            gradoData = gradoResponse.data[0];
+            setGrado(gradoData);
+            
+            // Obtener materias del estudiante inmediatamente después de tener el grado
+            try {
+              const materiasResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${gradoData.id}/materias`,
+                { 
+                  ...config,
+                  params: { annoEscolarID: annoResponse.data.id }
+                }
+              );
+              setMaterias(materiasResponse.data);
+            } catch (materiasError) {
+              console.error('Error al obtener materias:', materiasError);
+              setMaterias([]);
+            }
             
             // Obtener información de la sección usando la ruta directa de secciones
             try {
-                const seccionResponse = await axios.get(
+              const seccionResponse = await axios.get(
                 `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/estudiante/${id}`,
                 { 
-                    ...config,
-                    params: { annoEscolarID: annoResponse.data.id }
+                  ...config,
+                  params: { annoEscolarID: annoResponse.data.id }
                 }
-                );
-                
-                if (seccionResponse.data && seccionResponse.data.length > 0) {
+              );
+              
+              if (seccionResponse.data && seccionResponse.data.length > 0) {
                 setSeccion(seccionResponse.data[0]);
-                }
+              }
             } catch (seccionError) {
-                console.error('Error al obtener sección:', seccionError);
-                // No interrumpir el flujo si falla
+              console.error('Error al obtener sección:', seccionError);
+              // No interrumpir el flujo si falla
             }
-            }
+          }
         } catch (gradoError) {
-            console.error('Error al obtener grado:', gradoError);
-            // No interrumpir el flujo si falla esta petición
+          console.error('Error al obtener grado:', gradoError);
+          // No interrumpir el flujo si falla esta petición
         }
         
         // Obtener información del representante directamente
         try {
-            const representanteResponse = await axios.get(
+          const representanteResponse = await axios.get(
             `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/estudiante/${id}/representante`,
             config
-            );
-            
-            if (representanteResponse.data) {
+          );
+          
+          if (representanteResponse.data) {
             setRepresentante(representanteResponse.data);
-            }
+          }
         } catch (representanteError) {
-            console.error('Error al obtener representante:', representanteError);
-            // No interrumpir el flujo si falla
+          console.error('Error al obtener representante:', representanteError);
+          // No interrumpir el flujo si falla
         }
-
-            // Obtener materias del estudiante
-            try {
-            // Primero verificamos si tenemos el grado del estudiante
-            if (grado && grado.id && annoEscolar && annoEscolar.id) {
-                const materiasResponse = await axios.get(
-                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${grado.id}/materias`,
-                { 
-                    ...config,
-                    params: { annoEscolarID: annoEscolar.id }
-                }
-                );
-                setMaterias(materiasResponse.data);
+  
+        // Eliminar el bloque de obtención de materias que está causando el error
+        // Ya lo hemos movido dentro del bloque de obtención del grado
+  
+        // Obtener evaluaciones del estudiante
+        try {
+          const evaluacionesResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/evaluaciones/estudiante/${id}`,
+            { 
+              ...config,
+              params: { annoEscolarID: annoResponse.data?.id }
             }
-            } catch (materiasError) {
-            console.error('Error al obtener materias:', materiasError);
-            setMaterias([]);
-            }
-
-            // Obtener evaluaciones del estudiante
-            try {
-            const evaluacionesResponse = await axios.get(
-                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/evaluaciones/estudiante/${id}`,
-                { 
-                ...config,
-                params: { annoEscolarID: annoEscolar?.id }
-                }
-            );
-            setEvaluaciones(evaluacionesResponse.data);
-            } catch (evaluacionesError) {
-            console.error('Error al obtener evaluaciones:', evaluacionesError);
-            setEvaluaciones([]);
-            }
+          );
+          setEvaluaciones(evaluacionesResponse.data);
+        } catch (evaluacionesError) {
+          console.error('Error al obtener evaluaciones:', evaluacionesError);
+          setEvaluaciones([]);
+        }
 
             // Obtener calificaciones del estudiante
             try {
@@ -248,9 +250,6 @@ const EstudianteDetail = () => {
             setLoading(false);
             }
             };
-
-      
-    
     fetchEstudianteData();
   }, [id, navigate]);
   
@@ -1078,6 +1077,7 @@ const EstudianteDetail = () => {
               )}
               
               {/* Documentos */}
+              {activeTab === 'documentos' && (
               <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
                 <div className="px-4 py-5 sm:px-6">
                   <h3 className="text-lg leading-6 font-medium text-gray-900">
@@ -1177,9 +1177,89 @@ const EstudianteDetail = () => {
                   </div>
                 </div>
               </div>
+              )}
               
-              {/* Modal para subir/resubir documentos */}
-              {showModal && (
+
+              {/* Calificaciones */}
+              {activeTab === 'calificaciones' && (
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Calificaciones</h2>
+                  
+                  {calificaciones.length > 0 ? (
+                    <div className="bg-gray-50 p-4 rounded-md overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Materia
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Evaluación
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Tipo
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Calificación
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Fecha
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {calificaciones.map(calificacion => {
+                            const evaluacion = evaluaciones.find(ev => ev.id === calificacion.evaluacionID);
+                            const materia = materias.find(m => m.id === (evaluacion?.materiaID || calificacion.materiaID));
+                            
+                            return (
+                              <tr key={calificacion.id}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {materia?.asignatura || 'No disponible'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">
+                                    {evaluacion?.titulo || 'No disponible'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-500">
+                                    {evaluacion?.tipo || 'No especificado'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className={`text-sm font-medium ${
+                                    parseFloat(calificacion.valor) >= 10 ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    {calificacion.valor}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-500">
+                                    {formatearFecha(calificacion.fecha || calificacion.createdAt)}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <p className="text-gray-500">No hay calificaciones registradas para este estudiante.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal para subir/resubir documentos */}
+        {showModal && (
               <div className="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
                 <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                   {/* Overlay de fondo */}
@@ -1286,83 +1366,6 @@ const EstudianteDetail = () => {
                   </div>
                 </div>
               </div>
-              )}
-              {/* Calificaciones */}
-              {activeTab === 'calificaciones' && (
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Calificaciones</h2>
-                  
-                  {calificaciones.length > 0 ? (
-                    <div className="bg-gray-50 p-4 rounded-md overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Materia
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Evaluación
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Tipo
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Calificación
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Fecha
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {calificaciones.map(calificacion => {
-                            const evaluacion = evaluaciones.find(ev => ev.id === calificacion.evaluacionID);
-                            const materia = materias.find(m => m.id === (evaluacion?.materiaID || calificacion.materiaID));
-                            
-                            return (
-                              <tr key={calificacion.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {materia?.asignatura || 'No disponible'}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {evaluacion?.titulo || 'No disponible'}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-500">
-                                    {evaluacion?.tipo || 'No especificado'}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className={`text-sm font-medium ${
-                                    parseFloat(calificacion.valor) >= 10 ? 'text-green-600' : 'text-red-600'
-                                  }`}>
-                                    {calificacion.valor}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-500">
-                                    {formatearFecha(calificacion.fecha || calificacion.createdAt)}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 p-4 rounded-md">
-                      <p className="text-gray-500">No hay calificaciones registradas para este estudiante.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
         )}
         
         {/* Modal para subir documentos */}

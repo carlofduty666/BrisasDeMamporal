@@ -374,3 +374,156 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+// Registrar usuario para un profesor existente
+exports.registerProfesor = async (req, res) => {
+  const transaction = await db.sequelize.transaction();
+  
+  try {
+    const { personaID, email, password } = req.body;
+    
+    // Validar datos
+    if (!personaID || !email || !password) {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Todos los campos son requeridos' });
+    }
+    
+    // Verificar que la persona exista y sea profesor
+    const profesor = await db.Personas.findOne({
+      where: {
+        id: personaID,
+        tipo: 'profesor'
+      },
+      transaction
+    });
+    
+    if (!profesor) {
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Profesor no encontrado' });
+    }
+    
+    // Verificar si ya tiene un usuario
+    const usuarioExistente = await db.Usuarios.findOne({
+      where: { personaID: profesor.id },
+      transaction
+    });
+    
+    if (usuarioExistente) {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Este profesor ya tiene una cuenta de usuario' });
+    }
+    
+    // Verificar si el email ya está en uso
+    const emailExistente = await db.Usuarios.findOne({
+      where: { email },
+      transaction
+    });
+    
+    if (emailExistente) {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Este correo electrónico ya está en uso' });
+    }
+    
+    // Generar hash de la contraseña
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Generar código de verificación
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Crear usuario
+    const nuevoUsuario = await db.Usuarios.create({
+      personaID: profesor.id,
+      email,
+      password: hashedPassword,
+      codigoVerificacion: verificationCode,
+      verificado: false
+    }, { transaction });
+    
+    // Actualizar email en la tabla Personas si es necesario
+    if (!profesor.email) {
+      await profesor.update({ email }, { transaction });
+    }
+    
+    // Enviar email de verificación (usando el mismo método que en register)
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Verificación de Correo - Brisas de Mamporal',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Verificación de Correo Electrónico</h2>
+          <p>Gracias por registrarte en el Sistema de Gestión Escolar Brisas de Mamporal.</p>
+          <p>Tu código de verificación es: <strong>${verificationCode}</strong></p>
+          <p>Este código expirará en 24 horas.</p>
+        </div>
+      `
+    };
+    
+    await transporter.sendMail(mailOptions);
+    await transaction.commit();
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Usuario registrado correctamente. Por favor verifica tu correo electrónico.'
+    });
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error al registrar profesor:', error);
+    return res.status(500).json({ message: 'Error al registrar profesor', error: error.message });
+  }
+};
+
+// Verificar si existe un profesor por cédula
+exports.verificarProfesor = async (req, res) => {
+  try {
+    const { cedula } = req.params;
+    
+    if (!cedula) {
+      return res.status(400).json({ message: 'La cédula es requerida' });
+    }
+    
+    // Buscar persona con tipo profesor y la cédula proporcionada
+    const profesor = await db.Personas.findOne({
+      where: {
+        cedula,
+        tipo: 'profesor'
+      }
+    });
+    
+    if (!profesor) {
+      return res.status(404).json({ 
+        existe: false,
+        message: 'No se encontró un profesor con esta cédula' 
+      });
+    }
+    
+    // Verificar si ya tiene un usuario asociado
+    const usuarioExistente = await db.Usuarios.findOne({
+      where: { personaID: profesor.id }
+    });
+    
+    if (usuarioExistente) {
+      return res.status(400).json({ 
+        existe: true,
+        yaRegistrado: true,
+        message: 'Este profesor ya tiene una cuenta de usuario registrada' 
+      });
+    }
+    
+    // Devolver información básica del profesor
+    return res.status(200).json({
+      existe: true,
+      yaRegistrado: false,
+      profesor: {
+        id: profesor.id,
+        nombre: profesor.nombre,
+        apellido: profesor.apellido,
+        email: profesor.email || ''
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error al verificar profesor:', error);
+    return res.status(500).json({ message: 'Error al verificar profesor' });
+  }
+};

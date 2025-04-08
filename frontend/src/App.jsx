@@ -37,6 +37,9 @@ import ProfesorForm from './components/admin/profesores/ProfesorForm';
 import ArancelesManager from './components/admin/pagos/ArancelesManager';
 import PagosList from './components/admin/pagos/PagosList';
 
+// Componentes de profesor
+import ProfesorDashboard from './components/dashboard/ProfesorDashboard'
+
 // Importando tus componentes existentes
 import NavBar from './components/NavBar';
 import Carrusel from './components/Carrusel';
@@ -83,6 +86,7 @@ function App() {
         {/* Rutas públicas */}
         <Route path="/" element={<HomePage />} />
         <Route path="/register" element={<RegisterForm />} />
+        <Route path="/registro-profesor" element={<RegisterForm />} />
         <Route path="/verificacion-email" element={<EmailVerification />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/recuperar-password" element={<ForgotPassword />} />
@@ -299,6 +303,16 @@ function App() {
               <ArancelesManager />
             </ProtectedRoute>
           } 
+        />
+
+        {/* Rutas panel de profesor */}
+        <Route
+          path="/profesor/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['profesor', 'adminWeb', 'owner']}>)
+              <ProfesorDashboard />
+            </ProtectedRoute>
+          }
         />
 
 
