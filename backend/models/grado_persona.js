@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'gradoID',
         as: 'grado'
       });
+      Grado_Personas.belongsTo(models.Personas, {
+        foreignKey: 'personaID',
+        as: 'persona'
+      });
     }
   }
   

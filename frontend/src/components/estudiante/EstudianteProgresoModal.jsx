@@ -7,6 +7,7 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [estudiante, setEstudiante] = useState(null);
+  const [profesores, setProfesores] = useState([]);
   const [grado, setGrado] = useState(null);
   const [seccion, setSeccion] = useState(null);
   const [materias, setMaterias] = useState([]);
@@ -57,7 +58,7 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
         // Obtener el grado del estudiante directamente
         const gradoResponse = await axios.get(
           `${import.meta.env.VITE_API_URL}/grados/estudiante/${estudianteID}`,
-          { 
+          {
             ...config,
             params: { annoEscolarID: annoResponse.data.id }
           }
@@ -72,7 +73,7 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
           try {
             const materiasResponse = await axios.get(
               `${import.meta.env.VITE_API_URL}/grados/${gradoData.id}/materias`,
-              { 
+              {
                 ...config,
                 params: { annoEscolarID: annoResponse.data.id }
               }
@@ -87,7 +88,7 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
           try {
             const seccionResponse = await axios.get(
               `${import.meta.env.VITE_API_URL}/secciones/estudiante/${estudianteID}`,
-              { 
+              {
                 ...config,
                 params: { annoEscolarID: annoResponse.data.id }
               }
@@ -108,7 +109,7 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
       try {
         const evaluacionesResponse = await axios.get(
           `${import.meta.env.VITE_API_URL}/evaluaciones/estudiante/${estudianteID}`,
-          { 
+          {
             ...config,
             params: { annoEscolarID: annoResponse.data?.id }
           }
@@ -118,51 +119,144 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
         console.error('Error al obtener evaluaciones:', evaluacionesError);
         setEvaluaciones([]);
       }
-
-      // Obtener calificaciones del estudiante
+      
+      // Obtener calificaciones del estudiante - Enfoque directo sin resumen
       try {
-        // Usar la nueva ruta para obtener el resumen de calificaciones
+        const annoEscolarId = annoResponse.data.id;
+        
+        // Primero intentamos obtener calificaciones directamente del estudiante
         const calificacionesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/calificaciones/resumen/estudiante/${estudianteID}`,
-          { 
+          `${import.meta.env.VITE_API_URL}/calificaciones/estudiante/${estudianteID}`,
+          {
             ...config,
-            params: { annoEscolarID: annoResponse.data?.id }
+            params: { annoEscolarID: annoEscolarId }
           }
         );
         
-        // Si la respuesta tiene el formato esperado
-        if (calificacionesResponse.data && calificacionesResponse.data.materias) {
-          setCalificaciones(calificacionesResponse.data.materias);
-        } else {
-          // Fallback a la ruta antigua si es necesario
-          const calificacionesAntiguasResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/calificaciones/estudiante/${estudianteID}`,
-            { 
-              ...config,
-              params: { annoEscolarID: annoResponse.data?.id }
+        console.log("Respuesta de calificaciones (directa):", calificacionesResponse.data);
+        
+        if (Array.isArray(calificacionesResponse.data) && calificacionesResponse.data.length > 0) {
+          // Si encontramos calificaciones directamente, las usamos
+          setCalificaciones(calificacionesResponse.data);
+        } else if (materias && materias.length > 0) {
+          // Si no hay calificaciones directas pero hay materias, intentamos por materia
+          console.log("Obteniendo calificaciones por materias:", materias);
+          
+          // Array para almacenar todas las calificaciones encontradas
+          let todasLasCalificaciones = [];
+          
+          // Para cada materia, intentamos obtener sus calificaciones
+          for (const materia of materias) {
+            try {
+              const materiaCalificacionesResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL}/calificaciones/materia/${materia.id}`,
+                {
+                  ...config,
+                  params: {
+                    estudianteID: estudianteID,
+                    annoEscolarID: annoEscolarId
+                  }
+                }
+              );
+              
+              console.log(`Calificaciones para materia ${materia.asignatura}:`, 
+                          materiaCalificacionesResponse.data);
+              
+              if (materiaCalificacionesResponse.data &&
+                  Array.isArray(materiaCalificacionesResponse.data) &&
+                  materiaCalificacionesResponse.data.length > 0) {
+                
+                // Añadimos información de la materia a cada calificación
+                const calificacionesConMateria = materiaCalificacionesResponse.data.map(cal => ({
+                  ...cal,
+                  materiaID: materia.id,
+                  nombreMateria: materia.asignatura
+                }));
+                
+                todasLasCalificaciones = [...todasLasCalificaciones, ...calificacionesConMateria];
+              }
+            } catch (error) {
+              console.error(`Error al obtener calificaciones para materia ${materia.id}:`, error);
             }
-          );
-          setCalificaciones(calificacionesAntiguasResponse.data);
+          }
+          
+          // Si encontramos calificaciones por materias, las usamos
+          if (todasLasCalificaciones.length > 0) {
+            console.log("Calificaciones encontradas por materias:", todasLasCalificaciones);
+            setCalificaciones(todasLasCalificaciones);
+          } else {
+            // Si no hay calificaciones en ninguna parte, usamos un array vacío
+            setCalificaciones([]);
+          }
+        } else {
+          // Si no hay materias ni calificaciones directas, usamos un array vacío
+          setCalificaciones([]);
         }
       } catch (calificacionesError) {
         console.error('Error al obtener calificaciones:', calificacionesError);
         
-        // Intentar con la ruta antigua como fallback
-        try {
-          const calificacionesAntiguasResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/calificaciones/estudiante/${estudianteID}`,
-            { 
-              ...config,
-              params: { annoEscolarID: annoResponse.data?.id }
+        // Si falla la obtención directa, intentamos por materias si están disponibles
+        if (materias && materias.length > 0) {
+          try {
+            const annoEscolarId = annoResponse.data.id;
+            let todasLasCalificaciones = [];
+            
+            for (const materia of materias) {
+              try {
+                const materiaCalificacionesResponse = await axios.get(
+                  `${import.meta.env.VITE_API_URL}/calificaciones/materia/${materia.id}`,
+                  {
+                    ...config,
+                    params: {
+                      estudianteID: estudianteID,
+                      annoEscolarID: annoEscolarId
+                    }
+                  }
+                );
+                
+                if (materiaCalificacionesResponse.data &&
+                    Array.isArray(materiaCalificacionesResponse.data) &&
+                    materiaCalificacionesResponse.data.length > 0) {
+                  
+                  const calificacionesConMateria = materiaCalificacionesResponse.data.map(cal => ({
+                    ...cal,
+                    materiaID: materia.id,
+                    nombreMateria: materia.asignatura
+                  }));
+                  
+                  todasLasCalificaciones = [...todasLasCalificaciones, ...calificacionesConMateria];
+                }
+              } catch (error) {
+                console.error(`Error al obtener calificaciones para materia ${materia.id}:`, error);
+              }
             }
-          );
-          setCalificaciones(calificacionesAntiguasResponse.data);
-        } catch (error) {
-          console.error('Error al obtener calificaciones (fallback):', error);
+            
+            if (todasLasCalificaciones.length > 0) {
+              setCalificaciones(todasLasCalificaciones);
+            } else {
+              setCalificaciones([]);
+            }
+          } catch (error) {
+            console.error('Error al obtener calificaciones por materias:', error);
+            setCalificaciones([]);
+          }
+        } else {
           setCalificaciones([]);
         }
       }
-
+      
+      // Obtener lista de profesores
+      try {
+        const profesoresResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/personas/tipo/profesor`,
+          config
+        );
+        setProfesores(profesoresResponse.data);
+      } catch (profesoresError) {
+        console.error('Error al obtener profesores:', profesoresError);
+        setProfesores([]);
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Error al cargar datos del estudiante:', error);
@@ -173,30 +267,77 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
 
   // Función para calcular el progreso por materia
   const calcularProgresoMateria = (materiaId) => {
-    const calificacionesMateria = calificaciones.filter(cal => cal.materiaID === materiaId);
-    
-    if (calificacionesMateria.length === 0) {
+    // Verificar si estamos trabajando con el formato de resumen o el tradicional
+    if (calificaciones.length > 0 && calificaciones[0].hasOwnProperty('asignatura')) {
+      // Formato de resumen
+      const materia = calificaciones.find(mat => mat.id === materiaId);
+      
+      if (!materia) {
+        return {
+          promedio: 0,
+          porcentajeCompletado: 0,
+          calificaciones: []
+        };
+      }
+      
+      // Calcular promedio basado en notas de lapsos o definitiva
+      let promedio = 0;
+      let totalLapsos = 0;
+      
+      if (materia.lapsos) {
+        Object.keys(materia.lapsos).forEach(lapso => {
+          if (materia.lapsos[lapso] && materia.lapsos[lapso].nota) {
+            promedio += parseFloat(materia.lapsos[lapso].nota);
+            totalLapsos++;
+          }
+        });
+        
+        promedio = totalLapsos > 0 ? promedio / totalLapsos : 0;
+      } else if (materia.definitiva) {
+        promedio = parseFloat(materia.definitiva);
+      }
+      
+      // Calcular porcentaje completado (basado en lapsos evaluados)
+      const porcentajeCompletado = totalLapsos > 0 ? (totalLapsos / 3) * 100 : 0;
+      
       return {
-        promedio: 0,
-        porcentajeCompletado: 0,
-        calificaciones: []
+        promedio: promedio.toFixed(2),
+        porcentajeCompletado: Math.round(porcentajeCompletado),
+        calificaciones: materia.lapsos ? Object.keys(materia.lapsos).map(lapso => ({
+          lapso,
+          valor: materia.lapsos[lapso].nota,
+          porcentajeEvaluado: materia.lapsos[lapso].porcentajeEvaluado
+        })) : []
+      };
+    } else {
+      // Formato tradicional
+      const calificacionesMateria = calificaciones.filter(cal => 
+        (cal.Evaluacion && cal.Evaluacion.materiaID === materiaId) || cal.materiaID === materiaId
+      );
+      
+      if (calificacionesMateria.length === 0) {
+        return {
+          promedio: 0,
+          porcentajeCompletado: 0,
+          calificaciones: []
+        };
+      }
+      
+      const suma = calificacionesMateria.reduce((acc, cal) => acc + parseFloat(cal.calificacion || cal.valor || 0), 0);
+      const promedio = suma / calificacionesMateria.length;
+      
+      // Calcular porcentaje de evaluaciones completadas
+      const evaluacionesMateria = evaluaciones.filter(ev => ev.materiaID === materiaId);
+      const porcentajeCompletado = evaluacionesMateria.length > 0 
+        ? (calificacionesMateria.length / evaluacionesMateria.length) * 100 
+        : 0;
+      
+      return {
+        promedio: promedio.toFixed(2),
+        porcentajeCompletado: Math.round(porcentajeCompletado),
+        calificaciones: calificacionesMateria
       };
     }
-    
-    const suma = calificacionesMateria.reduce((acc, cal) => acc + parseFloat(cal.valor || 0), 0);
-    const promedio = suma / calificacionesMateria.length;
-    
-    // Calcular porcentaje de evaluaciones completadas
-    const evaluacionesMateria = evaluaciones.filter(ev => ev.materiaID === materiaId);
-    const porcentajeCompletado = evaluacionesMateria.length > 0 
-      ? (calificacionesMateria.length / evaluacionesMateria.length) * 100 
-      : 0;
-    
-    return {
-      promedio: promedio.toFixed(2),
-      porcentajeCompletado: Math.round(porcentajeCompletado),
-      calificaciones: calificacionesMateria
-    };
   };
 
   // Función para formatear fechas
@@ -446,81 +587,147 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
                 </div>
               )}
               
-              {/* Calificaciones */}
-              {activeTab === 'calificaciones' && (
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Calificaciones</h2>
-                  
-                  {calificaciones.length > 0 ? (
-                    <div className="bg-gray-50 p-4 rounded-md overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Materia
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Evaluación
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Tipo
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Calificación
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Fecha
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {calificaciones.map(calificacion => {
-                            const evaluacion = evaluaciones.find(ev => ev.id === calificacion.evaluacionID);
-                            const materia = materias.find(m => m.id === (evaluacion?.materiaID || calificacion.materiaID));
+            {/* Calificaciones */}
+            {activeTab === 'calificaciones' && (
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Calificaciones</h2>
+                
+                {calificaciones && calificaciones.length > 0 ? (
+                  <div className="bg-gray-50 p-4 rounded-md overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Materia
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {calificaciones[0] && calificaciones[0].hasOwnProperty('asignatura') ? 'Lapso' : 'Evaluación'}
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Calificación
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {calificaciones[0] && calificaciones[0].hasOwnProperty('asignatura') ? 'Progreso' : 'Tipo'}
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Fecha
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {calificaciones[0] && calificaciones[0].hasOwnProperty('asignatura') ? (
+                          // Formato de resumen
+                          calificaciones.flatMap(materia => {
+                            if (!materia.lapsos) return [];
                             
-                            return (
-                              <tr key={calificacion.id}>
+                            return Object.keys(materia.lapsos).map(lapso => (
+                              <tr key={`${materia.id}-${lapso}`}>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm font-medium text-gray-900">
-                                    {materia?.asignatura || 'No disponible'}
+                                    {materia.asignatura}
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm text-gray-900">
-                                    {evaluacion?.titulo || 'No disponible'}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-500">
-                                    {evaluacion?.tipo || 'No especificado'}
+                                    Lapso {lapso}
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className={`text-sm font-medium ${
-                                    parseFloat(calificacion.valor) >= 10 ? 'text-green-600' : 'text-red-600'
+                                    parseFloat(materia.lapsos[lapso].nota) >= 10 ? 'text-green-600' : 'text-red-600'
                                   }`}>
-                                    {calificacion.valor}
+                                    {materia.lapsos[lapso].nota}
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm text-gray-500">
-                                    {formatearFecha(calificacion.fecha || calificacion.createdAt)}
+                                    {materia.lapsos[lapso].porcentajeEvaluado ? `${materia.lapsos[lapso].porcentajeEvaluado}% evaluado` : 'N/A'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-500">
+                                    {materia.lapsos[lapso].fecha ? formatearFecha(materia.lapsos[lapso].fecha) : 'N/A'}
+                                  </div>
+                                </td>
+                              </tr>
+                            ));
+                          })
+                        ) : (
+                          // Formato tradicional
+                          calificaciones.map((calificacion, index) => {
+                            const evaluacion = evaluaciones.find(ev => ev.id === calificacion.evaluacionID);
+                            var materia = materias.find(m => m.id === (evaluacion?.materiaID || calificacion.materiaID));
+                            
+                            return (
+                              <tr key={calificacion.id || `cal-${index}`}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {materia?.asignatura || calificacion.nombreMateria || 'No disponible'}
+                                </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-500">
+                                    {evaluacion ? (evaluacion.tipoEvaluacion || evaluacion.tipo || 'No especificado') : 
+                                    calificacion.tipoEvaluacion || calificacion.tipo || 'No especificado'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className={`text-sm font-medium ${
+                                    parseFloat(calificacion.calificacion || calificacion.valor || 0) >= 10 ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    {calificacion.calificacion || calificacion.valor || 'N/A'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-500">
+                                    {evaluacion ? (evaluacion.tipoEvaluacion || evaluacion.tipo || 'No especificado') : 
+                                    calificacion.tipoEvaluacion || calificacion.tipo || 'No especificado'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-500">
+                                    {calificacion.fecha || calificacion.fechaRegistro || calificacion.createdAt 
+                                      ? formatearFecha(calificacion.fecha || calificacion.fechaRegistro || calificacion.createdAt)
+                                      : 'N/A'}
                                   </div>
                                 </td>
                               </tr>
                             );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 p-4 rounded-md">
-                      <p className="text-gray-500">No hay calificaciones registradas para este estudiante.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    {materias && materias.length > 0 ? (
+                      <div>
+                        <p className="text-gray-500 mb-2">No hay calificaciones registradas para este estudiante.</p>
+                        <p className="text-gray-500">El estudiante está inscrito en {materias.length} materia(s), pero aún no tiene evaluaciones calificadas.</p>
+                        <div className="mt-4">
+                          <h3 className="text-md font-medium text-gray-700 mb-2">Materias del grado {grado?.nombre_grado}:</h3>
+                          <ul className="list-disc pl-5">
+                            {materias.map(materia => (
+                              <li key={materia.id} className="text-gray-600">{materia.asignatura}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    ) : grado ? (
+                      <div>
+                        <p className="text-gray-500 mb-2">No hay calificaciones ni materias registradas para este estudiante.</p>
+                        <p className="text-gray-500">El estudiante está asignado al grado {grado.nombre_grado}, pero no tiene materias asignadas.</p>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500">No hay calificaciones ni información académica registrada para este estudiante.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+
+  
               {/* Evaluaciones */}
               {activeTab === 'evaluaciones' && (
                 <div>
@@ -538,7 +745,16 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
                               Título
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Profesor
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Tipo
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Lapso
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Porcentaje
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Fecha
@@ -549,67 +765,90 @@ const EstudianteProgresoModal = ({ isOpen, onClose, estudianteID }) => {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {evaluaciones.map(evaluacion => {
-                            const materia = materias.find(m => m.id === evaluacion.materiaID);
-                            const calificacion = calificaciones.find(c => c.evaluacionID === evaluacion.id);
-                            const fechaEvaluacion = new Date(evaluacion.fecha);
-                            const hoy = new Date();
-                            
-                            let estado = 'Pendiente';
-                            let estadoClase = 'bg-yellow-100 text-yellow-800';
-                            
-                            if (calificacion) {
-                              estado = 'Calificada';
-                              estadoClase = 'bg-green-100 text-green-800';
-                            } else if (fechaEvaluacion < hoy) {
-                              estado = 'Vencida';
-                              estadoClase = 'bg-red-100 text-red-800';
-                            } else if (fechaEvaluacion > hoy) {
-                              estado = 'Próxima';
-                              estadoClase = 'bg-blue-100 text-blue-800';
-                            }
-                            
-                            return (
-                              <tr key={evaluacion.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {materia?.asignatura || 'No disponible'}
+                        {evaluaciones.map(evaluacion => {
+                          const materia = materias.find(m => m.id === evaluacion.materiaID);
+                          const calificacion = calificaciones.find(c => c.evaluacionID === evaluacion.id);
+                          const fechaEvaluacion = new Date(evaluacion.fechaEvaluacion || evaluacion.fecha);
+                          const hoy = new Date();
+
+                          // Buscar información del profesor
+                          const profesor = profesores.find(p => p.id === evaluacion.profesorID);
+
+                          let estado = 'Pendiente';
+                          let estadoClase = 'bg-yellow-100 text-yellow-800';
+
+                          if (calificacion) {
+                            estado = 'Calificada';
+                            estadoClase = 'bg-green-100 text-green-800';
+                          } else if (fechaEvaluacion < hoy) {
+                            estado = 'Vencida';
+                            estadoClase = 'bg-red-100 text-red-800';
+                          } else if (fechaEvaluacion > hoy) {
+                            estado = 'Próxima';
+                            estadoClase = 'bg-blue-100 text-blue-800';
+                          }
+                          
+                          return (
+                            <tr key={evaluacion.id}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {materia?.asignatura || 'No disponible'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {evaluacion.nombreEvaluacion || evaluacion.titulo}
+                                </div>
+                                {evaluacion.descripcion && (
+                                  <div className="text-xs text-gray-500">
+                                    {evaluacion.descripcion}
                                   </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {evaluacion.titulo}
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {profesor ? `${profesor.nombre} ${profesor.apellido}` : 'No asignado'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-500">
+                                  {evaluacion.tipoEvaluacion || evaluacion.tipo}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-500">
+                                  {evaluacion.lapso || 'N/A'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-500">
+                                  {evaluacion.porcentaje ? `${evaluacion.porcentaje}%` : 'N/A'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-500">
+                                  {formatearFecha(evaluacion.fechaEvaluacion || evaluacion.fecha)}
+                                </div>
+                                {evaluacion.requiereEntrega && evaluacion.fechaLimiteEntrega && (
+                                  <div className="text-xs text-gray-500">
+                                    Entrega: {formatearFecha(evaluacion.fechaLimiteEntrega)}
                                   </div>
-                                  {evaluacion.descripcion && (
-                                    <div className="text-xs text-gray-500">
-                                      {evaluacion.descripcion}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-500">
-                                    {evaluacion.tipo}
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${estadoClase}`}>
+                                  {estado}
+                                </span>
+                                {calificacion && (
+                                  <div className="text-sm font-medium mt-1">
+                                    Nota: {calificacion.valor}
                                   </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-500">
-                                    {formatearFecha(evaluacion.fecha)}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${estadoClase}`}>
-                                    {estado}
-                                  </span>
-                                  {calificacion && (
-                                    <div className="text-sm font-medium mt-1">
-                                      Nota: {calificacion.valor}
-                                    </div>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
                       </table>
                     </div>
                   ) : (

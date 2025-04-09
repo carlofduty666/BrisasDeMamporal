@@ -151,6 +151,214 @@ const getEstudiantesByRepresentante = async (req, res) => {
   }
 };
 
+
+// Obtener estudiantes por profesor
+const getEstudiantesByProfesor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { annoEscolarID } = req.query;
+    
+    if (!annoEscolarID) {
+      return res.status(400).json({ message: 'Se requiere el ID del año escolar' });
+    }
+    
+    // Verificar que el profesor existe
+    const profesor = await db.Personas.findOne({
+      where: { 
+        id: id,
+        tipo: 'profesor'
+      }
+    });
+    
+    if (!profesor) {
+      return res.status(404).json({ message: 'Profesor no encontrado' });
+    }
+    
+    // Buscar las asignaciones del profesor (materias, grados) en el año escolar actual
+    const asignacionesProfesor = await db.Profesor_Materia_Grados.findAll({
+      where: { 
+        profesorID: id,
+        annoEscolarID: annoEscolarID
+      },
+      include: [
+        {
+          model: db.Grados,
+          as: 'grado'
+        },
+        {
+          model: db.Materias,
+          as: 'materia'
+        }
+      ]
+    });
+    
+    if (!asignacionesProfesor || asignacionesProfesor.length === 0) {
+      return res.json([]);
+    }
+    
+    // Obtener IDs de los grados donde enseña el profesor
+    const gradoIDs = [...new Set(asignacionesProfesor.map(asig => asig.gradoID))];
+    
+    // Buscar estudiantes asignados a esos grados para el año escolar actual
+    const estudiantesGrado = await db.Grado_Personas.findAll({
+      where: { 
+        gradoID: gradoIDs,
+        annoEscolarID: annoEscolarID,
+        tipo: 'estudiante'
+      },
+      include: [
+        {
+          model: db.Personas,
+          as: 'persona',
+          where: { tipo: 'estudiante' }  // Cambiado de 'personas' a 'persona' según la asociación
+        },
+        {
+          model: db.Grados,
+          as: 'grado'
+        }
+      ]
+    });
+    
+    // Buscar las secciones de estos estudiantes
+    const personaIDs = estudiantesGrado.map(eg => eg.personaID);
+    
+    const seccionesEstudiantes = await db.Seccion_Personas.findAll({
+      where: {
+        personaID: personaIDs,
+        annoEscolarID: annoEscolarID,
+        rol: 'estudiante'
+      },
+      include: [
+        {
+          model: db.Secciones,
+          as: 'secciones'  // Asegúrate de que esta asociación esté definida correctamente
+        }
+      ]
+    });
+    
+    // Crear un mapa para acceder rápidamente a la sección de cada estudiante
+    const seccionPorEstudiante = {};
+    seccionesEstudiantes.forEach(se => {
+      seccionPorEstudiante[se.personaID] = {
+        seccionID: se.seccionID,
+        seccion: se.seccion
+      };
+    });
+    
+    // Formatear la respuesta
+    const estudiantes = estudiantesGrado.map(eg => {
+      const seccionInfo = seccionPorEstudiante[eg.personaID] || {};
+      
+      return {
+        ...eg.persona.toJSON(),  // Cambiado de 'personas' a 'persona'
+        gradoID: eg.gradoID,
+        grado: eg.grado,
+        seccionID: seccionInfo.seccionID,
+        seccion: seccionInfo.secciones
+      };
+    });
+    
+    res.json(estudiantes);
+  } catch (err) {
+    console.error('Error al obtener estudiantes por profesor:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+// Obtener profesores por estudiante
+const getProfesorByEstudiante = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { annoEscolarID, materiaID } = req.query;
+    
+    if (!annoEscolarID) {
+      return res.status(400).json({ message: 'Se requiere el ID del año escolar' });
+    }
+    
+    // Verificar que el estudiante existe
+    const estudiante = await db.Personas.findOne({
+      where: { 
+        id: id,
+        tipo: 'estudiante'
+      }
+    });
+    
+    if (!estudiante) {
+      return res.status(404).json({ message: 'Estudiante no encontrado' });
+    }
+    
+    // Buscar el grado del estudiante
+    const gradoEstudiante = await db.Grado_Personas.findOne({
+      where: {
+        personaID: id,
+        annoEscolarID: annoEscolarID,
+        tipo: 'estudiante'
+      }
+    });
+    
+    if (!gradoEstudiante) {
+      return res.status(404).json({ message: 'No se encontró asignación de grado para este estudiante' });
+    }
+    
+    // Buscar la sección del estudiante
+    const seccionEstudiante = await db.Seccion_Personas.findOne({
+      where: {
+        personaID: id,
+        annoEscolarID: annoEscolarID,
+        rol: 'estudiante'
+      }
+    });
+    
+    // Construir la consulta para encontrar profesores
+    let whereClause = {
+      gradoID: gradoEstudiante.gradoID,
+      annoEscolarID: annoEscolarID
+    };
+    
+    // Si se especifica una materia, filtrar por ella
+    if (materiaID) {
+      whereClause.materiaID = materiaID;
+    }
+    
+    // Buscar profesores que enseñan en ese grado
+    const profesoresAsignados = await db.Profesor_Materia_Grados.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: db.Personas,
+          as: 'profesor'
+        },
+        {
+          model: db.Materias,
+          as: 'materia'
+        },
+        {
+          model: db.Grados,
+          as: 'grado'
+        }
+      ]
+    });
+    
+    if (!profesoresAsignados || profesoresAsignados.length === 0) {
+      return res.json([]);
+    }
+    
+    // Formatear la respuesta
+    const profesores = profesoresAsignados.map(pa => ({
+      ...pa.profesor.toJSON(),
+      materia: pa.materia,
+      grado: pa.grado
+    }));
+    
+    res.json(profesores);
+  } catch (err) {
+    console.error('Error al obtener profesores por estudiante:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 // Obtener representante de un estudiante
 const getRepresentanteByEstudiante = async (req, res) => {
   try {
@@ -344,5 +552,7 @@ module.exports = {
     getPersonaTipoById,
     getEstudiantesByRepresentante,
     getRepresentanteByEstudiante,
-    getPersonasByQuery
+    getPersonasByQuery,
+    getEstudiantesByProfesor,
+    getProfesorByEstudiante
 }

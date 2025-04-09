@@ -144,4 +144,3 @@ module.exports = (sequelize, DataTypes) => {
   
   return Evaluaciones;
 };
-

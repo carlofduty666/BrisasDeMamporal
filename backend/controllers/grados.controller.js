@@ -230,6 +230,7 @@ const gradosController = {
         // Obtener estudiantes asignados al grado en el año escolar especificado
         const estudiantes = await db.Personas.findAll({
           attributes: ['id', 'nombre', 'apellido', 'cedula', 'fechaNacimiento', 'genero'],
+          where: { tipo: 'estudiante' }, // Añadir esta línea para filtrar solo estudiantes
           include: [
             {
               model: db.Grados,

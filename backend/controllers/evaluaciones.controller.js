@@ -87,179 +87,206 @@ const evaluacionesController = {
         }
     },    
 
-    // Crear una evaluación
     createEvaluacion: async (req, res) => {
         try {
-        const {
-            nombreEvaluacion,
-            tipoEvaluacion,
-            porcentaje,
-            lapso,
-            materiaID,
-            gradoID,
-            seccionID,
-            profesorID,
-            annoEscolarID,
-            descripcion,
-            fechaEvaluacion,
-            requiereEntrega,
-            fechaLimiteEntrega
-        } = req.body;
-        
-        // Validar que la suma de porcentajes no exceda el 100% para el lapso
-        const evaluacionesExistentes = await Evaluaciones.findAll({
-            where: {
-            materiaID,
-            gradoID,
-            seccionID,
-            annoEscolarID,
-            lapso
+            let {
+                nombreEvaluacion,
+                tipoEvaluacion,
+                porcentaje,
+                lapso,
+                materiaID,
+                gradoID,
+                seccionID,
+                profesorID,
+                annoEscolarID,
+                descripcion,
+                fechaEvaluacion,
+                requiereEntrega,
+                fechaLimiteEntrega
+            } = req.body;
+
+            if (!annoEscolarID) {
+                const annoEscolarActual = await db.AnnoEscolar.findOne({
+                    where: { activo: true }
+                });
+                
+                if (!annoEscolarActual) {
+                    return res.status(400).json({ 
+                        message: 'No hay un año escolar activo. Por favor, especifique el año escolar.' 
+                    });
+                }
+                
+                annoEscolarID = annoEscolarActual.id;
             }
-        });
-        
-        const sumaPorcentajes = evaluacionesExistentes.reduce((sum, eval) => sum + eval.porcentaje, 0);
-        
-        if (sumaPorcentajes + parseFloat(porcentaje) > 100) {
-            return res.status(400).json({ 
-            message: `La suma de porcentajes excede el 100% para el lapso ${lapso}. Porcentaje disponible: ${100 - sumaPorcentajes}%` 
+    
+            // Validar que la suma de porcentajes no exceda el 100% para el lapso
+            const evaluacionesExistentes = await Evaluaciones.findAll({
+                where: {
+                    materiaID,
+                    gradoID,
+                    seccionID,
+                    annoEscolarID,
+                    lapso
+                }
             });
-        }
-        
-        // Crear la evaluación
-        const nuevaEvaluacion = await Evaluaciones.create({
-            nombreEvaluacion,
-            tipoEvaluacion,
-            porcentaje,
-            lapso,
-            materiaID,
-            gradoID,
-            seccionID,
-            profesorID,
-            annoEscolarID,
-            descripcion,
-            fechaEvaluacion,
-            requiereEntrega,
-            fechaLimiteEntrega
-        });
-        
-        // Si hay un archivo adjunto (procesado por multer)
-        if (req.file) {
-            const { filename, originalname, mimetype, size, path: filePath } = req.file;
-            
-            // Actualizar la evaluación con la información del archivo
-            await nuevaEvaluacion.update({
-            archivoURL: `/uploads/evaluaciones/${filename}`,
-            nombreArchivo: originalname,
-            tipoArchivo: mimetype,
-            tamanoArchivo: size
+    
+            const sumaPorcentajes = evaluacionesExistentes.reduce((sum, eval) => sum + eval.porcentaje, 0);
+    
+            if (sumaPorcentajes + parseFloat(porcentaje) > 100) {
+                return res.status(400).json({
+                    message: `La suma de porcentajes excede el 100% para el lapso ${lapso}. Porcentaje disponible: ${100 - sumaPorcentajes}%`
+                });
+            }
+    
+            // Crear la evaluación
+            const nuevaEvaluacion = await Evaluaciones.create({
+                nombreEvaluacion,
+                tipoEvaluacion,
+                porcentaje,
+                lapso,
+                materiaID,
+                gradoID,
+                seccionID,
+                profesorID,
+                annoEscolarID,
+                descripcion,
+                fechaEvaluacion,
+                requiereEntrega,
+                fechaLimiteEntrega
             });
-        }
-        
-        res.status(201).json(nuevaEvaluacion);
+    
+            // Si hay un archivo adjunto (procesado por express-fileupload)
+            if (req.files && req.files.archivo) {
+                const archivo = req.files.archivo;
+                const fileName = `${Date.now()}-${archivo.name}`;
+                const uploadPath = path.join(__dirname, '../uploads/evaluaciones', fileName);
+    
+                // Crear directorio si no existe
+                const dir = path.join(__dirname, '../uploads/evaluaciones');
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+    
+                // Mover el archivo al directorio de uploads
+                await archivo.mv(uploadPath);
+    
+                // Actualizar la evaluación con la información del archivo
+                await nuevaEvaluacion.update({
+                    archivoURL: `/uploads/evaluaciones/${fileName}`,
+                    nombreArchivo: archivo.name,
+                    tipoArchivo: archivo.mimetype,
+                    tamanoArchivo: archivo.size
+                });
+            }
+    
+            res.status(201).json(nuevaEvaluacion);
         } catch (err) {
-        // Si hay un error y se subió un archivo, eliminarlo
-        if (req.file) {
-            fs.unlinkSync(req.file.path);
-        }
-        console.error(err);
-        res.status(500).json({ message: err.message });
+            console.error(err);
+            res.status(500).json({ message: err.message });
         }
     },
 
     // Actualizar una evaluación
     updateEvaluacion: async (req, res) => {
         try {
-        const { id } = req.params;
-        const {
-            nombreEvaluacion,
-            tipoEvaluacion,
-            porcentaje,
-            lapso,
-            materiaID,
-            gradoID,
-            seccionID,
-            profesorID,
-            annoEscolarID,
-            descripcion,
-            fechaEvaluacion,
-            requiereEntrega,
-            fechaLimiteEntrega
-        } = req.body;
-        
-        const evaluacion = await Evaluaciones.findByPk(id);
-        
-        if (!evaluacion) {
-            return res.status(404).json({ message: 'Evaluación no encontrada' });
-        }
-        
-        // Si cambia el lapso o el porcentaje, validar que no exceda el 100%
-        if (lapso !== evaluacion.lapso || parseFloat(porcentaje) !== evaluacion.porcentaje) {
-            const evaluacionesExistentes = await Evaluaciones.findAll({
-            where: {
+            const { id } = req.params;
+            const {
+                nombreEvaluacion,
+                tipoEvaluacion,
+                porcentaje,
+                lapso,
+                materiaID,
+                gradoID,
+                seccionID,
+                profesorID,
+                annoEscolarID,
+                descripcion,
+                fechaEvaluacion,
+                requiereEntrega,
+                fechaLimiteEntrega
+            } = req.body;
+    
+            const evaluacion = await Evaluaciones.findByPk(id);
+    
+            if (!evaluacion) {
+                return res.status(404).json({ message: 'Evaluación no encontrada' });
+            }
+    
+            // Si cambia el lapso o el porcentaje, validar que no exceda el 100%
+            if (lapso !== evaluacion.lapso || parseFloat(porcentaje) !== evaluacion.porcentaje) {
+                const evaluacionesExistentes = await Evaluaciones.findAll({
+                    where: {
+                        materiaID: materiaID || evaluacion.materiaID,
+                        gradoID: gradoID || evaluacion.gradoID,
+                        seccionID: seccionID || evaluacion.seccionID,
+                        annoEscolarID: annoEscolarID || evaluacion.annoEscolarID,
+                        lapso: lapso || evaluacion.lapso,
+                        id: { [db.Sequelize.Op.ne]: id } // Excluir la evaluación actual
+                    }
+                });
+    
+                const sumaPorcentajes = evaluacionesExistentes.reduce((sum, eval) => sum + eval.porcentaje, 0);
+    
+                if (sumaPorcentajes + parseFloat(porcentaje) > 100) {
+                    return res.status(400).json({
+                        message: `La suma de porcentajes excede el 100% para el lapso ${lapso || evaluacion.lapso}. Porcentaje disponible: ${100 - sumaPorcentajes}%`
+                    });
+                }
+            }
+    
+            // Actualizar la evaluación
+            await evaluacion.update({
+                nombreEvaluacion: nombreEvaluacion || evaluacion.nombreEvaluacion,
+                tipoEvaluacion: tipoEvaluacion || evaluacion.tipoEvaluacion,
+                porcentaje: porcentaje || evaluacion.porcentaje,
+                lapso: lapso || evaluacion.lapso,
                 materiaID: materiaID || evaluacion.materiaID,
                 gradoID: gradoID || evaluacion.gradoID,
                 seccionID: seccionID || evaluacion.seccionID,
+                profesorID: profesorID || evaluacion.profesorID,
                 annoEscolarID: annoEscolarID || evaluacion.annoEscolarID,
-                lapso: lapso || evaluacion.lapso,
-                id: { [db.Sequelize.Op.ne]: id } // Excluir la evaluación actual
-            }
+                descripcion: descripcion !== undefined ? descripcion : evaluacion.descripcion,
+                fechaEvaluacion: fechaEvaluacion || evaluacion.fechaEvaluacion,
+                requiereEntrega: requiereEntrega !== undefined ? requiereEntrega : evaluacion.requiereEntrega,
+                fechaLimiteEntrega: fechaLimiteEntrega || evaluacion.fechaLimiteEntrega
             });
-            
-            const sumaPorcentajes = evaluacionesExistentes.reduce((sum, eval) => sum + eval.porcentaje, 0);
-            
-            if (sumaPorcentajes + parseFloat(porcentaje) > 100) {
-            return res.status(400).json({ 
-                message: `La suma de porcentajes excede el 100% para el lapso ${lapso || evaluacion.lapso}. Porcentaje disponible: ${100 - sumaPorcentajes}%` 
-            });
+    
+            // Si hay un nuevo archivo adjunto
+            if (req.files && req.files.archivo) {
+                // Si ya había un archivo, eliminarlo
+                if (evaluacion.archivoURL) {
+                    const oldFilePath = path.join(__dirname, '..', evaluacion.archivoURL);
+                    if (fs.existsSync(oldFilePath)) {
+                        fs.unlinkSync(oldFilePath);
+                    }
+                }
+    
+                const archivo = req.files.archivo;
+                const fileName = `${Date.now()}-${archivo.name}`;
+                const uploadPath = path.join(__dirname, '../uploads/evaluaciones', fileName);
+    
+                // Crear directorio si no existe
+                const dir = path.join(__dirname, '../uploads/evaluaciones');
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+    
+                // Mover el archivo al directorio de uploads
+                await archivo.mv(uploadPath);
+    
+                // Actualizar con el nuevo archivo
+                await evaluacion.update({
+                    archivoURL: `/uploads/evaluaciones/${fileName}`,
+                    nombreArchivo: archivo.name,
+                    tipoArchivo: archivo.mimetype,
+                    tamanoArchivo: archivo.size
+                });
             }
-        }
-        
-        // Actualizar la evaluación
-        await evaluacion.update({
-            nombreEvaluacion: nombreEvaluacion || evaluacion.nombreEvaluacion,
-            tipoEvaluacion: tipoEvaluacion || evaluacion.tipoEvaluacion,
-            porcentaje: porcentaje || evaluacion.porcentaje,
-            lapso: lapso || evaluacion.lapso,
-            materiaID: materiaID || evaluacion.materiaID,
-            gradoID: gradoID || evaluacion.gradoID,
-            seccionID: seccionID || evaluacion.seccionID,
-            profesorID: profesorID || evaluacion.profesorID,
-            annoEscolarID: annoEscolarID || evaluacion.annoEscolarID,
-            descripcion: descripcion !== undefined ? descripcion : evaluacion.descripcion,
-            fechaEvaluacion: fechaEvaluacion || evaluacion.fechaEvaluacion,
-            requiereEntrega: requiereEntrega !== undefined ? requiereEntrega : evaluacion.requiereEntrega,
-            fechaLimiteEntrega: fechaLimiteEntrega || evaluacion.fechaLimiteEntrega
-        });
-        
-        // Si hay un nuevo archivo adjunto
-        if (req.file) {
-            // Si ya había un archivo, eliminarlo
-            if (evaluacion.archivoURL) {
-            const oldFilePath = path.join(__dirname, '..', evaluacion.archivoURL);
-            if (fs.existsSync(oldFilePath)) {
-                fs.unlinkSync(oldFilePath);
-            }
-            }
-            
-            const { filename, originalname, mimetype, size } = req.file;
-            
-            // Actualizar con el nuevo archivo
-            await evaluacion.update({
-            archivoURL: `/uploads/evaluaciones/${filename}`,
-            nombreArchivo: originalname,
-            tipoArchivo: mimetype,
-            tamanoArchivo: size
-            });
-        }
-        
-        res.json(evaluacion);
+    
+            res.json(evaluacion);
         } catch (err) {
-        // Si hay un error y se subió un archivo, eliminarlo
-        if (req.file) {
-            fs.unlinkSync(req.file.path);
-        }
-        console.error(err);
-        res.status(500).json({ message: err.message });
+            console.error(err);
+            res.status(500).json({ message: err.message });
         }
     },
     
@@ -315,40 +342,45 @@ const evaluacionesController = {
     // Subir archivo adjunto a una evaluación
     uploadArchivoEvaluacion: async (req, res) => {
         try {
-        const { evaluacionID } = req.body;
-        
-        if (!req.file) {
-            return res.status(400).json({ message: 'No se ha subido ningún archivo' });
-        }
-        
-        const evaluacion = await Evaluaciones.findByPk(evaluacionID);
-        
-        if (!evaluacion) {
-            // Eliminar el archivo subido
-            fs.unlinkSync(req.file.path);
-            return res.status(404).json({ message: 'Evaluación no encontrada' });
-        }
-        
-        const { filename, originalname, mimetype, size } = req.file;
-        
-        // Crear el registro del archivo
-        const nuevoArchivo = await ArchivosEvaluaciones.create({
-            evaluacionID,
-            archivoURL: `/uploads/evaluaciones/${filename}`,
-            nombreArchivo: originalname,
-            tipoArchivo: mimetype,
-            tamanoArchivo: size,
-            descripcion: req.body.descripcion || null
-        });
-        
-        res.status(201).json(nuevoArchivo);
+            const { evaluacionID, descripcion } = req.body;
+
+            if (!req.files || !req.files.archivo) {
+                return res.status(400).json({ message: 'No se ha subido ningún archivo' });
+            }
+
+            const evaluacion = await Evaluaciones.findByPk(evaluacionID);
+
+            if (!evaluacion) {
+                return res.status(404).json({ message: 'Evaluación no encontrada' });
+            }
+
+            const archivo = req.files.archivo;
+            const fileName = `${Date.now()}-${archivo.name}`;
+            const uploadPath = path.join(__dirname, '../uploads/evaluaciones', fileName);
+
+            // Crear directorio si no existe
+            const dir = path.join(__dirname, '../uploads/evaluaciones');
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+
+            // Mover el archivo al directorio de uploads
+            await archivo.mv(uploadPath);
+
+            // Crear el registro del archivo
+            const nuevoArchivo = await ArchivosEvaluaciones.create({
+                evaluacionID,
+                archivoURL: `/uploads/evaluaciones/${fileName}`,
+                nombreArchivo: archivo.name,
+                tipoArchivo: archivo.mimetype,
+                tamanoArchivo: archivo.size,
+                descripcion: descripcion || null
+            });
+
+            res.status(201).json(nuevoArchivo);
         } catch (err) {
-        // Si hay un error y se subió un archivo, eliminarlo
-        if (req.file) {
-            fs.unlinkSync(req.file.path);
-        }
-        console.error(err);
-        res.status(500).json({ message: err.message });
+            console.error(err);
+            res.status(500).json({ message: err.message });
         }
     },
 

@@ -23,7 +23,7 @@ const calificacionesController = {
             },
             { 
               model: Personas, 
-              as: 'Estudiante',
+              as: 'Personas',
               attributes: ['id', 'nombre', 'apellido', 'cedula']
             }
           ]
@@ -52,7 +52,7 @@ const calificacionesController = {
             },
             { 
               model: Personas, 
-              as: 'Estudiante',
+              as: 'Personas',
               attributes: ['id', 'nombre', 'apellido', 'cedula']
             }
           ]
@@ -79,13 +79,13 @@ const calificacionesController = {
           include: [
             { 
               model: Personas, 
-              as: 'Estudiante',
+              as: 'Personas',
               attributes: ['id', 'nombre', 'apellido', 'cedula']
             }
           ],
           order: [
-            [{ model: Personas, as: 'Estudiante' }, 'apellido', 'ASC'],
-            [{ model: Personas, as: 'Estudiante' }, 'nombre', 'ASC']
+            [{ model: Personas, as: 'Personas' }, 'apellido', 'ASC'],
+            [{ model: Personas, as: 'Personas' }, 'nombre', 'ASC']
           ]
         });
         
@@ -228,13 +228,13 @@ const calificacionesController = {
             },
             { 
               model: Personas, 
-              as: 'Estudiante',
+              as: 'Personas',
               attributes: ['id', 'nombre', 'apellido', 'cedula']
             }
           ],
           order: [
-            [{ model: Personas, as: 'Estudiante' }, 'apellido', 'ASC'],
-            [{ model: Personas, as: 'Estudiante' }, 'nombre', 'ASC'],
+            [{ model: Personas, as: 'Personas' }, 'apellido', 'ASC'],
+            [{ model: Personas, as: 'Personas' }, 'nombre', 'ASC'],
             [{ model: Evaluaciones, as: 'Evaluaciones' }, 'lapso', 'ASC'],
             [{ model: Evaluaciones, as: 'Evaluaciones' }, 'fechaEvaluacion', 'ASC']
           ]
@@ -647,7 +647,7 @@ const calificacionesController = {
         include: [
           { 
             model: Personas, 
-            as: 'Estudiante',
+            as: 'Personas',
             attributes: ['id', 'nombre', 'apellido', 'cedula']
           },
           { 
@@ -685,7 +685,7 @@ const calificacionesController = {
         include: [
           { 
             model: Personas, 
-            as: 'Estudiante',
+            as: 'Personas',
             attributes: ['id', 'nombre', 'apellido', 'cedula']
           },
           { 

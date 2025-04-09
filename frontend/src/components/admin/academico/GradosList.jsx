@@ -99,7 +99,10 @@ const GradosList = () => {
           `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${grado.id}/estudiantes`,
           { 
             headers: { 'Authorization': `Bearer ${token}` },
-            params: { annoEscolarID: annoEscolar.id }
+            params: { 
+              annoEscolarID: annoEscolar.id,
+              tipo: 'estudiante'
+            }
           }
         );
         setEstudiantes(estudiantesResponse.data);
@@ -114,7 +117,10 @@ const GradosList = () => {
           `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${grado.id}/profesores`,
           { 
             headers: { 'Authorization': `Bearer ${token}` },
-            params: { annoEscolarID: annoEscolar.id }
+            params: { 
+              annoEscolarID: annoEscolar.id,
+              tipo: 'profesor'
+            }
           }
         );
         setProfesores(profesoresResponse.data);
