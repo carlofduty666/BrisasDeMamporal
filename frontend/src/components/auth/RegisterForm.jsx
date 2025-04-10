@@ -138,9 +138,17 @@ const RegisterForm = () => {
         <p className="mt-2 text-center text-sm text-gray-600">
           ¿Ya tiene una cuenta?{' '}
           <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-            Iniciar sesión
+            Inicie sesión aquí
           </Link>
         </p>
+        {!isProfesorRegister && (
+          <p className="mt-2 text-center text-sm text-gray-600">
+            ¿Es Profesor?{' '}
+            <Link to="/registro-profesor" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Regístrese aquí
+            </Link>
+          </p>
+        )}
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">

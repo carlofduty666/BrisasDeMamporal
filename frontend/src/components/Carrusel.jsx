@@ -21,9 +21,10 @@ function Carrusel() {
         <section className="carrusel">
             <div className="carrousel">
                 <ul className="slider" ref={sliderRef}>
+                    {/* Quinta imagen */}
                     <li
                         className="item"
-                        style={{ backgroundImage: `url('https://cdn.mos.cms.futurecdn.net/dP3N4qnEZ4tCTCLq59iysd.jpg')` }}
+                        style={{ backgroundImage: `url("../img/brisas-pic3.jpg")` }}
                     >
                         <div className="content">
                             <h2 className="title">"Lossless Youths"</h2>
@@ -35,9 +36,10 @@ function Carrusel() {
                             <button>Read More</button>
                         </div>
                     </li>
+                    {/* Primera imagen */}
                     <li
                         className="item"
-                        style={{ backgroundImage: `url('https://i.redd.it/tc0aqpv92pn21.jpg')` }}
+                        style={{ backgroundImage: `url("../img/brisas-pic4.jpg")` }}
                     >
                         <div className="content">
                             <h2 className="title">Bienvenido a Brisas de Mamporal</h2>
@@ -49,9 +51,10 @@ function Carrusel() {
                             <button>Read More</button>
                         </div>
                     </li>
+                    {/* Segunda imagen */}
                     <li
                         className="item"
-                        style={{ backgroundImage: `url('https://wharferj.files.wordpress.com/2015/11/bio_north.jpg')` }}
+                        style={{ backgroundImage: `url("../img/brisas-pic6.jpg")` }}
                     >
                         <div className="content">
                             <h2 className="title">"The Gate Keeper"</h2>
@@ -63,9 +66,10 @@ function Carrusel() {
                             <button>Read More</button>
                         </div>
                     </li>
+                    {/* Tercera imagen */}
                     <li
                         className="item"
-                        style={{ backgroundImage: `url('https://images7.alphacoders.com/878/878663.jpg')` }}
+                        style={{ backgroundImage: `url("../img/brisas-pic5.webp")` }}
                     >
                         <div className="content">
                             <h2 className="title">"Last Trace Of Us"</h2>
@@ -77,9 +81,10 @@ function Carrusel() {
                             <button>Read More</button>
                         </div>
                     </li>
+                    {/* Cuarta imagen */}
                     <li
                         className="item"
-                        style={{ backgroundImage: `url('https://theawesomer.com/photos/2017/07/simon_stalenhag_the_electric_state_6.jpg')` }}
+                        style={{ backgroundImage: `url("../img/brisas-pic1.png")` }}
                     >
                         <div className="content">
                             <h2 className="title">"Urban Decay"</h2>

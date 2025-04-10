@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { ThemeProvider } from './context/ThemeContext';
 
 
 // Componentes de authentication
@@ -40,10 +41,13 @@ import PagosList from './components/admin/pagos/PagosList';
 // Componentes de profesor
 import ProfesorDashboard from './components/dashboard/ProfesorDashboard'
 
-// Importando tus componentes existentes
+// Componentes de home
 import NavBar from './components/NavBar';
 import Carrusel from './components/Carrusel';
 import InfoHome from './components/InfoHome';
+import NuestraInstitucion from './components/NuestraInstitucion';
+import CalendarioAcademico from './components/CalendarioAcademico';
+
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -81,11 +85,17 @@ function App() {
   }, []);
 
   return (
-    <Router>
+
+
+      <ThemeProvider>
+        <Router>
       <Routes>
         {/* Rutas públicas */}
         <Route path="/" element={<HomePage />} />
-        <Route path="/register" element={<RegisterForm />} />
+        <Route path="/nuestra-institucion" element={<NuestraInstitucion />} />
+        <Route path="/calendario-academico" element={<CalendarioAcademico />} />
+
+        <Route path="/register" element={<RegisterForm key="register" />} />
         <Route path="/registro-profesor" element={<RegisterForm />} />
         <Route path="/verificacion-email" element={<EmailVerification />} />
         <Route path="/login" element={<LoginForm />} />
@@ -329,7 +339,9 @@ function App() {
         {/* Ruta para cualquier otra dirección no definida */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
+        </Router>
+      
+      </ThemeProvider>
   );
 }
 

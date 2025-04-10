@@ -87,18 +87,9 @@ body {
 }
 
 .nav-contenedor {
-  /* position: fixed; */
-  /* top: 14px;
-  left: 20rem; */
-  /* background-color: #FCFCFB; */
   font-family: "Inter Tight", sans-serif;
   font-style: normal;
-  /* font-weight: 100; */
   display: flex;
-  /* flex-direction: row;
-  align-items: center;
-  justify-content: space-between; */
-  /* border-radius: 1rem; */
 }
 
 .nav-logo {

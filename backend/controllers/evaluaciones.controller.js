@@ -118,6 +118,20 @@ const evaluacionesController = {
                 
                 annoEscolarID = annoEscolarActual.id;
             }
+
+            const profesorMateriaGrado = await db.Profesor_Materia_Grados.findOne({
+                where: {
+                    profesorID,
+                    materiaID,
+                    gradoID
+                }
+            });
+            
+            if (!profesorMateriaGrado) {
+                return res.status(400).json({
+                    message: 'No estás autorizado para crear evaluaciones para esta materia en este grado'
+                });
+            }
     
             // Validar que la suma de porcentajes no exceda el 100% para el lapso
             const evaluacionesExistentes = await Evaluaciones.findAll({

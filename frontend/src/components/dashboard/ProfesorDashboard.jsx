@@ -223,6 +223,73 @@ const ProfesorDashboard = () => {
       busqueda: ''
     });
   };
+
+ // Cuando el profesor selecciona un grado
+const handleGradoChange = async (e) => {
+  const gradoID = e.target.value;
+  setEvaluacionForm({
+    ...evaluacionForm,
+    gradoID,
+    materiaID: '', // Resetear la materia seleccionada
+    seccionID: ''  // También resetear la sección seleccionada
+  });
+  
+  if (gradoID) {
+    try {
+      setSavingEvaluacion(true); // Usar el estado existente para indicar carga
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      // Obtener las materias asignadas a este grado
+      const materiasGradoResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/grados/${gradoID}/materias`,
+        config
+      );
+      
+      // Obtener las materias que imparte el profesor
+      const materiasProfesorResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/materias/profesor/${profesor.id}`,
+        config
+      );
+      
+      // Filtrar para obtener solo las materias que están en ambos conjuntos
+      const materiasGrado = materiasGradoResponse.data;
+      const materiasProfesor = materiasProfesorResponse.data;
+      
+      const materiasDisponibles = materiasGrado.filter(materiaGrado => 
+        materiasProfesor.some(materiaProf => materiaProf.id === materiaGrado.id)
+      );
+      
+      // Actualizar el estado de materias
+      setMaterias(materiasDisponibles);
+      
+      // También obtener las secciones para este grado
+      const seccionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/secciones/grado/${gradoID}`,
+        config
+      );
+      
+      if (seccionesResponse.data && Array.isArray(seccionesResponse.data)) {
+        setSecciones(seccionesResponse.data);
+      }
+      
+      if (materiasDisponibles.length === 0) {
+        setError('No tienes materias asignadas para este grado');
+      } else {
+        setError(''); // Limpiar error si hay materias disponibles
+      }
+      
+      setSavingEvaluacion(false);
+    } catch (error) {
+      console.error('Error al cargar materias:', error);
+      setError('Error al cargar las materias disponibles');
+      setSavingEvaluacion(false);
+    }
+  } else {
+    // Si no se selecciona un grado, limpiar las materias
+    setMaterias([]);
+  }
+};
   
   // Manejar cambios en el formulario de evaluación
   const handleEvaluacionChange = (e) => {
@@ -986,309 +1053,352 @@ const ProfesorDashboard = () => {
       </main>
       
       {/* Modal para crear/editar evaluación */}
-      {showEvaluacionModal && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                      {selectedEvaluacion ? 'Editar Evaluación' : 'Nueva Evaluación'}
-                    </h3>
-                    <div className="mt-2">
-                      <form onSubmit={handleSubmitEvaluacion} className="space-y-6">
-                        <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                          <div className="sm:col-span-6">
-                          <label htmlFor="nombreEvaluacion" className="block text-sm font-medium text-gray-700">
-                              Nombre de la Evaluación
-                            </label>
-                            <div className="mt-1">
-                              <input
-                                type="text"
-                                id="nombreEvaluacion"
-                                name="nombreEvaluacion"
-                                value={evaluacionForm.nombreEvaluacion}
-                                onChange={handleEvaluacionChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                required
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="sm:col-span-6">
-                            <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">
-                              Descripción
-                            </label>
-                            <div className="mt-1">
-                              <textarea
-                                id="descripcion"
-                                name="descripcion"
-                                rows="3"
-                                value={evaluacionForm.descripcion}
-                                onChange={handleEvaluacionChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                              ></textarea>
-                            </div>
-                          </div>
-                          
-                          <div className="sm:col-span-3">
-                            <label htmlFor="tipoEvaluacion" className="block text-sm font-medium text-gray-700">
-                              Tipo de Evaluación
-                            </label>
-                            <div className="mt-1">
-                              <select
-                                id="tipoEvaluacion"
-                                name="tipoEvaluacion"
-                                value={evaluacionForm.tipoEvaluacion}
-                                onChange={handleEvaluacionChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                required
-                              >
-                                <option value="">Seleccione un tipo</option>
-                                <option value="Examen">Examen</option>
-                                <option value="Tarea">Tarea</option>
-                                <option value="Proyecto">Proyecto</option>
-                                <option value="Exposición">Exposición</option>
-                                <option value="Participación">Participación</option>
-                                <option value="Prueba Corta">Prueba Corta</option>
-                                <option value="Otro">Otro</option>
-                              </select>
-                            </div>
-                          </div>
-                          
-                          <div className="sm:col-span-3">
-                            <label htmlFor="fechaEvaluacion" className="block text-sm font-medium text-gray-700">
-                              Fecha de Evaluación
-                            </label>
-                            <div className="mt-1">
-                              <input
-                                type="date"
-                                id="fechaEvaluacion"
-                                name="fechaEvaluacion"
-                                value={evaluacionForm.fechaEvaluacion}
-                                onChange={handleEvaluacionChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                required
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="sm:col-span-2">
-                            <label htmlFor="materiaID" className="block text-sm font-medium text-gray-700">
-                              Materia
-                            </label>
-                            <div className="mt-1">
-                              <select
-                                id="materiaID"
-                                name="materiaID"
-                                value={evaluacionForm.materiaID}
-                                onChange={handleEvaluacionChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                required
-                              >
-                                <option value="">Seleccione una materia</option>
-                                {materias.map(materia => (
-                                  <option key={materia.id} value={materia.id}>
-                                    {materia.asignatura}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                          
-                          <div className="sm:col-span-2">
-                            <label htmlFor="gradoID" className="block text-sm font-medium text-gray-700">
-                              Grado
-                            </label>
-                            <div className="mt-1">
-                              <select
-                                id="gradoID"
-                                name="gradoID"
-                                value={evaluacionForm.gradoID}
-                                onChange={handleEvaluacionChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                required
-                              >
-                                <option value="">Seleccione un grado</option>
-                                {grados.map(grado => (
-                                  <option key={grado.id} value={grado.id}>
-                                    {grado.nombre_grado}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                          
-                          <div className="sm:col-span-2">
-                            <label htmlFor="seccionID" className="block text-sm font-medium text-gray-700">
-                              Sección
-                            </label>
-                            <div className="mt-1">
-                              <select
-                                id="seccionID"
-                                name="seccionID"
-                                value={evaluacionForm.seccionID}
-                                onChange={handleEvaluacionChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                required
-                                disabled={!evaluacionForm.gradoID}
-                              >
-                                <option value="">Seleccione una sección</option>
-                                {secciones
-                                  .filter(seccion => !evaluacionForm.gradoID || seccion.gradoID === parseInt(evaluacionForm.gradoID))
-                                  .map(seccion => (
-                                    <option key={seccion.id} value={seccion.id}>
-                                      {seccion.nombre_seccion}
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
-                          </div>
-                          
-                          <div className="sm:col-span-2">
-                            <label htmlFor="porcentaje" className="block text-sm font-medium text-gray-700">
-                              Porcentaje (%)
-                            </label>
-                            <div className="mt-1">
-                              <input
-                                type="number"
-                                id="porcentaje"
-                                name="porcentaje"
-                                min="1"
-                                max="100"
-                                value={evaluacionForm.porcentaje}
-                                onChange={handleEvaluacionChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                required
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="sm:col-span-2">
-                            <label htmlFor="lapso" className="block text-sm font-medium text-gray-700">
-                              Lapso
-                            </label>
-                            <div className="mt-1">
-                              <select
-                                id="lapso"
-                                name="lapso"
-                                value={evaluacionForm.lapso}
-                                onChange={handleEvaluacionChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                required
-                              >
-                                <option value="">Seleccione un lapso</option>
-                                <option value="1">Primer Lapso</option>
-                                <option value="2">Segundo Lapso</option>
-                                <option value="3">Tercer Lapso</option>
-                              </select>
-                            </div>
-                          </div>
-                          
-                          <div className="sm:col-span-2">
-                            <div className="flex items-start mt-6">
-                              <div className="flex items-center h-5">
-                                <input
-                                  id="requiereEntrega"
-                                  name="requiereEntrega"
-                                  type="checkbox"
-                                  checked={evaluacionForm.requiereEntrega}
-                                  onChange={handleEvaluacionChange}
-                                  className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                                />
-                              </div>
-                              <div className="ml-3 text-sm">
-                                <label htmlFor="requiereEntrega" className="font-medium text-gray-700">
-                                  Requiere entrega
-                                </label>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {evaluacionForm.requiereEntrega && (
-                            <div className="sm:col-span-3">
-                              <label htmlFor="fechaLimiteEntrega" className="block text-sm font-medium text-gray-700">
-                                Fecha Límite de Entrega
-                              </label>
-                              <div className="mt-1">
-                                <input
-                                  type="date"
-                                  id="fechaLimiteEntrega"
-                                  name="fechaLimiteEntrega"
-                                  value={evaluacionForm.fechaLimiteEntrega}
-                                  onChange={handleEvaluacionChange}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                  required={evaluacionForm.requiereEntrega}
-                                />
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="sm:col-span-6">
-                            <label htmlFor="archivo" className="block text-sm font-medium text-gray-700">
-                              Archivo (opcional)
-                            </label>
-                            <div className="mt-1">
-                              <input
-                                type="file"
-                                id="archivo"
-                                onChange={handleFileChange}
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                              />
-                            </div>
-                            <p className="mt-2 text-sm text-gray-500">
-                              Suba un archivo con instrucciones o material relacionado con la evaluación.
-                            </p>
-                          </div>
-                        </div>
-                      </form>
+{/* Modal para crear/editar evaluación */}
+{showEvaluacionModal && (
+  <div className="fixed z-10 inset-0 overflow-y-auto">
+    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+        <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+      </div>
+      
+      <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+      
+      <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+        <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div className="sm:flex sm:items-start">
+            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+              <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                {selectedEvaluacion ? 'Editar Evaluación' : 'Nueva Evaluación'}
+              </h3>
+              <div className="mt-2">
+                <form onSubmit={handleSubmitEvaluacion} className="space-y-6">
+                  <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div className="sm:col-span-6">
+                    <label htmlFor="nombreEvaluacion" className="block text-sm font-medium text-gray-700">
+                        Nombre de la Evaluación
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="text"
+                          id="nombreEvaluacion"
+                          name="nombreEvaluacion"
+                          value={evaluacionForm.nombreEvaluacion}
+                          onChange={handleEvaluacionChange}
+                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          required
+                        />
+                      </div>
                     </div>
+                    
+                    <div className="sm:col-span-6">
+                      <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">
+                        Descripción
+                      </label>
+                      <div className="mt-1">
+                        <textarea
+                          id="descripcion"
+                          name="descripcion"
+                          rows="3"
+                          value={evaluacionForm.descripcion}
+                          onChange={handleEvaluacionChange}
+                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        ></textarea>
+                      </div>
+                    </div>
+                    
+                    <div className="sm:col-span-3">
+                      <label htmlFor="tipoEvaluacion" className="block text-sm font-medium text-gray-700">
+                        Tipo de Evaluación
+                      </label>
+                      <div className="mt-1">
+                        <select
+                          id="tipoEvaluacion"
+                          name="tipoEvaluacion"
+                          value={evaluacionForm.tipoEvaluacion}
+                          onChange={handleEvaluacionChange}
+                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          required
+                        >
+                          <option value="">Seleccione un tipo</option>
+                          <option value="Examen">Examen</option>
+                          <option value="Tarea">Tarea</option>
+                          <option value="Proyecto">Proyecto</option>
+                          <option value="Exposición">Exposición</option>
+                          <option value="Participación">Participación</option>
+                          <option value="Prueba Corta">Prueba Corta</option>
+                          <option value="Otro">Otro</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="sm:col-span-3">
+                      <label htmlFor="fechaEvaluacion" className="block text-sm font-medium text-gray-700">
+                        Fecha de Evaluación
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="date"
+                          id="fechaEvaluacion"
+                          name="fechaEvaluacion"
+                          value={evaluacionForm.fechaEvaluacion}
+                          onChange={handleEvaluacionChange}
+                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Aquí está el cambio principal: Primero seleccionar grado */}
+                    <div className="sm:col-span-2">
+                      <label htmlFor="gradoID" className="block text-sm font-medium text-gray-700">
+                        Grado
+                      </label>
+                      <div className="mt-1">
+                        <select
+                          id="gradoID"
+                          name="gradoID"
+                          value={evaluacionForm.gradoID}
+                          onChange={handleGradoChange}
+                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          required
+                        >
+                          <option value="">Seleccione un grado</option>
+                          {grados.map(grado => (
+                            <option key={grado.id} value={grado.id}>
+                              {grado.nombre_grado}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="sm:col-span-2">
+                      <label htmlFor="seccionID" className="block text-sm font-medium text-gray-700">
+                        Sección
+                      </label>
+                      <div className="mt-1">
+                        <select
+                          id="seccionID"
+                          name="seccionID"
+                          value={evaluacionForm.seccionID}
+                          onChange={handleEvaluacionChange}
+                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          required
+                          disabled={!evaluacionForm.gradoID}
+                        >
+                          <option value="">Seleccione una sección</option>
+                          {secciones
+                            .filter(seccion => !evaluacionForm.gradoID || seccion.gradoID === parseInt(evaluacionForm.gradoID))
+                            .map(seccion => (
+                              <option key={seccion.id} value={seccion.id}>
+                                {seccion.nombre_seccion}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="sm:col-span-2">
+                      <label htmlFor="materiaID" className="block text-sm font-medium text-gray-700">
+                        Materia
+                      </label>
+                      <div className="mt-1">
+                        <select
+                          id="materiaID"
+                          name="materiaID"
+                          value={evaluacionForm.materiaID}
+                          onChange={handleEvaluacionChange}
+                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          required
+                          disabled={!evaluacionForm.gradoID || materias.length === 0}
+                        >
+                          <option value="">Seleccione una materia</option>
+                          {materias.map(materia => (
+                            <option key={materia.id} value={materia.id}>
+                              {materia.asignatura}
+                            </option>
+                          ))}
+                        </select>
+                        {materias.length === 0 && evaluacionForm.gradoID && (
+                          <p className="mt-1 text-xs text-red-500">
+                            No tienes materias asignadas para este grado
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="sm:col-span-2">
+                      <label htmlFor="porcentaje" className="block text-sm font-medium text-gray-700">
+                        Porcentaje (%)
+                      </label>
+                      <div className="mt-1">
+                        <input
+                          type="number"
+                          id="porcentaje"
+                          name="porcentaje"
+                          min="1"
+                          max="100"
+                          value={evaluacionForm.porcentaje}
+                          onChange={handleEvaluacionChange}
+                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="sm:col-span-2">
+                      <label htmlFor="lapso" className="block text-sm font-medium text-gray-700">
+                        Lapso
+                      </label>
+                      <div className="mt-1">
+                        <select
+                          id="lapso"
+                          name="lapso"
+                          value={evaluacionForm.lapso}
+                          onChange={handleEvaluacionChange}
+                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          required
+                        >
+                          <option value="">Seleccione un lapso</option>
+                          <option value="1">Primer Lapso</option>
+                          <option value="2">Segundo Lapso</option>
+                          <option value="3">Tercer Lapso</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="sm:col-span-2">
+                      <div className="flex items-start mt-6">
+                        <div className="flex items-center h-5">
+                          <input
+                            id="requiereEntrega"
+                            name="requiereEntrega"
+                            type="checkbox"
+                            checked={evaluacionForm.requiereEntrega}
+                            onChange={handleEvaluacionChange}
+                            className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                          />
+                        </div>
+                        <div className="ml-3 text-sm">
+                          <label htmlFor="requiereEntrega" className="font-medium text-gray-700">
+                            Requiere entrega
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {evaluacionForm.requiereEntrega && (
+  <div className="sm:col-span-3">
+    <label htmlFor="fechaLimiteEntrega" className="block text-sm font-medium text-gray-700">
+      Fecha Límite de Entrega
+    </label>
+    <div className="mt-1">
+      <input
+        type="date"
+        id="fechaLimiteEntrega"
+        name="fechaLimiteEntrega"
+        value={evaluacionForm.fechaLimiteEntrega}
+        onChange={handleEvaluacionChange}
+        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+        required={evaluacionForm.requiereEntrega}
+      />
+    </div>
+  </div>
+)}
+
+{/* Sección para subir archivo */}
+<div className="sm:col-span-6">
+  <label className="block text-sm font-medium text-gray-700">
+    Archivo adjunto (opcional)
+  </label>
+  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+    <div className="space-y-1 text-center">
+      <svg
+        className="mx-auto h-12 w-12 text-gray-400"
+        stroke="currentColor"
+        fill="none"
+        viewBox="0 0 48 48"
+        aria-hidden="true"
+      >
+        <path
+          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <div className="flex text-sm text-gray-600">
+        <label
+          htmlFor="file-upload"
+          className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
+        >
+          <span>Subir un archivo</span>
+          <input
+            id="file-upload"
+            name="file-upload"
+            type="file"
+            className="sr-only"
+            onChange={handleFileChange}
+          />
+        </label>
+        <p className="pl-1">o arrastrar y soltar</p>
+      </div>
+      <p className="text-xs text-gray-500">
+        PDF, DOC, DOCX, PPT, PPTX hasta 10MB
+      </p>
+      {selectedFile && (
+        <p className="text-sm text-indigo-600 mt-2">
+          Archivo seleccionado: {selectedFile.name}
+        </p>
+      )}
+    </div>
+  </div>
+</div>
                   </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={handleSubmitEvaluacion}
-                  disabled={savingEvaluacion}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                >
-                  {savingEvaluacion ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Guardando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center">
-                      <FaSave className="mr-2" /> {selectedEvaluacion ? 'Actualizar' : 'Guardar'}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEvaluacionModal(false);
-                    setSelectedEvaluacion(null);
-                  }}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                >
-                  Cancelar
-                </button>
+                </form>
               </div>
             </div>
           </div>
         </div>
-      )}
+        <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <button
+            type="button"
+            onClick={handleSubmitEvaluacion}
+            disabled={savingEvaluacion}
+            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+          >
+            {savingEvaluacion ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Guardando...
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <FaSave className="mr-2" /> {selectedEvaluacion ? 'Actualizar' : 'Crear'}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowEvaluacionModal(false);
+              setSelectedEvaluacion(null);
+              setEvaluacionForm(initialEvaluacionForm);
+              setSelectedFile(null);
+              setError('');
+            }}
+            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       
       {/* Modal para calificar estudiante */}
       {showCalificacionModal && (
