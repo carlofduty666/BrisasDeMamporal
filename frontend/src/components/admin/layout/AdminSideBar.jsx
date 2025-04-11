@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fa';
 import { logout } from '../../../services/auth.service';
 
-const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
+const AdminSideBar = ({ isOpen, toggleSidebar, userRole }) => {
 
   const [showAcademicoSubmenu, setShowAcademicoSubmenu] = useState(false);
   
@@ -230,4 +230,4 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
   );
 };
 
-export default AdminSidebar;
+export default AdminSideBar;
