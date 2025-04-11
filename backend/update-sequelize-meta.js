@@ -1,5 +1,5 @@
 const { Sequelize } = require('sequelize');
-const config = require('./config/config.js').production;
+const config = require('./config/dbconfig.js').production;
 
 // Crear una conexión a la base de datos
 const sequelize = new Sequelize(
