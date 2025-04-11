@@ -14,10 +14,10 @@
     "dialect": "mysql"
   },
   "production": {
-    "username": "root",
-    "password": null,
-    "database": "database_production",
-    "host": "127.0.0.1",
+    "username": "406468",
+    "password": "xHb29q29aH7@i7j",
+    "database": "brisasdemamporal_database",
+    "host": "mysql-brisasdemamporal.alwaysdata.net",
     "dialect": "mysql"
   }
 }
