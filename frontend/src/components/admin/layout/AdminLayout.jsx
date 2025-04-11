@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminSidebar from './AdminSidebar';
+import AdminSideBar from './AdminSideBar';
 import AdminHeader from './AdminHeader';
 import { getCurrentUser } from '../../../services/auth.service';
 
