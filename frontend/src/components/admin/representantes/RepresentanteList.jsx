@@ -401,17 +401,10 @@ useEffect(() => {
                         <div className="flex space-x-2">
                           <Link
                             to={`/admin/representantes/${representante.id}`}
-                            className="text-indigo-600 hover:text-indigo-900"
+                            className="bg-indigo-600 text-white px-4 py-2 rounded-md flex items-center"
                             title="Ver detalles"
                           >
-                            <FaEye />
-                          </Link>
-                          <Link
-                            to={`/admin/representantes/${representante.id}/editar`}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="Editar"
-                          >
-                            <FaEdit />
+                            <FaEye className="mr-2" /> Ver detalles
                           </Link>
                           {representante.cantidadEstudiantes === 0 && (
                             <button

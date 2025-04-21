@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { FaArrowLeft, FaPlus, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice } from 'react-icons/fa';
 import AdminLayout from '../layout/AdminLayout';
-import { formatearFecha, tipoDocumentoFormateado, formatearNombreGrado } from '../../../utils/formatters';
+import { formatearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado } from '../../../utils/formatters';
 
 const RepresentanteDetail = () => {
   const { id } = useParams();
@@ -725,13 +725,13 @@ const RepresentanteDetail = () => {
                     <input
                       type="date"
                       name="fechaNacimiento"
-                      value={editData.fechaNacimiento || ''}
+                      value={formatearFechaParaInput(editData.fechaNacimiento)}
                       onChange={handleEditChange}
                       className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
                     />
                   ) : (
                     representante?.fechaNacimiento ? 
-                    new Date(representante.fechaNacimiento).toLocaleDateString() : 
+                    formatearFecha(representante.fechaNacimiento) : 
                     'No disponible'
                   )}
                 </dd>

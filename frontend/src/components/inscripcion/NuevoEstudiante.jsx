@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha } from '../../utils/formatters';
+import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha, formatearFechaParaInput } from '../../utils/formatters';
 
 
 const NuevoEstudiante = () => {
@@ -905,7 +905,7 @@ const NuevoEstudiante = () => {
                           type="date"
                           name="fechaNacimiento"
                           id="fechaNacimiento"
-                          value={formData.estudiante.fechaNacimiento}
+                          value={formatearFechaParaInput(formData.estudiante.fechaNacimiento)}
                           onChange={(e) => handleChange(e, 'estudiante')}
                           className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
                           required
@@ -1395,7 +1395,7 @@ const NuevoEstudiante = () => {
                     </div>
                     <div className="sm:col-span-1">
                       <dt className="text-sm font-medium text-gray-500">Fecha de Nacimiento</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{formData.estudiante.fechaNacimiento}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">{formatearFecha(formData.estudiante.fechaNacimiento)}</dd>
                     </div>
                     <div className="sm:col-span-1">
                       <dt className="text-sm font-medium text-gray-500">Género</dt>
