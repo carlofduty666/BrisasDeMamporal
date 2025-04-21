@@ -538,7 +538,7 @@ const RepresentanteForm = () => {
   };
   
   return (
-    <AdminLayout>
+     
       <div className="container mx-auto px-4 py-8">
         {/* Botón de regreso */}
         <div className="mb-6">
@@ -1440,7 +1440,7 @@ const RepresentanteForm = () => {
           </div>
         )}
       </div>
-    </AdminLayout>
+     
   );
 };
 

@@ -273,16 +273,16 @@ const EstudiantesList = () => {
   
   if (loading) {
     return (
-      <AdminLayout>
+       
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
-      </AdminLayout>
+       
     );
   }
   
   return (
-    <AdminLayout>
+     
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-gray-800">Estudiantes</h1>
@@ -450,18 +450,11 @@ const EstudiantesList = () => {
                         <div className="flex space-x-2">
                           <Link
                             to={`/admin/estudiantes/${estudiante.id}`}
-                            className="text-indigo-600 hover:text-indigo-900"
+                            className="bg-indigo-600 text-white px-4 py-2 rounded-md flex items-center"
                             title="Ver detalles"
                           >
-                            <FaEye />
+                            <FaEye className="mr-2" /> Ver detalles
                           </Link>
-                          <button
-                            onClick={() => handleDelete(estudiante.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Eliminar"
-                          >
-                            <FaTrash />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -571,7 +564,7 @@ const EstudiantesList = () => {
           )}
         </div>
       </div>
-    </AdminLayout>
+     
   );
 };
 

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { FaEdit, FaTrash, FaPlus, FaUserPlus, FaLayerGroup, FaChalkboardTeacher, FaTimes } from 'react-icons/fa';
-import AdminLayout from '../layout/AdminLayout';
 
 const MateriasList = () => {
   const [materias, setMaterias] = useState([]);
@@ -342,8 +341,7 @@ const MateriasList = () => {
     );
   };
   
-  // Contenido principal
-  const content = (
+  return (
     <div className="relative">
       <button
           onClick={() => setShowCreateForm(!showCreateForm)}
@@ -755,13 +753,6 @@ const MateriasList = () => {
         </form>
       </Modal>
     </div>
-  );
-  
-  // Renderizar el componente dentro del layout de administración
-  return (
-    <AdminLayout>
-      {content}
-    </AdminLayout>
   );
 };
 

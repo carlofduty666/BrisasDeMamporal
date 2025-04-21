@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { FaSave, FaSync, FaPlus, FaRedo } from 'react-icons/fa';
-import AdminLayout from '../layout/AdminLayout';
 import axios from 'axios';
 import { formatearNombreGrado } from '../../../utils/formatters';
 
@@ -395,15 +394,14 @@ const CuposManager = () => {
   }, {});
   
   return (
-    <AdminLayout>
-      <div className="container mx-auto">
+    <div className="container mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-gray-800">Gestión de Cupos</h1>
           <div className="flex space-x-4">
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="bg-gray-600 text-white px-4 py-2 rounded-md flex items-center"
+              className="bg-gray-600 text-white px-4 py-2 rounded-md flex items-center hidden"
             >
               <FaSync className={`mr-2 ${loading ? 'animate-spin' : ''}`} /> Actualizar
             </button>
@@ -639,8 +637,7 @@ const CuposManager = () => {
             )}
           </>
         )}
-      </div>
-    </AdminLayout>
+    </div>
   );
 };
 

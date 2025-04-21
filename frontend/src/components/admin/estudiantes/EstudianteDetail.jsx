@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { FaArrowLeft, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice, FaBook, FaGraduationCap, FaChalkboardTeacher } from 'react-icons/fa';
 import AdminLayout from '../layout/AdminLayout';
-import { formatearFecha, tipoDocumentoFormateado, formatearNombreGrado } from '../../../utils/formatters';
+import { formatearFecha, parsearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado } from '../../../utils/formatters';
 
 const EstudianteDetail = () => {
   const { id } = useParams();
@@ -235,7 +235,7 @@ const EstudianteDetail = () => {
             nombre: estudianteResponse.data.nombre || '',
             apellido: estudianteResponse.data.apellido || '',
             cedula: estudianteResponse.data.cedula || '',
-            fechaNacimiento: isValidDate(estudianteResponse.data.fechaNacimiento) ? new Date(estudianteResponse.data.fechaNacimiento).toISOString().split('T')[0] : '',
+            fechaNacimiento: estudianteResponse.data.fechaNacimiento || '',
             genero: estudianteResponse.data.genero || '',
             telefono: estudianteResponse.data.telefono || '',
             email: estudianteResponse.data.email || '',
@@ -256,10 +256,19 @@ const EstudianteDetail = () => {
   // Manejar cambios en el formulario de edición
   const handleEditChange = (e) => {
     const { name, value } = e.target;
-    setEditData({
-      ...editData,
-      [name]: value
-    });
+    
+    // Para campos de fecha, asegurarse de que se guarda en el formato correcto
+    if (name === 'fechaNacimiento') {
+      setEditData(prev => ({
+        ...prev,
+        [name]: value // El input date ya devuelve en formato YYYY-MM-DD
+      }));
+    } else {
+      setEditData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
   
   // Guardar cambios en el estudiante
@@ -268,9 +277,26 @@ const EstudianteDetail = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
+      // Crear una copia de los datos para modificar
+      const dataToSend = { ...editData };
+      
+      // Si hay una fecha de nacimiento, asegurarse de que esté en el formato correcto
+      if (dataToSend.fechaNacimiento) {
+        // Para evitar problemas de zona horaria, enviar directamente en formato DD-MM-YYYY
+        // sin crear un objeto Date intermedio
+        
+        // Si la fecha ya está en formato YYYY-MM-DD (del input date)
+        if (dataToSend.fechaNacimiento.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          // Convertir de YYYY-MM-DD a DD-MM-YYYY
+          const [year, month, day] = dataToSend.fechaNacimiento.split('-');
+          dataToSend.fechaNacimiento = `${day}-${month}-${year}`;
+        }
+        // Si no está en ningún formato reconocible, se enviará tal cual
+      }
+      
       await axios.put(
         `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${id}`,
-        editData,
+        dataToSend,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
@@ -548,16 +574,16 @@ const EstudianteDetail = () => {
   
   if (loading && !estudiante) {
     return (
-      <AdminLayout>
+       
         <div className="flex justify-center items-center h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
-      </AdminLayout>
+       
     );
   }
   
   return (
-    <AdminLayout>
+     
       <div className="container mx-auto px-4 py-8">
         {/* Botón de regreso */}
         <div className="mb-6">
@@ -722,9 +748,9 @@ const EstudianteDetail = () => {
                         <input
                           type="date"
                           name="fechaNacimiento"
-                          value={editData.fechaNacimiento ? editData.fechaNacimiento.substring(0, 10) : ''}
+                          value={formatearFechaParaInput(editData.fechaNacimiento)}
                           onChange={handleEditChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                          className="..."
                         />
                       </div>
                       
@@ -737,9 +763,8 @@ const EstudianteDetail = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                         >
                           <option value="">Seleccionar</option>
-                          <option value="masculino">Masculino</option>
-                          <option value="femenino">Femenino</option>
-                          <option value="otro">Otro</option>
+                          <option value="M">Masculino</option>
+                          <option value="F">Femenino</option>
                         </select>
                       </div>
                       
@@ -797,7 +822,7 @@ const EstudianteDetail = () => {
                       <div>
                         <h3 className="text-sm font-medium text-gray-500">Fecha de Nacimiento</h3>
                         <p className="mt-1 text-sm text-gray-900">
-                          {estudiante.fechaNacimiento ? formatearFecha(estudiante.fechaNacimiento) : 'No especificada'}
+                          {formatearFecha(estudiante.fechaNacimiento)}
                         </p>
                       </div>
                       
@@ -1430,7 +1455,7 @@ const EstudianteDetail = () => {
           </div>
         )}
       </div>
-    </AdminLayout>
+     
   );
 };
 

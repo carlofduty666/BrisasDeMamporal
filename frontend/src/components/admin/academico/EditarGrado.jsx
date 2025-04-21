@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import AdminLayout from '../layout/AdminLayout';
+
 
 const EditarGrado = () => {
   const { id } = useParams();
@@ -79,7 +79,6 @@ const EditarGrado = () => {
   };
   
   return (
-    <AdminLayout>
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-gray-800">Editar Grado</h1>
@@ -180,7 +179,6 @@ const EditarGrado = () => {
           </div>
         )}
       </div>
-    </AdminLayout>
   );
 };
 

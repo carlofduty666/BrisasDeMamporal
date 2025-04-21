@@ -838,16 +838,16 @@ const InscripcionDetail = () => {
   
   if (loading && !inscripcion) {
     return (
-      <AdminLayout>
+       
         <div className="flex justify-center items-center h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
         </div>
-      </AdminLayout>
+       
     );
   }
   
   return (
-    <AdminLayout>
+     
       <div className="container mx-auto px-4 py-8">
         {/* Botón de volver */}
         <div className="mb-6">
@@ -1873,7 +1873,7 @@ const InscripcionDetail = () => {
           </dd>
         </div> */}
       </div>
-    </AdminLayout>
+     
   );
 };
 

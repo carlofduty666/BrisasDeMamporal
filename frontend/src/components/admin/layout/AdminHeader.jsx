@@ -11,26 +11,6 @@ const AdminHeader = ({ user, toggleSidebar }) => {
         <button onClick={toggleSidebar} className="text-gray-500 focus:outline-none lg:hidden">
           <FaBars className="h-6 w-6" />
         </button>
-        
-        <div className="relative mx-4 lg:mx-0">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center">
-            <svg className="h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          
-          <input
-            className="form-input w-32 sm:w-64 rounded-md pl-10 pr-4 focus:border-indigo-600"
-            type="text"
-            placeholder="Buscar"
-          />
-        </div>
       </div>
       
       <div className="flex items-center">
@@ -80,7 +60,7 @@ const AdminHeader = ({ user, toggleSidebar }) => {
             onClick={() => setShowProfileMenu(!showProfileMenu)}
             className="relative z-10 block h-8 w-8 rounded-full overflow-hidden shadow focus:outline-none"
           >
-            {user.avatar ? (
+            {user?.avatar ? (
               <img
                 className="h-full w-full object-cover"
                 src={user.avatar}
@@ -96,7 +76,7 @@ const AdminHeader = ({ user, toggleSidebar }) => {
           {showProfileMenu && (
             <div className="absolute right-0 mt-2 py-2 w-48 bg-white rounded-md shadow-xl z-20">
               <div className="px-4 py-2 text-xs text-gray-400">
-                {user.nombre} {user.apellido}
+                {user?.nombre} {user?.apellido}
               </div>
               <a
                 href="#"

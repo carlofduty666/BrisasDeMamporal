@@ -107,17 +107,34 @@ module.exports = (sequelize, DataTypes) => {
     apellido: DataTypes.STRING,
     cedula: DataTypes.STRING,
     fechaNacimiento: {
-      type: DataTypes.DATE,
+      type: DataTypes.DATEONLY,
       get() {
-        return moment(this.getDataValue('fechaNacimiento')).format('DD-MM-YYYY');
+        const rawValue = this.getDataValue('fechaNacimiento');
+        return rawValue ? moment(rawValue).format('YYYY-MM-DD') : null;
       },
       set(value) {
-        const fecha = moment(value, 'DD-MM-YYYY');
-        if (fecha.isValid()) {
-          this.setDataValue('fechaNacimiento', fecha.toDate());
-        } else {
-          throw new Error('Formato de fecha inválido');
+        if (!value) {
+          this.setDataValue('fechaNacimiento', null);
+          return;
         }
+        
+        // Parsear la fecha manteniendo el día exacto sin ajustes de zona horaria
+        let fecha;
+        if (typeof value === 'string' && value.includes('-')) {
+          const parts = value.split('-');
+          // Detectar si es DD-MM-YYYY o YYYY-MM-DD
+          if (parts[0].length === 4) {
+            // Es YYYY-MM-DD
+            fecha = value;
+          } else {
+            // Es DD-MM-YYYY, convertir a YYYY-MM-DD
+            fecha = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        } else {
+          fecha = value;
+        }
+        
+        this.setDataValue('fechaNacimiento', fecha);
       }
     },
     telefono: DataTypes.STRING,

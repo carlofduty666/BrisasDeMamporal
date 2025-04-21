@@ -581,16 +581,16 @@ const RepresentanteDetail = () => {
 
   if (loading && !representante) {
     return (
-      <AdminLayout>
+       
         <div className="flex justify-center items-center h-screen">
           <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
-      </AdminLayout>
+       
     );
   }
 
   return (
-    <AdminLayout>
+     
       <div className="container mx-auto px-4 py-8">
         {/* Botón de regreso */}
         <div className="mb-6">
@@ -1594,7 +1594,7 @@ const RepresentanteDetail = () => {
           </div>
         )}
       </div>
-    </AdminLayout>
+     
   );
 };
 

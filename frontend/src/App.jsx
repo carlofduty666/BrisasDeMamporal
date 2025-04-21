@@ -19,24 +19,25 @@ import DetallesEstudiante from './components/estudiante/DetallesEstudiante';
 import TestUpload from './components/test/TestUpload';
 
 // Componentes de administrador
-import AdminDashboard from './components/admin/AdminDashboard';
-import CuposManager from './components/admin/academico/CuposManager';
-import GradosList from './components/admin/academico/GradosList';
-import EditarGrado from './components/admin/academico/EditarGrado';
-import MateriasList from './components/admin/academico/MateriasList';
-import SeccionesList from './components/admin/academico/SeccionesList';
-import InscripcionesList from './components/admin/inscripciones/InscripcionesList'
-import InscripcionDetail from './components/admin/inscripciones/InscripcionDetail'
-import EstudiantesList from './components/admin/estudiantes/EstudiantesList';
-import EstudianteDetail from './components/admin/estudiantes/EstudianteDetail';
-import RepresentanteList from './components/admin/representantes/RepresentanteList';
-import RepresentanteDetail from './components/admin/representantes/RepresentanteDetail';
-import RepresentanteForm from './components/admin/representantes/RepresentanteForm';
-import ProfesoresList from './components/admin/profesores/ProfesoresList';
-import ProfesorDetail from './components/admin/profesores/ProfesorDetail';
-import ProfesorForm from './components/admin/profesores/ProfesorForm';
-import ArancelesManager from './components/admin/pagos/ArancelesManager';
-import PagosList from './components/admin/pagos/PagosList';
+import AdminRoutes from './routes/AdminRoutes';
+// import AdminDashboard from './components/admin/AdminDashboard';
+// import CuposManager from './components/admin/academico/CuposManager';
+// import GradosList from './components/admin/academico/GradosList';
+// import EditarGrado from './components/admin/academico/EditarGrado';
+// import MateriasList from './components/admin/academico/MateriasList';
+// import SeccionesList from './components/admin/academico/SeccionesList';
+// import InscripcionesList from './components/admin/inscripciones/InscripcionesList'
+// import InscripcionDetail from './components/admin/inscripciones/InscripcionDetail'
+// import EstudiantesList from './components/admin/estudiantes/EstudiantesList';
+// import EstudianteDetail from './components/admin/estudiantes/EstudianteDetail';
+// import RepresentanteList from './components/admin/representantes/RepresentanteList';
+// import RepresentanteDetail from './components/admin/representantes/RepresentanteDetail';
+// import RepresentanteForm from './components/admin/representantes/RepresentanteForm';
+// import ProfesoresList from './components/admin/profesores/ProfesoresList';
+// import ProfesorDetail from './components/admin/profesores/ProfesorDetail';
+// import ProfesorForm from './components/admin/profesores/ProfesorForm';
+// import ArancelesManager from './components/admin/pagos/ArancelesManager';
+// import PagosList from './components/admin/pagos/PagosList';
 
 // Componentes de profesor
 import ProfesorDashboard from './components/dashboard/ProfesorDashboard'
@@ -147,173 +148,13 @@ function App() {
         
         {/* Rutas del panel de administrador */}
         <Route 
-          path="/admin/dashboard" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/admin/estudiantes" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <EstudiantesList />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/admin/cupos" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <CuposManager />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/academico/grados" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <GradosList />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/academico/grados/:id/editar" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <EditarGrado />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/academico/materias" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <MateriasList />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/academico/secciones" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <SeccionesList />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/inscripciones" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <InscripcionesList />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/inscripciones/:id" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <InscripcionDetail />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/estudiantes" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <EstudiantesList />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/estudiantes/:id" 
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <EstudianteDetail />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/representantes"
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <RepresentanteList />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/representantes/nuevo"
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <RepresentanteForm />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/representantes/:id"
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <RepresentanteDetail />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/profesores"
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <ProfesoresList />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/profesores/:id"
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <ProfesorDetail />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/profesores/nuevo"
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <ProfesorForm />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/pagos"
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <PagosList />
-            </ProtectedRoute>
-          } 
-        />
-
-        <Route 
-          path="/admin/aranceles"
-          element={
-            <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
-              <ArancelesManager />
-            </ProtectedRoute>
-          } 
-        />
+            path="/admin/*" 
+            element={
+              <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+                <AdminRoutes />
+              </ProtectedRoute>
+            } 
+          />
 
         {/* Rutas panel de profesor */}
         <Route

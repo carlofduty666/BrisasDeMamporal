@@ -193,16 +193,16 @@ const AdminDashboard = () => {
   
   if (loading) {
     return (
-      <AdminLayout>
+       
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
-      </AdminLayout>
+       
     );
   }
   
   return (
-    <AdminLayout>
+     
       <div className="container mx-auto">
         <h1 className="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h1>
         
@@ -245,7 +245,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
-    </AdminLayout>
+     
   );
 };
 

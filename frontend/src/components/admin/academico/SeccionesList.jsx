@@ -438,9 +438,7 @@ const handleOpenEstudiantesModal = async (seccion) => {
     }
   };
   
-
-  // Contenido principal
-  const content = (
+  return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Gestión de Secciones</h1>
@@ -922,13 +920,6 @@ const handleOpenEstudiantesModal = async (seccion) => {
         </div>
       )}
     </div>
-  );
-  
-  // Renderizar el componente dentro del layout de administración
-  return (
-    <AdminLayout>
-      {content}
-    </AdminLayout>
   );
 };
 
