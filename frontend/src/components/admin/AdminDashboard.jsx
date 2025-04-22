@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { FaUserGraduate, FaChalkboardTeacher, FaUsers, FaMoneyBillWave } from 'react-icons/fa';
-import AdminLayout from './layout/AdminLayout';
-import api from '../../services/api';
 
 const StatCard = ({ title, value, icon, color }) => (
   <div className="bg-white rounded-lg shadow-md p-6">
@@ -204,7 +202,7 @@ const AdminDashboard = () => {
   return (
      
       <div className="container mx-auto">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-gray-800 mb-6">Resumen escolar</h1>
         
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">

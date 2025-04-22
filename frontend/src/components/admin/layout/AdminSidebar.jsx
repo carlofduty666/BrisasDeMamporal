@@ -24,9 +24,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-indigo-700">
         {isOpen ? (
-          <h1 className="text-xl font-bold">Brisas de Mamporal</h1>
+          <h1 className="text-xl font-bold">Panel de Administrador</h1>
         ) : (
-          <h1 className="text-xl font-bold">BM</h1>
+          <h1 className="text-xl font-bold"></h1>
         )}
         <button onClick={toggleSidebar} className="text-white focus:outline-none">
           {isOpen ? (
@@ -52,7 +52,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
               }
             >
               <FaHome className="w-5 h-5" />
-              {isOpen && <span className="ml-3">Dashboard</span>}
+              {isOpen && <span className="ml-3">Inicio</span>}
             </NavLink>
           </li>
           
