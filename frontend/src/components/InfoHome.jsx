@@ -5,6 +5,51 @@ import '../App.css';
 function InfoHome() {
     return (
         <section className='p-5 my-7 flex flex-col'>
+            {/* Sección Nuestra Institución */}
+            <div className='mt-16 bg-blue-50 p-8 rounded-lg'>
+                <h2 className='text-3xl font-bold text-gray-800 mb-6'>Nuestra Institución</h2>
+                <div className='flex flex-col md:flex-row gap-8'>
+                    <div className='md:w-1/2'>
+                        <p className='text-gray-700 mb-4'>
+                            La Unidad Educativa Brisas de Mamporal es una institución comprometida con la excelencia académica y la formación integral de nuestros estudiantes desde 1995.
+                        </p>
+                        <p className='text-gray-700 mb-4'>
+                            Ofrecemos educación de calidad desde preescolar hasta bachillerato, con un equipo docente altamente calificado y dedicado al desarrollo de las capacidades y talentos de cada estudiante.
+                        </p>
+                        <div className='mt-6'>
+                            <Link to="/nuestra-institucion" className='inline-flex items-center text-blue-600 hover:text-blue-800'>
+                                Conocer más sobre nuestra institución
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                            </Link>
+                        </div>
+                    </div>
+                    <div className='md:w-1/2'>
+                        <div className='grid grid-cols-2 gap-4'>
+                            <div className='bg-white p-4 rounded-lg shadow-sm'>
+                                <h3 className='text-lg font-semibold text-blue-700 mb-2'>Misión</h3>
+                                <p className='text-gray-600'>Formar estudiantes integrales con valores y competencias para enfrentar los desafíos del futuro.</p>
+                            </div>
+                            <div className='bg-white p-4 rounded-lg shadow-sm'>
+                                <h3 className='text-lg font-semibold text-blue-700 mb-2'>Visión</h3>
+                                <p className='text-gray-600'>Ser referentes en educación de calidad, innovación pedagógica y formación en valores.</p>
+                            </div>
+                            <div className='bg-white p-4 rounded-lg shadow-sm col-span-2'>
+                                <h3 className='text-lg font-semibold text-blue-700 mb-2'>Valores</h3>
+                                <p className='text-gray-600'>Respeto, responsabilidad, excelencia, solidaridad e innovación son los pilares de nuestra comunidad educativa.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className='mt-8 text-center'>
+                    <Link to="/calendario-academico" className='inline-block bg-blue-600 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-700 transition-all'>
+                        Ver Calendario Académico
+                    </Link>
+                </div>
+            </div>
+            
+            {/* Sección Proceso de Inscripción */}
             <div className='text-focus-in mb-10'>
                 <h1 className='text-4xl font-bold text-blue-700 mb-4'>Inscripciones en línea y automáticas</h1>
                 <p className='text-xl text-gray-700'>
@@ -94,49 +139,7 @@ function InfoHome() {
                     </div>
                 </div>
             </div>
-                        {/* Nueva sección sobre Nuestra Institución */}
-                        <div className='mt-16 bg-blue-50 p-8 rounded-lg'>
-                <h2 className='text-3xl font-bold text-gray-800 mb-6'>Nuestra Institución</h2>
-                <div className='flex flex-col md:flex-row gap-8'>
-                    <div className='md:w-1/2'>
-                        <p className='text-gray-700 mb-4'>
-                            La Unidad Educativa Brisas de Mamporal es una institución comprometida con la excelencia académica y la formación integral de nuestros estudiantes desde 1995.
-                        </p>
-                        <p className='text-gray-700 mb-4'>
-                            Ofrecemos educación de calidad desde preescolar hasta bachillerato, con un equipo docente altamente calificado y dedicado al desarrollo de las capacidades y talentos de cada estudiante.
-                        </p>
-                        <div className='mt-6'>
-                            <Link to="/nuestra-institucion" className='inline-flex items-center text-blue-600 hover:text-blue-800'>
-                                Conocer más sobre nuestra institución
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
-                            </Link>
-                        </div>
-                    </div>
-                    <div className='md:w-1/2'>
-                        <div className='grid grid-cols-2 gap-4'>
-                            <div className='bg-white p-4 rounded-lg shadow-sm'>
-                                <h3 className='text-lg font-semibold text-blue-700 mb-2'>Misión</h3>
-                                <p className='text-gray-600'>Formar estudiantes integrales con valores y competencias para enfrentar los desafíos del futuro.</p>
-                            </div>
-                            <div className='bg-white p-4 rounded-lg shadow-sm'>
-                                <h3 className='text-lg font-semibold text-blue-700 mb-2'>Visión</h3>
-                                <p className='text-gray-600'>Ser referentes en educación de calidad, innovación pedagógica y formación en valores.</p>
-                            </div>
-                            <div className='bg-white p-4 rounded-lg shadow-sm col-span-2'>
-                                <h3 className='text-lg font-semibold text-blue-700 mb-2'>Valores</h3>
-                                <p className='text-gray-600'>Respeto, responsabilidad, excelencia, solidaridad e innovación son los pilares de nuestra comunidad educativa.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className='mt-8 text-center'>
-                    <Link to="/calendario-academico" className='inline-block bg-blue-600 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-700 transition-all'>
-                        Ver Calendario Académico
-                    </Link>
-                </div>
-            </div>
+
         </section>
     );
 }

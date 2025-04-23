@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { FaArrowLeft, FaPlus, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice } from 'react-icons/fa';
-import AdminLayout from '../layout/AdminLayout';
 import { formatearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado } from '../../../utils/formatters';
 
 const RepresentanteDetail = () => {
@@ -28,6 +27,8 @@ const RepresentanteDetail = () => {
     representanteID: '',
     arancelID: '',
     metodoPagoID: '',
+    annoEscolarID: '',
+    inscripcionID: '',
     monto: '',
     montoMora: '0',
     descuento: '0',
@@ -106,14 +107,14 @@ const RepresentanteDetail = () => {
               );
               
               // Verificar pagos
-              const pagosAlDia = await verificarPagosAlDia(estudiante.id);
+              const estadoPagos = await verificarPagosAlDia(estudiante.id);
               
               // Combinar todos los datos
               return {
                 ...estudiante,
                 inscripcion: inscripcionResponse.data,
                 grado: inscripcionResponse.data?.grado || null,
-                pagosAlDia
+                estadoPagos
               };
             } catch (err) {
               console.error(`Error al obtener datos para estudiante ${estudiante.id}:`, err);
@@ -121,7 +122,7 @@ const RepresentanteDetail = () => {
                 ...estudiante,
                 inscripcion: null,
                 grado: null,
-                pagosAlDia: true // Por defecto, asumimos que está al día
+                estadoPagos: { alDia: true, pagosPendientes: 0 } // Por defecto, asumimos que está al día
               };
             }
           })
@@ -137,6 +138,16 @@ const RepresentanteDetail = () => {
         );
         
         setPagos(pagosResponse.data);
+
+        // Transformar los datos para tener un formato consistente
+        const pagosFormateados = pagosResponse.data.map(pago => ({
+          ...pago,
+          estudiante: pago.estudiantes || pago.estudiante,
+          arancel: pago.aranceles || pago.arancel,
+          metodoPago: pago.metodoPagos || pago.metodoPago
+        }));
+
+        setPagos(pagosFormateados);
         
         // Obtener documentos del representante
         const documentosResponse = await axios.get(
@@ -225,6 +236,12 @@ const RepresentanteDetail = () => {
       setErrorPago('');
       
       const token = localStorage.getItem('token');
+
+      // Obtener el año escolar actual
+      const annoEscolarResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/anno-escolar/actual`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
       
       // Cargar aranceles
       const arancelesResponse = await axios.get(
@@ -242,10 +259,15 @@ const RepresentanteDetail = () => {
       setMetodosPago(metodosPagoResponse.data);
       
       // Inicializar el formulario con el representante actual
+      const estudianteSeleccionado = estudiantes.length > 0 ? estudiantes[0] : null;
+      const inscripcionID = estudianteSeleccionado?.inscripcion?.id || '';
+
       setFormPago({
         ...formPago,
         representanteID: representante.id,
-        estudianteID: estudiantes.length > 0 ? estudiantes[0].id : '',
+        estudianteID: estudianteSeleccionado?.id || '',
+        annoEscolarID: annoEscolarResponse.data?.id || '',
+        inscripcionID: inscripcionID,
         fechaPago: new Date().toISOString().split('T')[0]
       });
       
@@ -256,6 +278,17 @@ const RepresentanteDetail = () => {
       setErrorPago(err.response?.data?.message || 'Error al cargar los datos necesarios para el pago. Por favor, intente nuevamente.');
       setLoadingPago(false);
     }
+  };
+
+  const handleEstudianteChange = (e) => {
+    const estudianteID = e.target.value;
+    const estudianteSeleccionado = estudiantes.find(est => est.id.toString() === estudianteID);
+    
+    setFormPago({
+      ...formPago,
+      estudianteID,
+      inscripcionID: estudianteSeleccionado?.inscripcion?.id || ''
+    });
   };
 
   // Función para cerrar el modal
@@ -352,14 +385,23 @@ const RepresentanteDetail = () => {
   const verificarPagosAlDia = async (estudianteId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/pagos/estudiante/${estudianteId}/estado`,
+      
+      // Obtener todos los pagos del estudiante
+      const pagosResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/pagos/estudiante/${estudianteId}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
-      return response.data.alDia;
+      
+      // Filtrar pagos pendientes
+      const pagosPendientes = pagosResponse.data.filter(pago => pago.estado === 'pendiente');
+      
+      return {
+        alDia: pagosPendientes.length === 0,
+        pagosPendientes: pagosPendientes.length
+      };
     } catch (err) {
       console.error(`Error al verificar pagos para estudiante ${estudianteId}:`, err);
-      return true; // Por defecto, asumimos que está al día en caso de error
+      return { alDia: true, pagosPendientes: 0 }; // Por defecto, asumimos que está al día en caso de error
     }
   };
   
@@ -825,7 +867,6 @@ const RepresentanteDetail = () => {
           </div>
         </div>
 
-        
         {/* Tabla de estudiantes */}
         <div className="overflow-x-auto mb-5">
           <div className="flex justify-between items-center pl-6 mb-3">
@@ -875,13 +916,14 @@ const RepresentanteDetail = () => {
                     formatearNombreGrado(estudiante.grado.nombre_grado) : 
                     'No asignado'}
                 </td>
-
                 <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                     estudiante.estadoPagos?.alDia ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                    {estudiante.estadoPagos?.alDia ? 'Al día' : `${estudiante.estadoPagos?.pagosPendientes || 0} pendientes`}
-                    </span>
+                  }`}>
+                    {estudiante.estadoPagos?.alDia 
+                      ? 'Al día' 
+                      : `${estudiante.estadoPagos?.pagosPendientes || 0} pendientes`}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
@@ -921,7 +963,91 @@ const RepresentanteDetail = () => {
         </table>
         </div>
 
-        
+          {/* Historial de pagos */}
+          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Historial de Pagos
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Pagos realizados por el representante.
+            </p>
+          </div>
+          
+          <div className="border-t border-gray-200">
+            {pagos.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Fecha
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Estudiante
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Concepto
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Método de Pago
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Referencia
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Monto
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Estado
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {pagos.map((pago) => (
+                      <tr key={pago.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatearFecha(pago.fechaPago || pago.fecha)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {pago.estudiantes?.nombre || pago.estudiante?.nombre} {pago.estudiantes?.apellido || pago.estudiante?.apellido}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {pago.aranceles?.nombre || pago.arancel?.nombre || 'Pago'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {pago.metodoPagos?.nombre || pago.metodoPago?.nombre || 'No especificado'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {pago.referencia || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ${(Number(pago.monto) || 0).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            pago.estado === 'pagado' ? 'bg-green-100 text-green-800' : 
+                            pago.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {pago.estado?.charAt(0).toUpperCase() + pago.estado?.slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="px-6 py-4 text-center text-sm text-gray-500">
+                No hay pagos registrados para este representante.
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Documentos */}
         <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
           <div className="px-4 py-5 sm:px-6">
@@ -1022,92 +1148,7 @@ const RepresentanteDetail = () => {
             </div>
           </div>
         </div>
-        
-        {/* Historial de pagos */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Historial de Pagos
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Pagos realizados por el representante.
-            </p>
-          </div>
-          
-          <div className="border-t border-gray-200">
-            {pagos.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estudiante
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Concepto
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Método de Pago
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Referencia
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Monto
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estado
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {pagos.map((pago) => (
-                      <tr key={pago.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatearFecha(pago.fecha)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {pago.estudiante?.nombre} {pago.estudiante?.apellido}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {pago.arancel?.nombre || 'Pago'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {pago.metodoPago?.nombre || 'No especificado'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {pago.referencia || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${(Number(pago.monto) || 0).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            pago.estado === 'procesado' ? 'bg-green-100 text-green-800' : 
-                            pago.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {pago.estado?.charAt(0).toUpperCase() + pago.estado?.slice(1)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="px-6 py-4 text-center text-sm text-gray-500">
-                No hay pagos registrados para este representante.
-              </div>
-            )}
-          </div>
-        </div>
-
+  
         {/* Botones de accion */}
         <div className="mt-4 flex flex-wrap space-x-2">         
           <button
@@ -1124,7 +1165,6 @@ const RepresentanteDetail = () => {
           </button>
         </div>
 
-        
         {/* Modal para subir/resubir documentos */}
         {showModal && (
           <div className="fixed z-10 inset-0 overflow-y-auto">
@@ -1298,7 +1338,7 @@ const RepresentanteDetail = () => {
                                   id="estudiante"
                                   name="estudianteID"
                                   value={formPago.estudianteID}
-                                  onChange={(e) => setFormPago({...formPago, estudianteID: e.target.value})}
+                                  onChange={handleEstudianteChange}
                                   className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
                                   required
                                 >

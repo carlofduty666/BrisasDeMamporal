@@ -541,8 +541,6 @@ const PagosList = () => {
     }
   };
   
-
-  
   // Función para eliminar un pago
   const handleDeletePago = async (pagoId) => {
     if (!confirm('¿Está seguro de que desea eliminar este pago? Esta acción no se puede deshacer.')) {
@@ -601,22 +599,130 @@ const PagosList = () => {
       window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${pago.urlComprobante}`, '_blank');
     }
   };
+
   // Función para abrir el modal con los detalles del pago
   const handleOpenDetailModal = async (pagoId) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       
+      // Obtener detalles completos del pago
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/pagos/${pagoId}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
-      setSelectedPago(response.data);
+      const pagoDetallado = response.data;
+      
+      // Obtener información del estudiante si no está incluida o está incompleta
+      if (pagoDetallado.estudianteID && (!pagoDetallado.estudiantes || !pagoDetallado.estudiantes.nombre)) {
+        try {
+          const estudianteResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${pagoDetallado.estudianteID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.estudiante = estudianteResponse.data;
+        } catch (err) {
+          console.error('Error al obtener datos del estudiante:', err);
+        }
+      } else if (pagoDetallado.estudiantes) {
+        // Si los datos vienen como "estudiantes" (plural), los copiamos a "estudiante" (singular)
+        pagoDetallado.estudiante = pagoDetallado.estudiantes;
+      }
+      
+      // Obtener información del representante si no está incluida o está incompleta
+      if (pagoDetallado.representanteID && (!pagoDetallado.representantes || !pagoDetallado.representantes.nombre)) {
+        try {
+          const representanteResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${pagoDetallado.representanteID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.representante = representanteResponse.data;
+        } catch (err) {
+          console.error('Error al obtener datos del representante:', err);
+        }
+      } else if (pagoDetallado.representantes) {
+        // Si los datos vienen como "representantes" (plural), los copiamos a "representante" (singular)
+        pagoDetallado.representante = pagoDetallado.representantes;
+      }
+      
+      // Obtener información de la inscripción si existe
+      if (pagoDetallado.inscripcionID) {
+        try {
+          const inscripcionResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${pagoDetallado.inscripcionID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.inscripcion = inscripcionResponse.data;
+          
+          // Obtener información del grado y sección si no están incluidos
+          if (pagoDetallado.inscripcion.gradoID && !pagoDetallado.inscripcion.grado) {
+            try {
+              const gradoResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${pagoDetallado.inscripcion.gradoID}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+              );
+              pagoDetallado.inscripcion.grado = gradoResponse.data;
+            } catch (err) {
+              console.error('Error al obtener datos del grado:', err);
+            }
+          }
+          
+          if (pagoDetallado.inscripcion.seccionID && !pagoDetallado.inscripcion.seccion) {
+            try {
+              const seccionResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/${pagoDetallado.inscripcion.seccionID}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+              );
+              pagoDetallado.inscripcion.seccion = seccionResponse.data;
+            } catch (err) {
+              console.error('Error al obtener datos de la sección:', err);
+            }
+          }
+        } catch (err) {
+          console.error('Error al obtener datos de la inscripción:', err);
+        }
+      }
+      
+      // Obtener información del arancel si no está incluida o está incompleta
+      if (pagoDetallado.arancelID && (!pagoDetallado.aranceles || !pagoDetallado.aranceles.nombre)) {
+        try {
+          const arancelResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/aranceles/${pagoDetallado.arancelID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.arancel = arancelResponse.data;
+        } catch (err) {
+          console.error('Error al obtener datos del arancel:', err);
+        }
+      } else if (pagoDetallado.aranceles) {
+        // Si los datos vienen como "aranceles" (plural), los copiamos a "arancel" (singular)
+        pagoDetallado.arancel = pagoDetallado.aranceles;
+      }
+      
+      // Obtener información del método de pago si no está incluida o está incompleta
+      if (pagoDetallado.metodoPagoID && (!pagoDetallado.metodoPagos || !pagoDetallado.metodoPagos.nombre)) {
+        try {
+          const metodoPagoResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/metodos-pago/${pagoDetallado.metodoPagoID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.metodoPago = metodoPagoResponse.data;
+        } catch (err) {
+          console.error('Error al obtener datos del método de pago:', err);
+        }
+      } else if (pagoDetallado.metodoPagos) {
+        // Si los datos vienen como "metodoPagos" (plural), los copiamos a "metodoPago" (singular)
+        pagoDetallado.metodoPago = pagoDetallado.metodoPagos;
+      }
+      
+      console.log("Pago detallado completo:", pagoDetallado);
+      
+      setSelectedPago(pagoDetallado);
       setShowDetailModal(true);
       setLoading(false);
     } catch (err) {
-      console.error('Error al cargar detalles del pago:', err);
+      console.error('Error al obtener detalles del pago:', err);
       setError(err.response?.data?.message || 'Error al cargar los detalles del pago. Por favor, intente nuevamente.');
       setLoading(false);
     }
@@ -628,9 +734,121 @@ const PagosList = () => {
     setSelectedPago(null);
   };
 
+  // Función para ver detalles de un pago
+  const handleViewDetails = async (pago) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      // Obtener detalles completos del pago
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/pagos/${pago.id}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      const pagoDetallado = response.data;
+      
+      // Obtener información del estudiante si no está incluida
+      if (pagoDetallado.estudianteID && (!pagoDetallado.estudiante || !pagoDetallado.estudiante.nombre)) {
+        try {
+          const estudianteResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${pagoDetallado.estudianteID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.estudiante = estudianteResponse.data;
+        } catch (err) {
+          console.error('Error al obtener datos del estudiante:', err);
+        }
+      }
+      
+      // Obtener información del representante si no está incluida
+      if (pagoDetallado.representanteID && (!pagoDetallado.representante || !pagoDetallado.representante.nombre)) {
+        try {
+          const representanteResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${pagoDetallado.representanteID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.representante = representanteResponse.data;
+        } catch (err) {
+          console.error('Error al obtener datos del representante:', err);
+        }
+      }
+      
+      // Obtener información de la inscripción si existe
+      if (pagoDetallado.inscripcionID) {
+        try {
+          const inscripcionResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${pagoDetallado.inscripcionID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.inscripcion = inscripcionResponse.data;
+          
+          // Obtener información del grado y sección si no están incluidos
+          if (pagoDetallado.inscripcion.gradoID && !pagoDetallado.inscripcion.grado) {
+            try {
+              const gradoResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${pagoDetallado.inscripcion.gradoID}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+              );
+              pagoDetallado.inscripcion.grado = gradoResponse.data;
+            } catch (err) {
+              console.error('Error al obtener datos del grado:', err);
+            }
+          }
+          
+          if (pagoDetallado.inscripcion.seccionID && !pagoDetallado.inscripcion.seccion) {
+            try {
+              const seccionResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/${pagoDetallado.inscripcion.seccionID}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+              );
+              pagoDetallado.inscripcion.seccion = seccionResponse.data;
+            } catch (err) {
+              console.error('Error al obtener datos de la sección:', err);
+            }
+          }
+        } catch (err) {
+          console.error('Error al obtener datos de la inscripción:', err);
+        }
+      }
+      
+      // Obtener información del arancel si no está incluida
+      if (pagoDetallado.arancelID && (!pagoDetallado.arancel || !pagoDetallado.arancel.nombre)) {
+        try {
+          const arancelResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/aranceles/${pagoDetallado.arancelID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.arancel = arancelResponse.data;
+        } catch (err) {
+          console.error('Error al obtener datos del arancel:', err);
+        }
+      }
+      
+      // Obtener información del método de pago si no está incluida
+      if (pagoDetallado.metodoPagoID && (!pagoDetallado.metodoPago || !pagoDetallado.metodoPago.nombre)) {
+        try {
+          const metodoPagoResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/metodos-pago/${pagoDetallado.metodoPagoID}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          pagoDetallado.metodoPago = metodoPagoResponse.data;
+        } catch (err) {
+          console.error('Error al obtener datos del método de pago:', err);
+        }
+      }
+      
+      setSelectedPago(pagoDetallado);
+      setShowDetailModal(true);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error al obtener detalles del pago:', err);
+      setError('Error al obtener los detalles del pago');
+      setLoading(false);
+    }
+  };
+
   
-
-
   
   return (
      
@@ -1316,56 +1534,86 @@ const PagosList = () => {
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Información del Estudiante */}
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <h4 className="text-md font-medium text-gray-900 mb-2">Información del Estudiante</h4>
-                          {selectedPago.estudiante ? (
-                            <div className="space-y-2">
-                              <p className="text-sm text-gray-700">
-                                <span className="font-medium">Nombre:</span> {selectedPago.estudiante.nombre} {selectedPago.estudiante.apellido}
-                              </p>
-                              <p className="text-sm text-gray-700">
-                                <span className="font-medium">Cédula:</span> {selectedPago.estudiante.cedula}
-                              </p>
-                              {selectedPago.inscripcion && selectedPago.inscripcion.grado && (
-                                <p className="text-sm text-gray-700">
-                                  <span className="font-medium">Grado:</span> {selectedPago.inscripcion.grado.nombre_grado}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-500">No hay información disponible</p>
-                          )}
-                        </div>
-                        
-                        {/* Información del Pago */}
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <h4 className="text-md font-medium text-gray-900 mb-2">Información del Pago</h4>
+                      {/* Información del Estudiante */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-md font-medium text-gray-900 mb-2">Información del Estudiante</h4>
+                        {(selectedPago.estudiante || selectedPago.estudiantes) ? (
                           <div className="space-y-2">
                             <p className="text-sm text-gray-700">
-                              <span className="font-medium">Concepto:</span> {selectedPago.arancel ? selectedPago.arancel.nombre : selectedPago.concepto || '-'}
+                              <span className="font-medium">Nombre:</span> {selectedPago.estudiante?.nombre || selectedPago.estudiantes?.nombre} {selectedPago.estudiante?.apellido || selectedPago.estudiantes?.apellido}
                             </p>
                             <p className="text-sm text-gray-700">
-                              <span className="font-medium">Monto:</span> {formatMonto(selectedPago.monto)}
+                              <span className="font-medium">Cédula:</span> {selectedPago.estudiante?.cedula || selectedPago.estudiantes?.cedula}
                             </p>
-                            {selectedPago.montoMora > 0 && (
-                              <p className="text-sm text-gray-700">
-                                <span className="font-medium">Mora:</span> {formatMonto(selectedPago.montoMora)}
-                              </p>
+                            {selectedPago.inscripcion && (
+                              <>
+                                <p className="text-sm text-gray-700">
+                                  <span className="font-medium">Grado:</span> {selectedPago.inscripcion.grado?.nombre_grado || 'No asignado'}
+                                </p>
+                                <p className="text-sm text-gray-700">
+                                  <span className="font-medium">Sección:</span> {selectedPago.inscripcion.seccion?.nombre_seccion || 'No asignada'}
+                                </p>
+                              </>
                             )}
-                            {selectedPago.descuento > 0 && (
-                              <p className="text-sm text-gray-700">
-                                <span className="font-medium">Descuento:</span> {formatMonto(selectedPago.descuento)}
-                              </p>
-                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">No hay información disponible</p>
+                        )}
+                      </div>
+
+                      {/* Información del Representante */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-md font-medium text-gray-900 mb-2">Información del Representante</h4>
+                        {(selectedPago.representante || selectedPago.representantes) ? (
+                          <div className="space-y-2">
                             <p className="text-sm text-gray-700">
-                              <span className="font-medium">Método de Pago:</span> {selectedPago.metodoPago ? selectedPago.metodoPago.nombre : '-'}
+                              <span className="font-medium">Nombre:</span> {selectedPago.representante?.nombre || selectedPago.representantes?.nombre} {selectedPago.representante?.apellido || selectedPago.representantes?.apellido}
                             </p>
                             <p className="text-sm text-gray-700">
-                              <span className="font-medium">Referencia:</span> {selectedPago.referencia || '-'}
+                              <span className="font-medium">Cédula:</span> {selectedPago.representante?.cedula || selectedPago.representantes?.cedula}
                             </p>
                           </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">No hay información disponible</p>
+                        )}
+                      </div>
+
+                      {/* Información del Pago */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-md font-medium text-gray-900 mb-2">Información del Pago</h4>
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-700">
+                            <span className="font-medium">Concepto:</span> {selectedPago.arancel?.nombre || selectedPago.aranceles?.nombre || selectedPago.concepto || '-'}
+                          </p>
+                          <p className="text-sm text-gray-700">
+                            <span className="font-medium">Monto:</span> {formatMonto(selectedPago.monto)}
+                          </p>
+                          {selectedPago.montoMora > 0 && (
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Mora:</span> {formatMonto(selectedPago.montoMora)}
+                            </p>
+                          )}
+                          {selectedPago.descuento > 0 && (
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Descuento:</span> {formatMonto(selectedPago.descuento)}
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-700">
+                            <span className="font-medium">Monto Total:</span> {formatMonto(selectedPago.montoTotal || (parseFloat(selectedPago.monto) + parseFloat(selectedPago.montoMora || 0) - parseFloat(selectedPago.descuento || 0)))}
+                          </p>
+                          <p className="text-sm text-gray-700">
+                            <span className="font-medium">Método de Pago:</span> {selectedPago.metodoPago?.nombre || selectedPago.metodoPagos?.nombre || '-'}
+                          </p>
+                          <p className="text-sm text-gray-700">
+                            <span className="font-medium">Referencia:</span> {selectedPago.referencia || '-'}
+                          </p>
+                          {selectedPago.mesPago && (
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Mes de Pago:</span> {selectedPago.mesPago}
+                            </p>
+                          )}
                         </div>
+                      </div>
                         
                         {/* Fechas */}
                         <div className="bg-gray-50 p-4 rounded-lg">
@@ -1387,7 +1635,7 @@ const PagosList = () => {
                         
                         {/* Observaciones */}
                         {selectedPago.observaciones && (
-                          <div className="bg-gray-50 p-4 rounded-lg">
+                          <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">
                             <h4 className="text-md font-medium text-gray-900 mb-2">Observaciones</h4>
                             <p className="text-sm text-gray-700">{selectedPago.observaciones}</p>
                           </div>
@@ -1401,7 +1649,7 @@ const PagosList = () => {
                           <div className="bg-gray-50 p-4 rounded-lg">
                             <div className="flex items-center justify-between">
                               <p className="text-sm text-gray-700">
-                                {selectedPago.urlComprobante.split('/').pop()}
+                                {selectedPago.nombreArchivo || selectedPago.urlComprobante.split('/').pop()}
                               </p>
                               <button
                                 onClick={() => handlePreviewComprobante(selectedPago)}
@@ -1470,6 +1718,7 @@ const PagosList = () => {
             </div>
           </div>
         )}
+
       </div>
      
   );

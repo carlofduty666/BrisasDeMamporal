@@ -25,7 +25,7 @@ const pagoEstudiantesController = {
           {
             model: Personas,
             as: 'representantes',
-            attributes: ['id', 'cedula', 'nombre', 'apellido']
+            attributes: ['id', 'cedula', 'nombre', 'apellido', 'telefono', 'email']
           },
           {
             model: MetodoPagos,
