@@ -27,10 +27,6 @@ const GradosList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNivel, setSelectedNivel] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  
-  // Estados para filtrado de estudiantes
-  const [searchEstudiante, setSearchEstudiante] = useState('');
-  const [selectedSeccion, setSelectedSeccion] = useState('');
 
   // Obtener token de autenticación
   const token = localStorage.getItem('token');
@@ -113,52 +109,6 @@ const GradosList = () => {
       return matchesSearch && matchesNivel;
     });
   }, [grados, searchTerm, selectedNivel]);
-  
-  // Filtrar estudiantes por sección y término de búsqueda
-  const filteredEstudiantes = useMemo(() => {
-    return estudiantes.filter(estudiante => {
-      const matchesSearch = searchEstudiante === '' || 
-        `${estudiante.nombre} ${estudiante.apellido}`.toLowerCase().includes(searchEstudiante.toLowerCase()) ||
-        (estudiante.cedula && estudiante.cedula.toLowerCase().includes(searchEstudiante.toLowerCase()));
-      
-      const matchesSeccion = selectedSeccion === '' || 
-        (estudiante.seccionID && estudiante.seccionID.toString() === selectedSeccion);
-      
-      return matchesSearch && matchesSeccion;
-    });
-  }, [estudiantes, searchEstudiante, selectedSeccion]);
-  
-  // Agrupar estudiantes por sección
-  const estudiantesPorSeccion = useMemo(() => {
-    const grupos = {};
-    
-    // Inicializar grupos con todas las secciones
-    secciones.forEach(seccion => {
-      grupos[seccion.id] = {
-        seccion: seccion,
-        estudiantes: []
-      };
-    });
-    
-    // Agrupar estudiantes por sección
-    filteredEstudiantes.forEach(estudiante => {
-      const seccionID = estudiante.seccionID;
-      if (seccionID && grupos[seccionID]) {
-        grupos[seccionID].estudiantes.push(estudiante);
-      } else {
-        // Si no tiene sección asignada o la sección no existe en el grupo
-        if (!grupos['sin_seccion']) {
-          grupos['sin_seccion'] = {
-            seccion: { id: 'sin_seccion', nombre_seccion: 'Sin sección asignada' },
-            estudiantes: []
-          };
-        }
-        grupos['sin_seccion'].estudiantes.push(estudiante);
-      }
-    });
-    
-    return grupos;
-  }, [filteredEstudiantes, secciones]);
 
   const loadGradoDetails = async (grado) => {
     setSelectedGrado(grado);
@@ -335,41 +285,49 @@ const GradosList = () => {
               </div>
               
               {showFilters && (
-  <div className="p-4 border-b">
-    <div className="mb-4">
-      <label htmlFor="nivel" className="block text-sm font-medium text-gray-700 mb-1">
-        Nivel Educativo
-      </label>
-      <select
-        id="nivel"
-        value={selectedNivel}
-        onChange={(e) => setSelectedNivel(e.target.value)}
-        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-      >
-        <option value="">Todos los niveles</option>
-        {niveles.map((nivel) => (
-          <option key={nivel.id} value={nivel.id}>
-            {nivel.nombre_nivel.charAt(0).toUpperCase() + nivel.nombre_nivel.slice(1)}
-          </option>
-        ))}
-      </select>
-    </div>
-  </div>
-)}
-              
-              <div className="p-4">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaSearch className="h-5 w-5 text-gray-400" />
+                <div className="p-4 border-b">
+                  <div className="mb-4">
+                    <label htmlFor="nivel" className="block text-sm font-medium text-gray-700 mb-1">
+                      Nivel Educativo
+                    </label>
+                    <select
+                      id="nivel"
+                      value={selectedNivel}
+                      onChange={(e) => setSelectedNivel(e.target.value)}
+                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    >
+                      <option value="">Todos los niveles</option>
+                      {niveles.map(nivel => (
+                        <option key={nivel.id} value={nivel.id}>
+                          {nivel.nombre_nivel.charAt(0).toUpperCase() + nivel.nombre_nivel.slice(1)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Buscar grado..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
+                  
+                  <div>
+                    <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+                      Buscar Grado
+                    </label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FaSearch className="text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        id="search"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                        placeholder="Buscar por nombre..."
+                      />
+                    </div>
+                  </div>
                 </div>
+              )}
+              
+              <div className="bg-gray-50 px-4 py-3 border-b">
+                <h2 className="text-lg font-medium text-gray-800">Grados ({filteredGrados.length})</h2>
               </div>
               
               <div className="overflow-y-auto max-h-[calc(100vh-350px)]">
@@ -562,57 +520,7 @@ const GradosList = () => {
                                 <dt className="text-sm font-medium text-gray-500">Descripción</dt>
                                 <dd className="mt-1 text-sm text-gray-900">{selectedGrado.descripcion || 'Sin descripción'}</dd>
                               </div>
-                              <div>
-                                <dt className="text-sm font-medium text-gray-500">Estado</dt>
-                                <dd className="mt-1 text-sm text-gray-900">
-                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                    selectedGrado.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {selectedGrado.activo ? 'Activo' : 'Inactivo'}
-                                  </span>
-                                </dd>
-                              </div>
                             </dl>
-                          </div>
-                          
-                          {/* Resumen de estadísticas */}
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">Resumen</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div className="bg-blue-50 p-4 rounded-md shadow-sm">
-                              <div className="flex items-center">
-                                <div className="p-3 rounded-full bg-blue-100 mr-4">
-                                  <FaUsers className="h-6 w-6 text-blue-600" />
-                                </div>
-                                <div>
-                                  <p className="text-sm text-blue-500">Estudiantes</p>
-                                  <p className="text-xl font-semibold text-blue-700">{estudiantes.length}</p>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="bg-green-50 p-4 rounded-md shadow-sm">
-                              <div className="flex items-center">
-                                <div className="p-3 rounded-full bg-green-100 mr-4">
-                                  <FaChalkboardTeacher className="h-6 w-6 text-green-600" />
-                                </div>
-                                <div>
-                                  <p className="text-sm text-green-500">Profesores</p>
-                                  <p className="text-xl font-semibold text-green-700">{profesores.length}</p>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="bg-purple-50 p-4 rounded-md shadow-sm">
-                              <div className="flex items-center">
-                              <div className="p-3 rounded-full bg-purple-100 mr-4">
-                                <FaBook className="h-6 w-6 text-purple-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-purple-500">Materias</p>
-                                <p className="text-xl font-semibold text-purple-700">{materias.length}</p>
-                              </div>
-                              </div>
-                            </div>
                           </div>
                           
                           {/* Secciones y Cupos */}
@@ -667,48 +575,48 @@ const GradosList = () => {
                                       </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                      {secciones.map((seccion) => {
-                                        // Calcular ocupación de la sección
-                                        const seccionCupos = cupos[`${selectedGrado.id}-${seccion.id}`] || { ocupados: 0 };
-                                        const porcentajeOcupacion = seccion.capacidad > 0 
-                                          ? Math.round((seccionCupos.ocupados / seccion.capacidad) * 100) 
-                                          : 0;
-                                        
-                                        return (
-                                          <tr key={seccion.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                              {seccion.nombre_seccion}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                              {seccion.capacidad}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                seccion.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                              }`}>
-                                                {seccion.activo ? 'Activo' : 'Inactivo'}
-                                              </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                              <div className="flex items-center">
-                                                <div className="w-full bg-gray-200 rounded-full h-2 mr-2 flex-grow">
-                                                  <div 
-                                                    className={`h-2 rounded-full ${
-                                                      porcentajeOcupacion >= 90 ? 'bg-red-500' : 
-                                                      porcentajeOcupacion >= 70 ? 'bg-yellow-500' : 'bg-green-500'
-                                                    }`}
-                                                    style={{ width: `${porcentajeOcupacion}%` }}
-                                                  ></div>
-                                                </div>
-                                                <span className="text-xs text-gray-500 whitespace-nowrap">
-                                                  {seccionCupos.ocupados}/{seccion.capacidad}
-                                                </span>
-                                              </div>
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
+  {secciones.map((seccion) => {
+    // Calcular ocupación de la sección
+    const seccionCupos = cupos[`${selectedGrado.id}-${seccion.id}`] || { ocupados: 0 };
+    const porcentajeOcupacion = seccion.capacidad > 0 
+      ? Math.round((seccionCupos.ocupados / seccion.capacidad) * 100) 
+      : 0;
+    
+    return (
+      <tr key={seccion.id}>
+        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+          {seccion.nombre_seccion}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {seccion.capacidad}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+            seccion.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}>
+            {seccion.activo ? 'Activo' : 'Inactivo'}
+          </span>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="flex items-center">
+            <div className="w-full bg-gray-200 rounded-full h-2 mr-2 flex-grow">
+              <div 
+                className={`h-2 rounded-full ${
+                  porcentajeOcupacion >= 90 ? 'bg-red-500' : 
+                  porcentajeOcupacion >= 70 ? 'bg-yellow-500' : 'bg-green-500'
+                }`}
+                style={{ width: `${porcentajeOcupacion}%` }}
+              ></div>
+            </div>
+            <span className="text-xs text-gray-500 whitespace-nowrap">
+              {seccionCupos.ocupados}/{seccion.capacidad}
+            </span>
+          </div>
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
                                   </table>
                                 </div>
                                 
@@ -749,105 +657,68 @@ const GradosList = () => {
                             </Link>
                           </div>
                           
-                          {/* Filtros para estudiantes */}
-                          <div className="bg-gray-50 p-4 rounded-md mb-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label htmlFor="searchEstudiante" className="block text-sm font-medium text-gray-700 mb-1">
-                                  Buscar estudiante
-                                </label>
-                                <div className="relative">
-                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <FaSearch className="h-4 w-4 text-gray-400" />
-                                  </div>
-                                  <input
-                                    type="text"
-                                    id="searchEstudiante"
-                                    placeholder="Nombre o cédula..."
-                                    value={searchEstudiante}
-                                    onChange={(e) => setSearchEstudiante(e.target.value)}
-                                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <label htmlFor="seccionFilter" className="block text-sm font-medium text-gray-700 mb-1">
-                                  Filtrar por sección
-                                </label>
-                                <select
-                                  id="seccionFilter"
-                                  value={selectedSeccion}
-                                  onChange={(e) => setSelectedSeccion(e.target.value)}
-                                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                                >
-                                  <option value="">Todas las secciones</option>
-                                  {secciones.map((seccion) => (
-                                    <option key={seccion.id} value={seccion.id}>
-                                      {seccion.nombre_seccion}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                          </div>
-                          
                           {estudiantes.length > 0 ? (
-                            <div>
-                              {/* Mostrar estudiantes agrupados por sección */}
-                              {Object.entries(estudiantesPorSeccion).map(([seccionId, grupo]) => (
-                                <div key={seccionId} className="mb-6">
-                                  <h4 className="text-md font-medium text-gray-800 mb-2 bg-gray-100 p-2 rounded">
-                                    {grupo.seccion.nombre_seccion} ({grupo.estudiantes.length} estudiantes)
-                                  </h4>
-                                  
-                                  <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                      <thead className="bg-gray-50">
-                                        <tr>
-                                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Cédula
-                                          </th>
-                                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Nombre
-                                          </th>
-                                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Acciones
-                                          </th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="bg-white divide-y divide-gray-200">
-                                        {grupo.estudiantes.map((estudiante) => (
-                                          <tr key={estudiante.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                              {estudiante.cedula}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                              <div className="text-sm font-medium text-gray-900">
-                                                {estudiante.nombre} {estudiante.apellido}
-                                              </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                              <Link
-                                                to={`/admin/estudiantes/${estudiante.id}`}
-                                                className="text-indigo-600 hover:text-indigo-900 mr-3"
-                                              >
-                                                <FaEye />
-                                              </Link>
-                                              <Link
-                                                to={`/admin/estudiantes/${estudiante.id}/notas`}
-                                                className="text-green-600 hover:text-green-900"
-                                              >
-                                                <FaUserGraduate />
-                                              </Link>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Cédula
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Nombre
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Sección
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Acciones
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {estudiantes.slice(0, 5).map((estudiante) => (
+                                    <tr key={estudiante.id}>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {estudiante.cedula}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900">
+                                          {estudiante.nombre} {estudiante.apellido}
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {estudiante.seccion?.nombre_seccion || 'No asignada'}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <Link
+                                          to={`/admin/estudiantes/${estudiante.id}`}
+                                          className="text-indigo-600 hover:text-indigo-900 mr-3"
+                                        >
+                                          <FaEye />
+                                        </Link>
+                                        <Link
+                                          to={`/admin/estudiantes/${estudiante.id}/notas`}
+                                          className="text-green-600 hover:text-green-900"
+                                        >
+                                          <FaUserGraduate />
+                                        </Link>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              
+                              {estudiantes.length > 5 && (
+                                <div className="mt-4 text-center">
+                                  <Link
+                                    to={`/admin/academico/grados/${selectedGrado.id}/estudiantes`}
+                                    className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                                  >
+                                    Ver todos los {estudiantes.length} estudiantes →
+                                  </Link>
                                 </div>
-                              ))}
+                              )}
                             </div>
                           ) : (
                             <div className="text-center py-6">
@@ -874,23 +745,23 @@ const GradosList = () => {
                             <div className="overflow-x-auto">
                               <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
-                                <tr>
-                                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Cédula
-                                  </th>
-                                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Nombre
-                                  </th>
-                                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Materias Asignadas
-                                  </th>
-                                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Acciones
-                                  </th>
-                                </tr>
+                                  <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Cédula
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Nombre
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Materias
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Acciones
+                                    </th>
+                                  </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                  {profesores.map((profesor) => (
+                                  {profesores.slice(0, 5).map((profesor) => (
                                     <tr key={profesor.id}>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {profesor.cedula}
@@ -900,32 +771,8 @@ const GradosList = () => {
                                           {profesor.nombre} {profesor.apellido}
                                         </div>
                                       </td>
-                                      <td className="px-6 py-4 text-sm text-gray-500">
-                                        {profesor.materiasAsignadas && profesor.materiasAsignadas.length > 0 ? (
-                                          <div className="flex flex-wrap gap-1">
-                                            {profesor.materiasAsignadas.map(materia => (
-                                              <span 
-                                                key={materia.id}
-                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                              >
-                                                {materia.nombre || materia.asignatura}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        ) : profesor.materias && profesor.materias.length > 0 ? (
-                                          <div className="flex flex-wrap gap-1">
-                                            {profesor.materias.map(materia => (
-                                              <span 
-                                                key={materia.id}
-                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                              >
-                                                {materia.nombre || materia.asignatura}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        ) : (
-                                          'No asignadas'
-                                        )}
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {profesor.materias?.map(m => m.nombre).join(', ') || 'No asignadas'}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <Link
@@ -939,6 +786,17 @@ const GradosList = () => {
                                   ))}
                                 </tbody>
                               </table>
+                              
+                              {profesores.length > 5 && (
+                                <div className="mt-4 text-center">
+                                  <Link
+                                    to={`/admin/academico/grados/${selectedGrado.id}/profesores`}
+                                    className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                                  >
+                                    Ver todos los {profesores.length} profesores →
+                                  </Link>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div className="text-center py-6">
@@ -970,10 +828,7 @@ const GradosList = () => {
                                       Nombre
                                     </th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Profesor Asignado
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Estado
+                                      Profesor
                                     </th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                       Acciones
@@ -981,39 +836,42 @@ const GradosList = () => {
                                   </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                  {materias.map((materia) => (
+                                  {materias.slice(0, 5).map((materia) => (
                                     <tr key={materia.id}>
                                       <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900">
-                                          {materia.nombre || materia.asignatura}
+                                          {materia.nombre}
                                         </div>
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {materia.profesor 
+                                        {materia.profesor?.nombre 
                                           ? `${materia.profesor.nombre} ${materia.profesor.apellido}` 
-                                          : materia.profesorAsignado
-                                            ? `${materia.profesorAsignado.nombre} ${materia.profesorAsignado.apellido}`
-                                            : 'No asignado'}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                          materia.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                        }`}>
-                                          {materia.activo ? 'Activo' : 'Inactivo'}
-                                        </span>
+                                          : 'No asignado'}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <Link
-                                          to={`/admin/academico/materias/${materia.id}`}
-                                          className="text-indigo-600 hover:text-indigo-900"
-                                        >
-                                          <FaEye />
-                                        </Link>
+                                      <Link
+                                        to={`/admin/academico/materias/${materia.id}`}
+                                        className="bg-indigo-600 text-white px-4 py-2 rounded-md flex items-center justify-center"
+                                        title="Ver detalles"
+                                      >
+                                        <FaEye className="mr-2" /> Ver detalles
+                                      </Link>
                                       </td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
+                              
+                              {materias.length > 5 && (
+                                <div className="mt-4 text-center">
+                                  <Link
+                                    to={`/admin/academico/grados/${selectedGrado.id}/materias`}
+                                    className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                                  >
+                                    Ver todas las {materias.length} materias →
+                                  </Link>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div className="text-center py-6">
