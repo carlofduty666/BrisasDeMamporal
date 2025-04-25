@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { FaEdit, FaTrash, FaEye, FaUserGraduate, FaChalkboardTeacher, FaBook, FaUsers, FaSearch, FaFilter, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaEye, FaUserGraduate, FaChalkboardTeacher, FaBook, FaUsers, FaSearch, FaFilter, FaChevronDown, FaChevronUp, FaComments, FaGlobe, FaCalculator, FaPalette, FaRunning, FaLanguage, FaLaptop, FaFlask, FaAtom, FaPencilRuler, FaBrain, FaProjectDiagram, FaMoneyBillWave, FaChartBar } from 'react-icons/fa';
+import { FaEarthAmericas } from "react-icons/fa6";
+import { GiChemicalDrop } from "react-icons/gi";
 import { formatearNombreGrado } from '../../../utils/formatters';
 
 const GradosList = () => {
@@ -22,6 +24,7 @@ const GradosList = () => {
   const [gradoToDelete, setGradoToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [selectedMateria, setSelectedMateria] = useState(null);
   
   // Estados para filtrado y búsqueda
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,7 +145,10 @@ const GradosList = () => {
     
     // Agrupar estudiantes por sección
     filteredEstudiantes.forEach(estudiante => {
-      const seccionID = estudiante.seccionID;
+      // Verificar si el estudiante tiene información de inscripción con sección
+      const seccionID = estudiante.seccion?.id || estudiante.seccionID || 
+                        (estudiante.inscripcion && estudiante.inscripcion.seccionID);
+      
       if (seccionID && grupos[seccionID]) {
         grupos[seccionID].estudiantes.push(estudiante);
       } else {
@@ -178,7 +184,41 @@ const GradosList = () => {
             }
           }
         );
-        setEstudiantes(estudiantesResponse.data);
+        
+        // Obtener información de sección para cada estudiante
+        const estudiantesConSeccion = [];
+        
+        for (const estudiante of estudiantesResponse.data) {
+          try {
+            // Buscar la inscripción actual del estudiante que incluye la sección
+            const inscripcionResponse = await axios.get(
+              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/estudiante/${estudiante.id}/actual`,
+              { 
+                headers: { 'Authorization': `Bearer ${token}` },
+                params: { annoEscolarID: annoEscolar.id }
+              }
+            );
+            
+            if (inscripcionResponse.data && inscripcionResponse.data.seccionID) {
+              // Buscar la información completa de la sección
+              const seccion = secciones.find(s => s.id === inscripcionResponse.data.seccionID);
+              
+              estudiantesConSeccion.push({
+                ...estudiante,
+                seccionID: inscripcionResponse.data.seccionID,
+                seccion: seccion || null,
+                inscripcion: inscripcionResponse.data
+              });
+            } else {
+              estudiantesConSeccion.push(estudiante);
+            }
+          } catch (error) {
+            console.error(`Error al obtener inscripción para estudiante ${estudiante.id}:`, error);
+            estudiantesConSeccion.push(estudiante);
+          }
+        }
+        
+        setEstudiantes(estudiantesConSeccion);
       } catch (estudiantesError) {
         console.error('Error al cargar estudiantes:', estudiantesError);
         setEstudiantes([]);
@@ -277,6 +317,10 @@ const GradosList = () => {
       setError('No se pudo eliminar el grado. Verifique que no tenga estudiantes o profesores asignados.');
       setDeleteLoading(false);
     }
+  };
+
+  const handleShowMateriaDetails = (materia) => {
+    setSelectedMateria(materia);
   };
 
   return (
@@ -406,14 +450,14 @@ const GradosList = () => {
                               </p>
                             </div>
                             <div className="flex space-x-2">
-                              <Link
+                              {/* <Link
                                 to={`/admin/academico/grados/${grado.id}/editar`}
                                 className="text-indigo-600 hover:text-indigo-900"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <FaEdit />
-                              </Link>
-                              <button
+                              </Link> */}
+                              {/* <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   confirmDelete(grado);
@@ -421,7 +465,7 @@ const GradosList = () => {
                                 className="text-red-600 hover:text-red-900"
                               >
                                 <FaTrash />
-                              </button>
+                              </button> */}
                             </div>
                           </div>
                           
@@ -465,12 +509,12 @@ const GradosList = () => {
                       >
                         <FaEdit className="mr-1" /> Editar
                       </Link>
-                      <button
+                      {/* <button
                         onClick={() => confirmDelete(selectedGrado)}
                         className="bg-red-100 text-red-700 px-3 py-1 rounded-md hover:bg-red-200 flex items-center"
                       >
                         <FaTrash className="mr-1" /> Eliminar
-                      </button>
+                      </button> */}
                     </div>
                   </div>
                   
@@ -562,16 +606,6 @@ const GradosList = () => {
                                 <dt className="text-sm font-medium text-gray-500">Descripción</dt>
                                 <dd className="mt-1 text-sm text-gray-900">{selectedGrado.descripcion || 'Sin descripción'}</dd>
                               </div>
-                              <div>
-                                <dt className="text-sm font-medium text-gray-500">Estado</dt>
-                                <dd className="mt-1 text-sm text-gray-900">
-                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                    selectedGrado.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {selectedGrado.activo ? 'Activo' : 'Inactivo'}
-                                  </span>
-                                </dd>
-                              </div>
                             </dl>
                           </div>
                           
@@ -617,7 +651,6 @@ const GradosList = () => {
                           
                           {/* Secciones y Cupos */}
                           <h3 className="text-lg font-medium text-gray-900 mb-4">Secciones y Cupos</h3>
-                          
                           <div className="bg-gray-50 p-4 rounded-md mb-6">
                             {secciones.length > 0 ? (
                               <div>
@@ -741,12 +774,6 @@ const GradosList = () => {
                         <div>
                           <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-medium text-gray-900">Estudiantes Inscritos</h3>
-                            <Link
-                              to={`/admin/academico/grados/${selectedGrado.id}/estudiantes`}
-                              className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
-                            >
-                              Ver todos →
-                            </Link>
                           </div>
                           
                           {/* Filtros para estudiantes */}
@@ -823,22 +850,22 @@ const GradosList = () => {
                                               {estudiante.cedula}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                              <div className="text-sm font-medium text-gray-900">
+                                              <div className="text-sm font-medium text-gray-900 uppercase">
                                                 {estudiante.nombre} {estudiante.apellido}
                                               </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <td className="px-6 py-4 flex flex-row text-sm font-medium">
                                               <Link
                                                 to={`/admin/estudiantes/${estudiante.id}`}
-                                                className="text-indigo-600 hover:text-indigo-900 mr-3"
+                                                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-900 mr-3"
                                               >
-                                                <FaEye />
+                                                 Detalles
                                               </Link>
                                               <Link
                                                 to={`/admin/estudiantes/${estudiante.id}/notas`}
-                                                className="text-green-600 hover:text-green-900"
+                                                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-900 mr-3"
                                               >
-                                                <FaUserGraduate />
+                                                 Notas
                                               </Link>
                                             </td>
                                           </tr>
@@ -862,12 +889,6 @@ const GradosList = () => {
                         <div>
                           <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-medium text-gray-900">Profesores Asignados</h3>
-                            <Link
-                              to={`/admin/academico/grados/${selectedGrado.id}/profesores`}
-                              className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
-                            >
-                              Ver todos →
-                            </Link>
                           </div>
                           
                           {profesores.length > 0 ? (
@@ -896,7 +917,7 @@ const GradosList = () => {
                                         {profesor.cedula}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">
+                                        <div className="text-sm font-medium text-gray-900 uppercase">
                                           {profesor.nombre} {profesor.apellido}
                                         </div>
                                       </td>
@@ -906,7 +927,7 @@ const GradosList = () => {
                                             {profesor.materiasAsignadas.map(materia => (
                                               <span 
                                                 key={materia.id}
-                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 uppercase"
                                               >
                                                 {materia.nombre || materia.asignatura}
                                               </span>
@@ -917,7 +938,7 @@ const GradosList = () => {
                                             {profesor.materias.map(materia => (
                                               <span 
                                                 key={materia.id}
-                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 uppercase"
                                               >
                                                 {materia.nombre || materia.asignatura}
                                               </span>
@@ -930,9 +951,9 @@ const GradosList = () => {
                                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <Link
                                           to={`/admin/profesores/${profesor.id}`}
-                                          className="text-indigo-600 hover:text-indigo-900"
+                                          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-900 mr-3"
                                         >
-                                          <FaEye />
+                                          Detalles
                                         </Link>
                                       </td>
                                     </tr>
@@ -962,62 +983,233 @@ const GradosList = () => {
                           </div>
                           
                           {materias.length > 0 ? (
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                  <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Nombre
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Profesor Asignado
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Estado
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Acciones
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                  {materias.map((materia) => (
-                                    <tr key={materia.id}>
-                                      <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                              {materias.map((materia) => {
+                                // Determinar el color y el icono según el nombre de la materia
+                                let bgColor = "bg-blue-50";
+                                let textColor = "text-blue-700";
+                                let iconColor = "text-blue-600";
+                                let bgIconColor = "bg-blue-100";
+                                let Icon = FaBook; // Icono por defecto
+                                
+                                const nombreMateria = (materia.nombre || materia.asignatura || "").toLowerCase();
+                                
+                                if (nombreMateria.includes("comunicacion") || nombreMateria.includes("lengua") || nombreMateria.includes("literatura") || nombreMateria.includes("castellano")) {
+                                  bgColor = "bg-purple-50";
+                                  textColor = "text-purple-700";
+                                  iconColor = "text-purple-600";
+                                  bgIconColor = "bg-purple-100";
+                                  Icon = FaComments;
+                                } else if (nombreMateria.includes("social") || nombreMateria.includes("ghc") || nombreMateria.includes("historia")) {
+                                  bgColor = "bg-yellow-50";
+                                  textColor = "text-yellow-700";
+                                  iconColor = "text-yellow-600";
+                                  bgIconColor = "bg-yellow-100";
+                                  Icon = FaGlobe;
+                                } else if (nombreMateria.includes("matematica")) {
+                                  bgColor = "bg-blue-50";
+                                  textColor = "text-blue-700";
+                                  iconColor = "text-blue-600";
+                                  bgIconColor = "bg-blue-100";
+                                  Icon = FaCalculator;
+                                } else if (nombreMateria.includes("arte")) {
+                                  bgColor = "bg-pink-50";
+                                  textColor = "text-pink-700";
+                                  iconColor = "text-pink-600";
+                                  bgIconColor = "bg-pink-100";
+                                  Icon = FaPalette;
+                                } else if (nombreMateria.includes("educacion fisica")) {
+                                  bgColor = "bg-red-50";
+                                  textColor = "text-red-700";
+                                  iconColor = "text-red-600";
+                                  bgIconColor = "bg-red-100";
+                                  Icon = FaRunning;
+                                } else if (nombreMateria.includes("fisica")) {
+                                  bgColor = "bg-cyan-50";
+                                  textColor = "text-cyan-700";
+                                  iconColor = "text-cyan-600";
+                                  bgIconColor = "bg-cyan-100";
+                                  Icon = FaAtom;
+                                } else if (nombreMateria.includes("ingles") || nombreMateria.includes("idioma")) {
+                                  bgColor = "bg-indigo-50";
+                                  textColor = "text-indigo-700";
+                                  iconColor = "text-indigo-600";
+                                  bgIconColor = "bg-indigo-100";
+                                  Icon = FaLanguage;
+                                } else if (nombreMateria.includes("informatica") || nombreMateria.includes("computacion")) {
+                                  bgColor = "bg-lime-50";
+                                  textColor = "text-lime-700";
+                                  iconColor = "text-lime-600";
+                                  bgIconColor = "bg-lime-100";
+                                  Icon = FaLaptop;
+                                } else if (nombreMateria.includes("ciencia") || nombreMateria.includes("natural") || nombreMateria.includes("biologia")) {
+                                  bgColor = "bg-green-50";
+                                  textColor = "text-green-700";
+                                  iconColor = "text-green-600";
+                                  bgIconColor = "bg-green-100";
+                                  Icon = FaEarthAmericas;
+                                } else if (nombreMateria.includes("quimica")) {
+                                  bgColor = "bg-teal-50";
+                                  textColor = "text-teal-700";
+                                  iconColor = "text-teal-600";
+                                  bgIconColor = "bg-teal-100";
+                                  Icon = GiChemicalDrop;
+                                } else if (nombreMateria.includes("dibujo") || nombreMateria.includes("tecnico")) {
+                                  bgColor = "bg-gray-50";
+                                  textColor = "text-gray-700";
+                                  iconColor = "text-gray-600";
+                                  bgIconColor = "bg-gray-100";
+                                  Icon = FaPencilRuler;
+                                } else if (nombreMateria.includes("orientacion") || nombreMateria.includes("vocacional") || nombreMateria.includes("psicologia")) {
+                                  bgColor = "bg-orange-50";
+                                  textColor = "text-orange-700";
+                                  iconColor = "text-orange-600";
+                                  bgIconColor = "bg-orange-100";
+                                  Icon = FaBrain;
+                                } else if (nombreMateria.includes("proyecto")) {
+                                  bgColor = "bg-cyan-50";
+                                  textColor = "text-cyan-700";
+                                  iconColor = "text-cyan-600";
+                                  bgIconColor = "bg-cyan-100";
+                                  Icon = FaProjectDiagram;
+                                } else if (nombreMateria.includes("contabilidad")) {
+                                  bgColor = "bg-emerald-50";
+                                  textColor = "text-emerald-700";
+                                  iconColor = "text-emerald-600";
+                                  bgIconColor = "bg-emerald-100";
+                                  Icon = FaMoneyBillWave;
+                                }
+                                
+                                return (
+                                  <div key={materia.id} className={`${bgColor} p-3 rounded-md shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                                    <div className="flex items-center">
+                                      <div className={`p-2 rounded-full ${bgIconColor} mr-3`}>
+                                        <Icon className={`h-5 w-5 ${iconColor}`} />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className={`text-sm font-medium ${textColor} truncate`}>
                                           {materia.nombre || materia.asignatura}
-                                        </div>
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {materia.profesor 
-                                          ? `${materia.profesor.nombre} ${materia.profesor.apellido}` 
-                                          : materia.profesorAsignado
-                                            ? `${materia.profesorAsignado.nombre} ${materia.profesorAsignado.apellido}`
-                                            : 'No asignado'}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                          materia.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                        }`}>
-                                          {materia.activo ? 'Activo' : 'Inactivo'}
-                                        </span>
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <Link
-                                          to={`/admin/academico/materias/${materia.id}`}
-                                          className="text-indigo-600 hover:text-indigo-900"
-                                        >
-                                          <FaEye />
-                                        </Link>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                          {materia.codigo || `Código: ${materia.id}`}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="mt-3 flex justify-between items-center">
+                                      <button
+                                        onClick={() => handleShowMateriaDetails(materia)}
+                                        className={`text-xs font-medium ${textColor} hover:underline flex items-center`}
+                                      >
+                                        <FaChartBar className="mr-1" /> Estadísticas
+                                      </button>
+                                      <Link
+                                        to={`/admin/academico/materias/${materia.id}`}
+                                        className={`text-xs font-medium ${textColor} hover:underline flex items-center`}
+                                      >
+                                        <FaEye className="mr-1" /> Detalles
+                                      </Link>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             <div className="text-center py-6">
                               <p className="text-gray-500">No hay materias asignadas a este grado.</p>
+                            </div>
+                          )}
+                          
+                          {/* Modal para mostrar detalles de la materia */}
+                          {selectedMateria && (
+                            <div className="fixed z-10 inset-0 overflow-y-auto">
+                              <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                                <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+                                  <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+                                </div>
+                                
+                                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                                
+                                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                                  <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                    <div className="sm:flex sm:items-start">
+                                      <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                          {selectedMateria.nombre || selectedMateria.asignatura}
+                                        </h3>
+                                        
+                                        <div className="mt-4">
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="bg-gray-50 p-3 rounded-md">
+                                              <p className="text-sm font-medium text-gray-700">Profesor Asignado</p>
+                                              <p className="text-sm text-gray-900">
+                                                {selectedMateria.profesor 
+                                                  ? `${selectedMateria.profesor.nombre} ${selectedMateria.profesor.apellido}` 
+                                                  : selectedMateria.profesorAsignado
+                                                    ? `${selectedMateria.profesorAsignado.nombre} ${selectedMateria.profesorAsignado.apellido}`
+                                                    : 'No asignado'}
+                                              </p>
+                                            </div>
+                                            
+                                            <div className="bg-gray-50 p-3 rounded-md">
+                                              <p className="text-sm font-medium text-gray-700">Estudiantes</p>
+                                              <p className="text-sm text-gray-900">
+                                                {selectedMateria.estudiantesCount || estudiantes.length || 0}
+                                              </p>
+                                            </div>
+                                            
+                                            <div className="bg-gray-50 p-3 rounded-md">
+                                              <p className="text-sm font-medium text-gray-700">Horas Semanales</p>
+                                              <p className="text-sm text-gray-900">
+                                                {selectedMateria.horasSemanales || 'No especificado'}
+                                              </p>
+                                            </div>
+                                            
+                                            <div className="bg-gray-50 p-3 rounded-md">
+                                              <p className="text-sm font-medium text-gray-700">Código</p>
+                                              <p className="text-sm text-gray-900">
+                                                {selectedMateria.codigo || selectedMateria.id}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          
+                                          {selectedMateria.descripcion && (
+                                            <div className="mt-4 bg-gray-50 p-3 rounded-md">
+                                              <p className="text-sm font-medium text-gray-700">Descripción</p>
+                                              <p className="text-sm text-gray-900">{selectedMateria.descripcion}</p>
+                                            </div>
+                                          )}
+                                          
+                                          <div className="mt-4">
+                                            <h4 className="text-md font-medium text-gray-900 mb-2">Estadísticas</h4>
+                                            <div className="bg-gray-50 p-3 rounded-md">
+                                              <p className="text-sm font-medium text-gray-700">Rendimiento Promedio</p>
+                                              <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                                <div 
+                                                  className="bg-blue-600 h-2.5 rounded-full" 
+                                                  style={{ width: `${selectedMateria.rendimientoPromedio || 75}%` }}
+                                                ></div>
+                                              </div>
+                                              <p className="text-xs text-gray-500 mt-1">
+                                                {selectedMateria.rendimientoPromedio || 75}% de aprobación
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedMateria(null)}
+                                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                                    >
+                                      Cerrar
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
