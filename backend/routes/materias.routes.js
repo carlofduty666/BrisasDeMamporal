@@ -8,7 +8,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 
 // Rutas protegidas
 router.get('/materias/profesor/:id', authMiddleware.verifyToken, materiaController.getMateriasByProfesor);
-router.get('/materias/grado/:id', authMiddleware.verifyToken, materiaController.getMateriasByGrado); // Añadida esta ruta
+router.get('/materias/grado/:id', authMiddleware.verifyToken, materiaController.getMateriasByGrado);
 
 router.get('/materias/:id', authMiddleware.verifyToken, materiaController.getMateriaByID);
 router.get('/materias', authMiddleware.verifyToken, materiaController.getAllMaterias);

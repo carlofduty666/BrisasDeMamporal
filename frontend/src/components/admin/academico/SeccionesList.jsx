@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaUserPlus, FaUsers } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaUserPlus, FaUsers, FaFilter, FaSearch, FaChalkboard, FaChalkboardTeacher } from 'react-icons/fa';
 import axios from 'axios';
-import AdminLayout from '../layout/AdminLayout';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { formatearNombreGrado, formatearNombreNivel } from '../../../utils/formatters';
@@ -23,6 +22,13 @@ const SeccionesList = () => {
   const [annoEscolar, setAnnoEscolar] = useState(null);
   const [niveles, setNiveles] = useState([]);
   const [gradoNivelMap, setGradoNivelMap] = useState({});
+  
+  // Nuevos estados para filtros
+  const [nivelFilter, setNivelFilter] = useState('');
+  const [gradoFilter, setGradoFilter] = useState('');
+  const [filteredSecciones, setFilteredSecciones] = useState([]);
+  const [gradosByNivel, setGradosByNivel] = useState({});
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' o 'list'
 
   // Estado para formularios
   const [newSeccion, setNewSeccion] = useState({
@@ -93,6 +99,7 @@ const SeccionesList = () => {
         setNiveles(nivelesResponse.data);
         setAnnoEscolar(annoResponse.data);
         setEstudiantes(estudiantesResponse.data);
+        setFilteredSecciones(seccionesResponse.data);
         setLoading(false);
       } catch (err) {
         console.error('Error al cargar datos:', err);
@@ -110,31 +117,84 @@ const SeccionesList = () => {
     fetchData();
   }, [navigate]);
 
+  // Crear mapa de grado-nivel y organizar grados por nivel
   useEffect(() => {
     if (grados.length > 0 && niveles.length > 0) {
       const mapGradoNivel = {};
+      const gradosPorNivel = {};
       
       grados.forEach(grado => {
         const nivel = niveles.find(n => n.id === grado.nivelID);
         if (nivel) {
           mapGradoNivel[grado.id] = {
             nombreGrado: grado.nombre_grado,
-            nombreNivel: nivel.nombre_nivel
+            nombreNivel: nivel.nombre_nivel,
+            nivelID: nivel.id
           };
+          
+          // Agrupar grados por nivel
+          if (!gradosPorNivel[nivel.id]) {
+            gradosPorNivel[nivel.id] = [];
+          }
+          gradosPorNivel[nivel.id].push(grado);
         }
       });
       
       setGradoNivelMap(mapGradoNivel);
+      setGradosByNivel(gradosPorNivel);
       console.log("Mapa de grado-nivel creado:", mapGradoNivel);
     }
   }, [grados, niveles]);
   
+  // Filtrar secciones según término de búsqueda y filtros
+  useEffect(() => {
+    let filtered = secciones;
+    
+    // Filtrar por término de búsqueda
+    if (searchTerm.trim() !== '') {
+      filtered = filtered.filter(seccion => 
+        seccion.nombre_seccion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (gradoNivelMap[seccion.gradoID]?.nombreGrado || '').toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Filtrar por nivel
+    if (nivelFilter !== '') {
+      filtered = filtered.filter(seccion => {
+        const gradoInfo = gradoNivelMap[seccion.gradoID];
+        return gradoInfo && gradoInfo.nivelID === nivelFilter;
+      });
+    }
+    
+    // Filtrar por grado
+    if (gradoFilter !== '') {
+      filtered = filtered.filter(seccion => seccion.gradoID === gradoFilter);
+    }
+    
+    setFilteredSecciones(filtered);
+  }, [searchTerm, nivelFilter, gradoFilter, secciones, gradoNivelMap]);
 
-  // Filtrar secciones según término de búsqueda
-  const filteredSecciones = secciones.filter(seccion => 
-    seccion.nombre_seccion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    grados.find(g => g.id === seccion.gradoID)?.nombre_grado.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Función para cargar secciones por grado
+  const loadSeccionesByGrado = async (gradoID) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/secciones/grado/${gradoID}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      return response.data;
+    } catch (err) {
+      console.error('Error al cargar secciones del grado:', err);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Crear nueva sección
   const handleCreateSeccion = async (e) => {
@@ -232,7 +292,7 @@ const SeccionesList = () => {
   };
 
   // Asignar estudiante a sección
-const handleAsignarEstudiante = async (e) => {
+  const handleAsignarEstudiante = async (e) => {
     e.preventDefault();
     
     if (!asignarEstudianteForm.estudianteID) {
@@ -287,11 +347,9 @@ const handleAsignarEstudiante = async (e) => {
       setLoading(false);
     }
   };
-  
 
   // Eliminar estudiante de sección
-// Modificar la función handleRemoveEstudiante
-const handleRemoveEstudiante = async (estudianteID) => {
+  const handleRemoveEstudiante = async (estudianteID) => {
     if (!annoEscolar) {
       toast.error('No hay un año escolar activo');
       return;
@@ -342,7 +400,6 @@ const handleRemoveEstudiante = async (estudianteID) => {
       }
     }
   };
-  
 
   // Cargar estudiantes de una sección
   const loadEstudiantesSeccion = useCallback(async (seccionID) => {
@@ -366,8 +423,8 @@ const handleRemoveEstudiante = async (estudianteID) => {
     }
   }, [annoEscolar]);
 
-// Modificar la función handleOpenEstudiantesModal
-const handleOpenEstudiantesModal = async (seccion) => {
+  // Abrir modal de estudiantes
+  const handleOpenEstudiantesModal = async (seccion) => {
     try {
       setLoading(true);
       setSelectedSeccion(seccion);
@@ -437,28 +494,54 @@ const handleOpenEstudiantesModal = async (seccion) => {
       setLoading(false);
     }
   };
+
+  // Obtener color según capacidad
+  const getCapacidadColor = (seccion) => {
+    const porcentajeOcupado = (estudiantesSeccion.length / seccion.capacidad) * 100;
+    
+    if (porcentajeOcupado < 50) return "bg-green-100 text-green-800";
+    if (porcentajeOcupado < 75) return "bg-yellow-100 text-yellow-800";
+    if (porcentajeOcupado < 90) return "bg-orange-100 text-orange-800";
+    return "bg-red-100 text-red-800";
+  };
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Gestión de Secciones</h1>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md flex items-center"
-        >
-          {showCreateForm ? (
-            <>
-              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center"
+          >
+            <FaPlus className="mr-2" /> Nueva Sección
+          </button>
+          
+          <div className="flex items-center">
+            <button 
+              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+              className={`px-3 py-2 rounded-md ${viewMode === 'grid' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'} mr-2`}
+              title="Vista de cuadrícula"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
               </svg>
-              Cancelar
-            </>
-          ) : (
-            <>
-              <FaPlus className="mr-2" /> Nueva Sección
-            </>
-          )}
-        </button>
+            </button>
+            <button 
+              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+              className={`px-3 py-2 rounded-md ${viewMode === 'list' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}
+              title="Vista de lista"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
       
       {/* Mensajes de éxito o error */}
@@ -564,145 +647,256 @@ const handleOpenEstudiantesModal = async (seccion) => {
         </div>
       )}
       
-      {/* Buscador */}
-      <div className="mb-6">
+      {/* Filtros y búsqueda */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaSearch className="h-5 w-5 text-gray-400" />
+          </div>
           <input
             type="text"
             placeholder="Buscar por nombre o grado..."
-            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="pl-10 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
+        </div>
+        
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaFilter className="h-5 w-5 text-gray-400" />
           </div>
+          <select
+            className="pl-10 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            value={nivelFilter}
+            onChange={(e) => {
+              setNivelFilter(e.target.value);
+              setGradoFilter(''); // Resetear filtro de grado al cambiar nivel
+            }}
+          >
+            <option value="">Todos los niveles</option>
+            {niveles.map(nivel => (
+              <option key={nivel.id} value={nivel.id}>
+                {formatearNombreNivel(nivel.nombre_nivel)}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaChalkboardTeacher className="h-5 w-5 text-gray-400" />
+          </div>
+          <select
+            className="pl-10 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            value={gradoFilter}
+            onChange={(e) => setGradoFilter(e.target.value)}
+            disabled={!nivelFilter}
+          >
+            <option value="">Todos los grados</option>
+            {nivelFilter && gradosByNivel[nivelFilter] ? 
+              gradosByNivel[nivelFilter].map(grado => (
+                <option key={grado.id} value={grado.id}>
+                  {formatearNombreGrado(grado.nombre_grado)}
+                </option>
+              )) : 
+              grados.map(grado => (
+                <option key={grado.id} value={grado.id}>
+                  {formatearNombreGrado(grado.nombre_grado)}
+                </option>
+              ))
+            }
+          </select>
         </div>
       </div>
       
-        {/* Tabla de secciones */}
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-            <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Sección
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Grado
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nivel
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Capacidad
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Estado
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Estudiantes
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-                </th>
-            </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-            {loading && !secciones.length ? (
-                <tr>
-                <td colSpan="7" className="px-6 py-4 text-center">
-                    <div className="flex justify-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
-                    </div>
-                </td>
-                </tr>
-            ) : filteredSecciones.length === 0 ? (
-                <tr>
-                <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">
-                    No se encontraron secciones
-                </td>
-                </tr>
-            ) : (
-                filteredSecciones.map((seccion) => {
-                  const grado = grados.find(g => g.id === seccion.gradoID);
-                  const nivel = grado ? niveles.find(n => n.id === grado.nivelID) : null;
-    
-                return (
-                  <tr key={seccion.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {seccion.nombre_seccion}
-                  </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {grado ? formatearNombreGrado(grado.nombre_grado) : 'No asignado'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {nivel ? formatearNombreNivel(nivel.nombre_nivel) : 'No asignado'}
-                  </td> */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {gradoNivelMap[seccion.gradoID]?.nombreGrado ? 
-                      formatearNombreGrado(gradoNivelMap[seccion.gradoID].nombreGrado) : 
-                      'No asignado'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {gradoNivelMap[seccion.gradoID]?.nombreNivel ? 
-                      formatearNombreNivel(gradoNivelMap[seccion.gradoID].nombreNivel) : 
-                      'No asignado'}
-                  </td>
-
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {seccion.capacidad}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${seccion.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+      {/* Vista de cuadrícula */}
+      {viewMode === 'grid' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {loading && !filteredSecciones.length ? (
+            <div className="col-span-full flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+            </div>
+          ) : filteredSecciones.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              No se encontraron secciones con los filtros aplicados
+            </div>
+          ) : (
+            filteredSecciones.map(seccion => {
+              const gradoInfo = gradoNivelMap[seccion.gradoID] || {};
+              
+              return (
+                <div 
+                  key={seccion.id} 
+                  className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                >
+                  <div className="p-5 border-b border-gray-200">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Sección {seccion.nombre_seccion}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {gradoInfo.nombreGrado ? formatearNombreGrado(gradoInfo.nombreGrado) : 'Grado no asignado'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {gradoInfo.nombreNivel ? formatearNombreNivel(gradoInfo.nombreNivel) : 'Nivel no asignado'}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${seccion.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {seccion.activo ? 'Activo' : 'Inactivo'}
-                        </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="p-5">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Capacidad:</p>
+                        <p className="text-lg font-bold">{seccion.capacidad} estudiantes</p>
+                      </div>
+                      <div className="flex space-x-2">
                         <button
-                        onClick={() => handleOpenEstudiantesModal(seccion)}
-                        className="text-indigo-600 hover:text-indigo-900 flex items-center"
-                        >
-                        <FaUsers className="mr-1" /> Ver estudiantes
-                        </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                        <button
-                            onClick={() => {
+                          onClick={() => {
                             setSelectedSeccion(seccion);
                             setShowEditForm(true);
+                          }}
+                          className="p-2 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded-full"
+                          title="Editar"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          onClick={() => handleOpenEstudiantesModal(seccion)}
+                          className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-full"
+                          title="Gestionar Estudiantes"
+                        >
+                          <FaUsers />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSeccion(seccion.id)}
+                          className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-full"
+                          title="Eliminar"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleOpenEstudiantesModal(seccion)}
+                      className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      <FaUserPlus className="inline mr-2" /> Gestionar Estudiantes
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+      
+      {/* Vista de tabla */}
+      {viewMode === 'list' && (
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Sección
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Grado
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Nivel
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Capacidad
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {loading && !filteredSecciones.length ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredSecciones.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                    No se encontraron secciones con los filtros aplicados
+                  </td>
+                </tr>
+              ) : (
+                filteredSecciones.map((seccion) => {
+                  const gradoInfo = gradoNivelMap[seccion.gradoID] || {};
+                  
+                  return (
+                    <tr key={seccion.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {seccion.nombre_seccion}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {gradoInfo.nombreGrado ? formatearNombreGrado(gradoInfo.nombreGrado) : 'No asignado'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {gradoInfo.nombreNivel ? formatearNombreNivel(gradoInfo.nombreNivel) : 'No asignado'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {seccion.capacidad}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${seccion.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {seccion.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => {
+                              setSelectedSeccion(seccion);
+                              setShowEditForm(true);
                             }}
                             className="text-indigo-600 hover:text-indigo-900"
                             title="Editar"
-                        >
+                          >
                             <FaEdit />
-                        </button>
-                        <button
+                          </button>
+                          <button
                             onClick={() => handleOpenEstudiantesModal(seccion)}
                             className="text-green-600 hover:text-green-900"
-                            title="Asignar Estudiantes"
-                        >
-                            <FaUserPlus />
-                        </button>
-                        <button
+                            title="Gestionar Estudiantes"
+                          >
+                            <FaUsers />
+                          </button>
+                          <button
                             onClick={() => handleDeleteSeccion(seccion.id)}
                             className="text-red-600 hover:text-red-900"
                             title="Eliminar"
-                        >
+                          >
                             <FaTrash />
-                        </button>
+                          </button>
                         </div>
-                    </td>
+                      </td>
                     </tr>
-                );
+                  );
                 })
-            )}
+              )}
             </tbody>
-        </table>
+          </table>
         </div>
+      )}
       
       {/* Modal para editar sección */}
       {showEditForm && selectedSeccion && (
@@ -737,7 +931,7 @@ const handleOpenEstudiantesModal = async (seccion) => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="edit_gradoID" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="edit_gradoID" className="block text-sm font-medium text-gray-700">
                     Grado *
                   </label>
                   <select
@@ -827,53 +1021,53 @@ const handleOpenEstudiantesModal = async (seccion) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Formulario para asignar estudiante */}
               <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="text-md font-medium text-gray-900 mb-3">Asignar Nuevo Estudiante</h4>
-            <form onSubmit={handleAsignarEstudiante}>
-                <div className="space-y-4">
-                <div>
-                    <label htmlFor="estudianteID" className="block text-sm font-medium text-gray-700">
-                    Estudiante *
-                    </label>
-                    <select
+                <h4 className="text-md font-medium text-gray-900 mb-3">Asignar Nuevo Estudiante</h4>
+                <form onSubmit={handleAsignarEstudiante}>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="estudianteID" className="block text-sm font-medium text-gray-700">
+                        Estudiante *
+                      </label>
+                      <select
                         id="estudianteID"
                         name="estudianteID"
                         required
                         className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={asignarEstudianteForm.estudianteID}
                         onChange={(e) => setAsignarEstudianteForm({...asignarEstudianteForm, estudianteID: e.target.value})}
-                        >
+                      >
                         <option value="">Seleccione un estudiante</option>
                         {estudiantes.map((estudiante) => (
-                            <option key={estudiante.id} value={estudiante.id}>
+                          <option key={estudiante.id} value={estudiante.id}>
                             {estudiante.nombre} {estudiante.apellido} - {estudiante.cedula}
-                            </option>
+                          </option>
                         ))}
-                    </select>
-                </div>
-                <div>
-                    <label htmlFor="annoEscolar" className="block text-sm font-medium text-gray-700">
-                    Año Escolar
-                    </label>
-                    <input
-                    type="text"
-                    id="annoEscolar"
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-gray-100 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    value={annoEscolar ? annoEscolar.periodo : 'Cargando...'}
-                    disabled
-                    />
-                </div>
-                </div>
-                <div className="mt-4">
-                <button
-                    type="submit"
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    disabled={loading}
-                >
-                    {loading ? 'Asignando...' : 'Asignar Estudiante'}
-                </button>
-                </div>
-            </form>
-            </div>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="annoEscolar" className="block text-sm font-medium text-gray-700">
+                        Año Escolar
+                      </label>
+                      <input
+                        type="text"
+                        id="annoEscolar"
+                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-gray-100 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        value={annoEscolar ? annoEscolar.periodo : 'Cargando...'}
+                        disabled
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <button
+                      type="submit"
+                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      disabled={loading}
+                    >
+                      {loading ? 'Asignando...' : 'Asignar Estudiante'}
+                    </button>
+                  </div>
+                </form>
+              </div>
               
               {/* Lista de estudiantes asignados */}
               <div className="bg-white border rounded-lg">

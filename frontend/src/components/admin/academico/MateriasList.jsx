@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { FaEdit, FaTrash, FaPlus, FaUserPlus, FaLayerGroup, FaChalkboardTeacher, FaTimes } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaUserPlus, FaLayerGroup, FaChalkboardTeacher, FaTimes, FaFilter, FaSearch } from 'react-icons/fa';
+import { getMateriaStyles, MateriaIcon, MateriaTag, MateriaCard } from '../../../utils/materiaStyles';
 
 const MateriasList = () => {
   const [materias, setMaterias] = useState([]);
@@ -10,6 +11,7 @@ const MateriasList = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedMateria, setSelectedMateria] = useState(null);
   const [grados, setGrados] = useState([]);
+  const [loadingMateriasGrado, setLoadingMateriasGrado] = useState(false);
   const [profesores, setProfesores] = useState([]);
   const [secciones, setSecciones] = useState([]);
   const [annoEscolar, setAnnoEscolar] = useState(null);
@@ -43,6 +45,10 @@ const MateriasList = () => {
     seccionID: '',
     annoEscolarID: ''
   });
+
+  // Nuevo estado para filtros
+  const [gradoFilter, setGradoFilter] = useState('');
+  const [viewMode, setViewMode] = useState('grid'); // 'list' o 'grid'
   
   const token = localStorage.getItem('token');
   
@@ -114,18 +120,48 @@ const MateriasList = () => {
     fetchInitialData();
   }, [token]);
   
-  // Filtrar materias cuando cambia el término de búsqueda
+
+  // Efecto para filtrar materias cuando cambia el filtro de grado
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredMaterias(materias);
-    } else {
-      const filtered = materias.filter(materia => 
-        materia.asignatura.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (materia.id && materia.id.toString().toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-      setFilteredMaterias(filtered);
+    const filterMateriasByGrado = async () => {
+      if (gradoFilter === '') {
+        // Si no hay filtro de grado, mostrar todas las materias
+        setFilteredMaterias(
+          searchTerm.trim() === '' 
+            ? materias 
+            : materias.filter(materia => 
+                materia.asignatura.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (materia.id && materia.id.toString().toLowerCase().includes(searchTerm.toLowerCase()))
+              )
+        );
+      } else {
+        // Si hay filtro de grado, cargar las materias de ese grado
+        setLoading(true);
+        try {
+          const materiasByGrado = await loadMateriasByGrado(gradoFilter);
+          
+          // Aplicar también el filtro de búsqueda si existe
+          const filtered = searchTerm.trim() === ''
+            ? materiasByGrado
+            : materiasByGrado.filter(materia =>
+                materia.asignatura.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (materia.id && materia.id.toString().toLowerCase().includes(searchTerm.toLowerCase()))
+              );
+              
+          setFilteredMaterias(filtered);
+        } catch (error) {
+          console.error("Error al filtrar materias por grado:", error);
+          setError("Error al filtrar materias por grado");
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    if (annoEscolar) {
+      filterMateriasByGrado();
     }
-  }, [searchTerm, materias]);
+  }, [gradoFilter, searchTerm, materias, annoEscolar]);
     
   
   // Función para crear una nueva materia
@@ -180,6 +216,12 @@ const MateriasList = () => {
         gradoID: '',
         annoEscolarID: ''
       });
+
+      if (gradoFilter === asignGradoForm.gradoID) {
+        const materiasByGrado = await loadMateriasByGrado(gradoFilter);
+        setFilteredMaterias(materiasByGrado);
+      }
+      
       
       setTimeout(() => setSuccessMessage(''), 3000);
       setLoading(false);
@@ -283,24 +325,27 @@ const MateriasList = () => {
       setLoading(false);
     }
   };
-  
-  // Función para cargar los grados de una materia
-  const loadMateriaGrados = async (materiaID) => {
-    try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/${materiaID}/grados`,
-        { 
-          headers: { 'Authorization': `Bearer ${token}` },
-          params: { annoEscolarID: annoEscolar?.id }
-        }
-      );
-      
-      return response.data;
-    } catch (err) {
-      console.error('Error al cargar grados de la materia:', err);
-      return [];
-    }
-  };
+
+    // Nueva función para cargar materias por grado
+    const loadMateriasByGrado = async (gradoID) => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/grado/${gradoID}`,
+          { 
+            headers: { 'Authorization': `Bearer ${token}` },
+            params: { 
+              annoEscolarID: annoEscolar?.id,
+              limit: 0
+            }
+          }
+        );
+        
+        return response.data;
+      } catch (err) {
+        console.error('Error al cargar materias del grado:', err);
+        return [];
+      }
+    };
   
   // Componente Modal personalizado
   const Modal = ({ isOpen, onClose, title, children }) => {
@@ -343,68 +388,98 @@ const MateriasList = () => {
   
   return (
     <div className="relative">
-      <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md mb-4 flex items-center"
-        >
-          <FaPlus className="mr-2" /> Nueva Materia
-        </button>
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-800">Gestión de Materias</h1>
         
-        {/* Formulario desplegable */}
-        {showCreateForm && (
-          <div className="absolute left-0 mt-2 w-96 bg-white rounded-md shadow-lg z-10 p-4 border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Crear Nueva Materia</h3>
-              <button 
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center"
+          >
+            <FaPlus className="mr-2" /> Nueva Materia
+          </button>
+          
+          <div className="flex items-center">
+            <button 
+              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+              className={`px-3 py-2 rounded-md ${viewMode === 'grid' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'} mr-2`}
+              title="Vista de cuadrícula"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            </button>
+            <button 
+              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+              className={`px-3 py-2 rounded-md ${viewMode === 'list' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}
+              title="Vista de lista"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+        
+      {/* Formulario desplegable */}
+      {showCreateForm && (
+        <div className="absolute left-0 mt-2 w-96 bg-white rounded-md shadow-lg z-10 p-4 border border-gray-200">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Crear Nueva Materia</h3>
+            <button 
+              onClick={() => setShowCreateForm(false)}
+              className="text-gray-400 hover:text-gray-500"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            handleCreateMateria(e);
+            setShowCreateForm(false);
+          }}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="asignatura" className="block text-sm font-medium text-gray-700">
+                  Nombre de la Materia *
+                </label>
+                <input
+                  type="text"
+                  id="asignatura"
+                  name="asignatura"
+                  required
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  value={newMateria.asignatura}
+                  onChange={(e) => setNewMateria({...newMateria, asignatura: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end space-x-3">
+              <button
+                type="button"
+                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 onClick={() => setShowCreateForm(false)}
-                className="text-gray-400 hover:text-gray-500"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                disabled={loading}
+              >
+                {loading ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
-            
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              handleCreateMateria(e);
-              setShowCreateForm(false);
-            }}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="asignatura" className="block text-sm font-medium text-gray-700">
-                    Nombre de la Materia *
-                  </label>
-                  <input
-                    type="text"
-                    id="asignatura"
-                    name="asignatura"
-                    required
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    value={newMateria.asignatura}
-                    onChange={(e) => setNewMateria({...newMateria, asignatura: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="mt-5 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  onClick={() => setShowCreateForm(false)}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  disabled={loading}
-                >
-                  {loading ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+          </form>
+        </div>
+      )}
 
       {/* Mensajes de éxito o error */}
       {successMessage && (
@@ -419,117 +494,255 @@ const MateriasList = () => {
         </div>
       )}
       
-      {/* Buscador */}
-      <div className="mb-6">
+      {/* Filtros y búsqueda */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaSearch className="h-5 w-5 text-gray-400" />
+          </div>
           <input
             type="text"
             placeholder="Buscar por nombre o código..."
-            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="pl-10 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
+        </div>
+        
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaFilter className="h-5 w-5 text-gray-400" />
           </div>
+          <select
+            className="pl-10 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            value={gradoFilter}
+            onChange={(e) => setGradoFilter(e.target.value)}
+          >
+            <option value="">Todos los grados</option>
+            {grados.map((grado) => (
+              <option key={grado.id} value={grado.id}>
+                {grado.nombre_grado}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       
-      {/* Tabla de materias */}
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Código
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nombre
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Descripción
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {loading ? (
-              <tr>
-                <td colSpan="4" className="px-6 py-4 text-center">
-                  <div className="flex justify-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      {/* Vista de cuadrícula */}
+      {viewMode === 'grid' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {loading ? (
+            <div className="col-span-full flex justify-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+            </div>
+          ) : filteredMaterias.length === 0 ? (
+            <div className="col-span-full py-8 text-center text-gray-500">
+              No se encontraron materias con los filtros aplicados
+            </div>
+          ) : (
+            filteredMaterias.map((materia) => {
+              const { bgColor, textColor, borderColor, Icon } = getMateriaStyles(materia.asignatura);
+
+              
+              return (
+                <div 
+                  key={materia.id} 
+                  className={`${bgColor} border ${borderColor} rounded-lg shadow-sm hover:shadow-md transition-shadow p-4`}
+                >
+                  <div className="flex items-center mb-3">
+                    <div className={`p-2 rounded-full ${textColor} bg-white mr-3`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className={`font-semibold ${textColor}`}>{materia.asignatura}</h3>
+                      <p className="text-xs text-gray-500">Código: {materia.id || 'N/A'}</p>
+                    </div>
                   </div>
-                </td>
-              </tr>
-            ) : filteredMaterias.length === 0 ? (
+                  
+                  {/* {gradosDeMateria.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-600 mb-1">Impartida en:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {gradosDeMateria.map(grado => (
+                          <span 
+                            key={grado.id} 
+                            className="inline-block px-2 py-1 text-xs bg-white rounded-full text-gray-700"
+                          >
+                            {grado.nombre_grado}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )} */}
+                  
+                  <div className="flex justify-between mt-3 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => {
+                        setSelectedMateria(materia);
+                        setShowAsignGradoModal(true);
+                      }}
+                      className={`text-sm ${textColor} hover:underline flex items-center`}
+                      title="Asignar a Grado"
+                    >
+                      <FaLayerGroup className="mr-1" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedMateria(materia);
+                        setShowAsignProfesorModal(true);
+                      }}
+                      className={`text-sm ${textColor} hover:underline flex items-center`}
+                      title="Asignar Profesor"
+                    >
+                      <FaUserPlus className="mr-1" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedMateria(materia);
+                        setShowAsignSeccionModal(true);
+                      }}
+                      className={`text-sm ${textColor} hover:underline flex items-center`}
+                      title="Asignar a Sección"
+                    >
+                      <FaChalkboardTeacher className="mr-1" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMateria(materia.id)}
+                      className="text-sm text-red-600 hover:underline flex items-center"
+                      title="Eliminar"
+                    >
+                      <FaTrash className="mr-1" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+      
+      {/* Vista de tabla */}
+      {viewMode === 'list' && (
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
-                  No se encontraron materias
-                </td>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Materia
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Código
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Grados
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
               </tr>
-            ) : (
-              filteredMaterias.map((materia) => (
-                <tr key={materia.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {materia.id || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {materia.asignatura}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {materia.descripcion || 'Sin descripción'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => {
-                          setSelectedMateria(materia);
-                          setShowAsignGradoModal(true);
-                        }}
-                        className="text-indigo-600 hover:text-indigo-900"
-                        title="Asignar a Grado"
-                      >
-                        <FaLayerGroup />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedMateria(materia);
-                          setShowAsignProfesorModal(true);
-                        }}
-                        className="text-green-600 hover:text-green-900"
-                        title="Asignar Profesor"
-                      >
-                        <FaUserPlus />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedMateria(materia);
-                          setShowAsignSeccionModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Asignar a Sección"
-                      >
-                        <FaChalkboardTeacher />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMateria(materia.id)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Eliminar"
-                      >
-                        <FaTrash />
-                      </button>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="px-6 py-4 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : filteredMaterias.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
+                    No se encontraron materias con los filtros aplicados
+                  </td>
+                </tr>
+              ) : (
+                filteredMaterias.map((materia) => {
+                  const { textColor, Icon } = getMateriaStyles(materia.asignatura, 'icon');
+
+                  
+                  return (
+                    <tr key={materia.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center">
+                            <Icon className={`h-6 w-6 ${textColor}`} />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {materia.asignatura}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {materia.id || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-wrap gap-1">
+                          {gradosDeMateria.length > 0 ? (
+                            gradosDeMateria.map(grado => (
+                              <span 
+                                key={grado.id} 
+                                className="inline-block px-2 py-1 text-xs bg-gray-100 rounded-full text-gray-700"
+                              >
+                                {grado.nombre_grado}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-gray-400">No asignada</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={() => {
+                              setSelectedMateria(materia);
+                              setShowAsignGradoModal(true);
+                            }}
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="Asignar a Grado"
+                          >
+                            <FaLayerGroup />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedMateria(materia);
+                              setShowAsignProfesorModal(true);
+                            }}
+                            className="text-green-600 hover:text-green-900"
+                            title="Asignar Profesor"
+                          >
+                            <FaUserPlus />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedMateria(materia);
+                              setShowAsignSeccionModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Asignar a Sección"
+                          >
+                            <FaChalkboardTeacher />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMateria(materia.id)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Eliminar"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
       
       {/* Modal para asignar materia a grado */}
       <Modal
@@ -539,9 +752,15 @@ const MateriasList = () => {
       >
         <form onSubmit={handleAsignGrado}>
           {selectedMateria && (
-            <p className="text-sm text-gray-500 mb-4">
-              Materia: <span className="font-medium">{selectedMateria.asignatura}</span>
-            </p>
+            <div className="mb-4">
+              <p className="text-sm text-gray-500">
+                Materia: 
+              </p>
+              <div className="flex items-center mt-1">
+                <MateriaIcon nombreMateria={selectedMateria.asignatura} size="1.5em" className="mr-2" />
+                <span className="font-medium">{selectedMateria.asignatura}</span>
+              </div>
+            </div>
           )}
           <div className="space-y-4">
             <div>
@@ -605,9 +824,15 @@ const MateriasList = () => {
       >
         <form onSubmit={handleAsignProfesor}>
           {selectedMateria && (
-            <p className="text-sm text-gray-500 mb-4">
-              Materia: <span className="font-medium">{selectedMateria.asignatura}</span>
-            </p>
+            <div className="mb-4">
+              <p className="text-sm text-gray-500">
+                Materia: 
+              </p>
+              <div className="flex items-center mt-1">
+                <MateriaIcon nombreMateria={selectedMateria.asignatura} size="1.5em" className="mr-2" />
+                <span className="font-medium">{selectedMateria.asignatura}</span>
+              </div>
+            </div>
           )}
           <div className="space-y-4">
             <div>
@@ -695,9 +920,15 @@ const MateriasList = () => {
       >
         <form onSubmit={handleAsignSeccion}>
           {selectedMateria && (
-            <p className="text-sm text-gray-500 mb-4">
-              Materia: <span className="font-medium">{selectedMateria.asignatura}</span>
-            </p>
+            <div className="mb-4">
+              <p className="text-sm text-gray-500">
+                Materia: 
+              </p>
+              <div className="flex items-center mt-1">
+                <MateriaIcon nombreMateria={selectedMateria.asignatura} size="1.5em" className="mr-2" />
+                <span className="font-medium">{selectedMateria.asignatura}</span>
+              </div>
+            </div>
           )}
           <div className="space-y-4">
             <div>

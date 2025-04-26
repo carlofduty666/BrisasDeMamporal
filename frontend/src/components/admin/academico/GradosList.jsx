@@ -5,6 +5,7 @@ import { FaEdit, FaTrash, FaEye, FaUserGraduate, FaChalkboardTeacher, FaBook, Fa
 import { FaEarthAmericas } from "react-icons/fa6";
 import { GiChemicalDrop } from "react-icons/gi";
 import { formatearNombreGrado } from '../../../utils/formatters';
+import { getMateriaStyles, MateriaCard } from '../../../utils/materiaStyles';
 
 const GradosList = () => {
   const [grados, setGrados] = useState([]);
@@ -379,27 +380,27 @@ const GradosList = () => {
               </div>
               
               {showFilters && (
-  <div className="p-4 border-b">
-    <div className="mb-4">
-      <label htmlFor="nivel" className="block text-sm font-medium text-gray-700 mb-1">
-        Nivel Educativo
-      </label>
-      <select
-        id="nivel"
-        value={selectedNivel}
-        onChange={(e) => setSelectedNivel(e.target.value)}
-        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-      >
-        <option value="">Todos los niveles</option>
-        {niveles.map((nivel) => (
-          <option key={nivel.id} value={nivel.id}>
-            {nivel.nombre_nivel.charAt(0).toUpperCase() + nivel.nombre_nivel.slice(1)}
-          </option>
-        ))}
-      </select>
-    </div>
-  </div>
-)}
+                <div className="p-4 border-b">
+                  <div className="mb-4">
+                    <label htmlFor="nivel" className="block text-sm font-medium text-gray-700 mb-1">
+                      Nivel Educativo
+                    </label>
+                    <select
+                      id="nivel"
+                      value={selectedNivel}
+                      onChange={(e) => setSelectedNivel(e.target.value)}
+                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    >
+                      <option value="">Todos los niveles</option>
+                      {niveles.map((nivel) => (
+                        <option key={nivel.id} value={nivel.id}>
+                          {nivel.nombre_nivel.charAt(0).toUpperCase() + nivel.nombre_nivel.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
               
               <div className="p-4">
                 <div className="relative">
@@ -592,11 +593,11 @@ const GradosList = () => {
                             <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
                               <div>
                                 <dt className="text-sm font-medium text-gray-500">Nombre</dt>
-                                <dd className="mt-1 text-sm text-gray-900">{formatearNombreGrado(selectedGrado.nombre_grado)}</dd>
+                                <dd className="mt-1 text-sm text-gray-900 uppercase">{formatearNombreGrado(selectedGrado.nombre_grado)}</dd>
                               </div>
                               <div>
                                 <dt className="text-sm font-medium text-gray-500">Nivel Educativo</dt>
-                                <dd className="mt-1 text-sm text-gray-900">
+                                <dd className="mt-1 text-sm text-gray-900 uppercase">
                                   {selectedGrado.Niveles 
                                     ? selectedGrado.Niveles.nombre_nivel.charAt(0).toUpperCase() + selectedGrado.Niveles.nombre_nivel.slice(1)
                                     : niveles.find(n => n.id === selectedGrado.nivelID)?.nombre_nivel.charAt(0).toUpperCase() + niveles.find(n => n.id === selectedGrado.nivelID)?.nombre_nivel.slice(1) || 'No asignado'}
@@ -924,25 +925,41 @@ const GradosList = () => {
                                       <td className="px-6 py-4 text-sm text-gray-500">
                                         {profesor.materiasAsignadas && profesor.materiasAsignadas.length > 0 ? (
                                           <div className="flex flex-wrap gap-1">
-                                            {profesor.materiasAsignadas.map(materia => (
-                                              <span 
-                                                key={materia.id}
-                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 uppercase"
-                                              >
-                                                {materia.nombre || materia.asignatura}
-                                              </span>
-                                            ))}
+                                            {profesor.materiasAsignadas.map(materia => {
+                                              const { bgColor, textColor, Icon } = getMateriaStyles(
+                                                materia.nombre || materia.asignatura, 
+                                                'tag'
+                                              );
+                                              
+                                              return (
+                                                <span 
+                                                  key={materia.id}
+                                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor} uppercase`}
+                                                >
+                                                  <Icon className="mr-1 h-3 w-3" />
+                                                  {materia.nombre || materia.asignatura}
+                                                </span>
+                                              );
+                                            })}
                                           </div>
                                         ) : profesor.materias && profesor.materias.length > 0 ? (
                                           <div className="flex flex-wrap gap-1">
-                                            {profesor.materias.map(materia => (
-                                              <span 
-                                                key={materia.id}
-                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 uppercase"
-                                              >
-                                                {materia.nombre || materia.asignatura}
-                                              </span>
-                                            ))}
+                                            {profesor.materias.map(materia => {
+                                              const { bgColor, textColor, Icon } = getMateriaStyles(
+                                                materia.nombre || materia.asignatura, 
+                                                'tag'
+                                              );
+                                              
+                                              return (
+                                                <span 
+                                                  key={materia.id}
+                                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor} uppercase`}
+                                                >
+                                                  <Icon className="mr-1 h-3 w-3" />
+                                                  {materia.nombre || materia.asignatura}
+                                                </span>
+                                              );
+                                            })}
                                           </div>
                                         ) : (
                                           'No asignadas'
@@ -974,111 +991,15 @@ const GradosList = () => {
                         <div>
                           <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-medium text-gray-900">Materias del Grado</h3>
-                            <Link
-                              to={`/admin/academico/grados/${selectedGrado.id}/materias`}
-                              className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
-                            >
-                              Ver todas →
-                            </Link>
                           </div>
                           
                           {materias.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                               {materias.map((materia) => {
-                                // Determinar el color y el icono según el nombre de la materia
-                                let bgColor = "bg-blue-50";
-                                let textColor = "text-blue-700";
-                                let iconColor = "text-blue-600";
-                                let bgIconColor = "bg-blue-100";
-                                let Icon = FaBook; // Icono por defecto
-                                
-                                const nombreMateria = (materia.nombre || materia.asignatura || "").toLowerCase();
-                                
-                                if (nombreMateria.includes("comunicacion") || nombreMateria.includes("lengua") || nombreMateria.includes("literatura") || nombreMateria.includes("castellano")) {
-                                  bgColor = "bg-purple-50";
-                                  textColor = "text-purple-700";
-                                  iconColor = "text-purple-600";
-                                  bgIconColor = "bg-purple-100";
-                                  Icon = FaComments;
-                                } else if (nombreMateria.includes("social") || nombreMateria.includes("ghc") || nombreMateria.includes("historia")) {
-                                  bgColor = "bg-yellow-50";
-                                  textColor = "text-yellow-700";
-                                  iconColor = "text-yellow-600";
-                                  bgIconColor = "bg-yellow-100";
-                                  Icon = FaGlobe;
-                                } else if (nombreMateria.includes("matematica")) {
-                                  bgColor = "bg-blue-50";
-                                  textColor = "text-blue-700";
-                                  iconColor = "text-blue-600";
-                                  bgIconColor = "bg-blue-100";
-                                  Icon = FaCalculator;
-                                } else if (nombreMateria.includes("arte")) {
-                                  bgColor = "bg-pink-50";
-                                  textColor = "text-pink-700";
-                                  iconColor = "text-pink-600";
-                                  bgIconColor = "bg-pink-100";
-                                  Icon = FaPalette;
-                                } else if (nombreMateria.includes("educacion fisica")) {
-                                  bgColor = "bg-red-50";
-                                  textColor = "text-red-700";
-                                  iconColor = "text-red-600";
-                                  bgIconColor = "bg-red-100";
-                                  Icon = FaRunning;
-                                } else if (nombreMateria.includes("fisica")) {
-                                  bgColor = "bg-cyan-50";
-                                  textColor = "text-cyan-700";
-                                  iconColor = "text-cyan-600";
-                                  bgIconColor = "bg-cyan-100";
-                                  Icon = FaAtom;
-                                } else if (nombreMateria.includes("ingles") || nombreMateria.includes("idioma")) {
-                                  bgColor = "bg-indigo-50";
-                                  textColor = "text-indigo-700";
-                                  iconColor = "text-indigo-600";
-                                  bgIconColor = "bg-indigo-100";
-                                  Icon = FaLanguage;
-                                } else if (nombreMateria.includes("informatica") || nombreMateria.includes("computacion")) {
-                                  bgColor = "bg-lime-50";
-                                  textColor = "text-lime-700";
-                                  iconColor = "text-lime-600";
-                                  bgIconColor = "bg-lime-100";
-                                  Icon = FaLaptop;
-                                } else if (nombreMateria.includes("ciencia") || nombreMateria.includes("natural") || nombreMateria.includes("biologia")) {
-                                  bgColor = "bg-green-50";
-                                  textColor = "text-green-700";
-                                  iconColor = "text-green-600";
-                                  bgIconColor = "bg-green-100";
-                                  Icon = FaEarthAmericas;
-                                } else if (nombreMateria.includes("quimica")) {
-                                  bgColor = "bg-teal-50";
-                                  textColor = "text-teal-700";
-                                  iconColor = "text-teal-600";
-                                  bgIconColor = "bg-teal-100";
-                                  Icon = GiChemicalDrop;
-                                } else if (nombreMateria.includes("dibujo") || nombreMateria.includes("tecnico")) {
-                                  bgColor = "bg-gray-50";
-                                  textColor = "text-gray-700";
-                                  iconColor = "text-gray-600";
-                                  bgIconColor = "bg-gray-100";
-                                  Icon = FaPencilRuler;
-                                } else if (nombreMateria.includes("orientacion") || nombreMateria.includes("vocacional") || nombreMateria.includes("psicologia")) {
-                                  bgColor = "bg-orange-50";
-                                  textColor = "text-orange-700";
-                                  iconColor = "text-orange-600";
-                                  bgIconColor = "bg-orange-100";
-                                  Icon = FaBrain;
-                                } else if (nombreMateria.includes("proyecto")) {
-                                  bgColor = "bg-cyan-50";
-                                  textColor = "text-cyan-700";
-                                  iconColor = "text-cyan-600";
-                                  bgIconColor = "bg-cyan-100";
-                                  Icon = FaProjectDiagram;
-                                } else if (nombreMateria.includes("contabilidad")) {
-                                  bgColor = "bg-emerald-50";
-                                  textColor = "text-emerald-700";
-                                  iconColor = "text-emerald-600";
-                                  bgIconColor = "bg-emerald-100";
-                                  Icon = FaMoneyBillWave;
-                                }
+                                const { bgColor, textColor, iconColor, bgIconColor, Icon } = getMateriaStyles(
+                                  materia.nombre || materia.asignatura, 
+                                  'card'
+                                );
                                 
                                 return (
                                   <div key={materia.id} className={`${bgColor} p-3 rounded-md shadow-sm hover:shadow-md transition-shadow duration-200`}>
