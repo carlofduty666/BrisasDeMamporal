@@ -21,6 +21,7 @@ router.delete('/secciones/:id', authMiddleware.verifyToken, seccionesController.
 
 // Rutas para asignar/desasignar estudiantes
 router.post('/secciones/asignar-estudiante', authMiddleware.verifyToken, seccionesController.asignarEstudianteASeccion);
+router.post('/transferir-estudiantes', authMiddleware.verifyToken, seccionesController.transferirEstudiantes);
 router.delete('/secciones/:seccionID/estudiantes/:estudianteID/anno/:annoEscolarID', authMiddleware.verifyToken, seccionesController.removeEstudianteFromSeccion);
 
 module.exports = router;
