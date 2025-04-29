@@ -173,6 +173,21 @@ const GradosList = () => {
     setLoadingDetails(true);
     
     try {
+      // Cargar secciones primero para tener la información disponible
+      try {
+        const seccionesResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/grado/${grado.id}`,
+          { 
+            headers: { 'Authorization': `Bearer ${token}` },
+            params: { annoEscolarID: annoEscolar.id }
+          }
+        );
+        setSecciones(seccionesResponse.data);
+      } catch (seccionesError) {
+        console.error('Error al cargar secciones:', seccionesError);
+        setSecciones([]);
+      }
+      
       // Cargar estudiantes
       try {
         const estudiantesResponse = await axios.get(
@@ -191,30 +206,52 @@ const GradosList = () => {
         
         for (const estudiante of estudiantesResponse.data) {
           try {
-            // Buscar la inscripción actual del estudiante que incluye la sección
-            const inscripcionResponse = await axios.get(
-              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/estudiante/${estudiante.id}/actual`,
+            // Usar la ruta de secciones para obtener la sección actual del estudiante
+            const seccionEstudianteResponse = await axios.get(
+              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/estudiante/${estudiante.id}`,
               { 
                 headers: { 'Authorization': `Bearer ${token}` },
                 params: { annoEscolarID: annoEscolar.id }
               }
             );
             
-            if (inscripcionResponse.data && inscripcionResponse.data.seccionID) {
-              // Buscar la información completa de la sección
-              const seccion = secciones.find(s => s.id === inscripcionResponse.data.seccionID);
-              
+            // Verificar si el estudiante tiene una sección asignada en este grado
+            const seccionesDelEstudiante = seccionEstudianteResponse.data;
+            const seccionEnEsteGrado = seccionesDelEstudiante.find(s => s.gradoID === grado.id);
+            
+            if (seccionEnEsteGrado) {
+              // Si tiene sección en este grado, usamos esa información
               estudiantesConSeccion.push({
                 ...estudiante,
-                seccionID: inscripcionResponse.data.seccionID,
-                seccion: seccion || null,
-                inscripcion: inscripcionResponse.data
+                seccionID: seccionEnEsteGrado.id,
+                seccion: seccionEnEsteGrado
               });
             } else {
-              estudiantesConSeccion.push(estudiante);
+              // Si no tiene sección asignada en este grado, buscamos en la inscripción como fallback
+              const inscripcionResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/estudiante/${estudiante.id}/actual`,
+                { 
+                  headers: { 'Authorization': `Bearer ${token}` },
+                  params: { annoEscolarID: annoEscolar.id }
+                }
+              );
+              
+              if (inscripcionResponse.data && inscripcionResponse.data.seccionID) {
+                // Buscar la información completa de la sección
+                const seccion = secciones.find(s => s.id === inscripcionResponse.data.seccionID);
+                
+                estudiantesConSeccion.push({
+                  ...estudiante,
+                  seccionID: inscripcionResponse.data.seccionID,
+                  seccion: seccion || null,
+                  inscripcion: inscripcionResponse.data
+                });
+              } else {
+                estudiantesConSeccion.push(estudiante);
+              }
             }
           } catch (error) {
-            console.error(`Error al obtener inscripción para estudiante ${estudiante.id}:`, error);
+            console.error(`Error al obtener sección para estudiante ${estudiante.id}:`, error);
             estudiantesConSeccion.push(estudiante);
           }
         }
@@ -261,26 +298,13 @@ const GradosList = () => {
         setMaterias([]);
       }
       
-      // Cargar secciones
-      try {
-        const seccionesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/grado/${grado.id}`,
-          { 
-            headers: { 'Authorization': `Bearer ${token}` }
-          }
-        );
-        setSecciones(seccionesResponse.data);
-      } catch (seccionesError) {
-        console.error('Error al cargar secciones:', seccionesError);
-        setSecciones([]);
-      }
-      
       setLoadingDetails(false);
     } catch (error) {
       console.error('Error general al cargar detalles del grado:', error);
       setLoadingDetails(false);
     }
   };
+  
 
   // Función para confirmar eliminación de grado
   const confirmDelete = (grado) => {

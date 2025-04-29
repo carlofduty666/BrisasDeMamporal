@@ -1,24 +1,77 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { FaUserGraduate, FaEye, FaChalkboardTeacher, FaUsers, FaMoneyBillWave } from 'react-icons/fa';
 import { MdChecklist } from "react-icons/md";
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-const StatCard = ({ title, value, icon, color, link }) => (
-  <Link to={link} className="block transition-transform duration-300 hover:scale-105 hover:shadow-lg">
-    <div className="bg-white rounded-lg shadow-md p-6 h-full">
-      <div className="flex items-center">
-        <div className={`rounded-full p-3 ${color}`}>
-          {icon}
-        </div>
-        <div className="ml-4">
-          <h3 className="text-gray-500 text-sm">{title}</h3>
-          <p className="text-2xl font-semibold">{value}</p>
+const colorCard = (color) => {
+  switch (color) {
+    case 'blue':
+      return {
+        card: 'bg-blue-100',
+        circle: 'bg-blue-200',
+        icon: 'text-blue-600',
+        title: 'text-blue-500',
+        value: 'text-blue-700'
+      };
+    case 'purple':
+      return {
+        card: 'bg-purple-100',
+        circle: 'bg-purple-200',
+        icon: 'text-purple-600',
+        title: 'text-purple-500',
+        value: 'text-purple-700'
+      };
+    case 'yellow':
+      return {
+        card: 'bg-yellow-100',
+        circle: 'bg-yellow-200',
+        icon: 'text-yellow-600',
+        title: 'text-yellow-600',
+        value: 'text-yellow-700'
+      };
+    case 'green':
+      return {
+        card: 'bg-green-100',
+        circle: 'bg-green-200',
+        icon: 'text-green-600',
+        title: 'text-green-500',
+        value: 'text-green-700'
+      };
+    default:
+      return {
+        card: 'bg-gray-100',
+        circle: 'bg-gray-100',
+        icon: 'text-gray-600',
+        title: 'text-gray-500',
+        value: 'text-gray-700'
+      };
+  }
+};
+
+
+const StatCard = ({ title, value, icon, color, link }) => {
+  const styles = colorCard(color);
+  
+  return (
+    <Link to={link} className="block transition-transform duration-300 hover:scale-105 hover:shadow-lg">
+      <div className={`${styles.card} p-4 rounded-md shadow-sm h-full`}>
+        <div className="flex items-center">
+          {/* Aquí está el círculo que envuelve al icono */}
+          <div className={`p-3 rounded-full ${styles.circle} mr-4`}>
+            {/* El icono con su color */}
+            {React.cloneElement(icon, { className: `h-6 w-6 ${styles.icon}` })}
+          </div>
+          <div>
+            <p className={`text-sm ${styles.title}`}>{title}</p>
+            <p className={`text-xl font-semibold ${styles.value}`}>{value}</p>
+          </div>
         </div>
       </div>
-    </div>
-  </Link>
-);
+    </Link>
+  );
+};
 
 const RecentActivity = ({ activities }) => (
   <div className="bg-white rounded-lg shadow-md p-6">
@@ -376,29 +429,30 @@ const AdminDashboard = () => {
         <StatCard 
           title="Estudiantes" 
           value={stats.estudiantes} 
-          icon={<FaUserGraduate className="text-white" size={20} />} 
-          color="bg-blue-500" 
+          icon={<FaUserGraduate size={20} />} 
+          color="blue" 
           link="/admin/estudiantes"
         />
         <StatCard 
           title="Profesores" 
           value={stats.profesores} 
-          icon={<FaChalkboardTeacher className="text-white" size={20} />} 
-          color="bg-purple-500" 
+          circle={stats.circle}
+          icon={<FaChalkboardTeacher size={20} />} 
+          color="purple" 
           link="/admin/profesores"
         />
         <StatCard 
           title="Representantes" 
           value={stats.representantes} 
-          icon={<FaUsers className="text-white" size={20} />} 
-          color="bg-yellow-500" 
+          icon={<FaUsers size={20} />} 
+          color="yellow" 
           link="/admin/representantes"
         />
         <StatCard 
           title="Pagos del Mes" 
           value={`$${stats.pagosMes.toLocaleString()}`} 
-          icon={<FaMoneyBillWave className="text-white" size={20} />} 
-          color="bg-green-500" 
+          icon={<FaMoneyBillWave size={20} />} 
+          color="green" 
           link="/admin/pagos"
         />
       </div>

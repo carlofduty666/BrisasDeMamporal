@@ -17,7 +17,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
   const getColorForRoute = (route) => {
     switch(route) {
       case '/admin/dashboard': return { main: 'bg-indigo-600', active: 'bg-indigo-700', hover: 'hover:bg-indigo-500', text: 'text-indigo-600' };
-      case '/admin/estudiantes': return { main: 'bg-sky-500', active: 'bg-sky-600', hover: 'hover:bg-sky-400', text: 'text-sky-500' };
+      case '/admin/estudiantes': return { main: 'bg-blue-500', active: 'bg-blue-600', hover: 'hover:bg-blue-400', text: 'text-blue-500' };
       case '/admin/profesores': return { main: 'bg-emerald-500', active: 'bg-emerald-600', hover: 'hover:bg-emerald-400', text: 'text-emerald-500' };
       case '/admin/representantes': return { main: 'bg-violet-500', active: 'bg-violet-600', hover: 'hover:bg-violet-400', text: 'text-violet-500' };
       case '/admin/empleados': return { main: 'bg-amber-500', active: 'bg-amber-600', hover: 'hover:bg-amber-400', text: 'text-amber-500' };
@@ -131,6 +131,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                     : getColorForRoute('/admin/dashboard').hover
                 }`
               }
+              title='Inicio'
             >
               <FaHome className="w-5 h-5" />
               {isOpen && <span className="ml-3">Inicio</span>}
@@ -147,6 +148,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                     : getColorForRoute('/admin/estudiantes').hover
                 }`
               }
+              title='Estudiantes'
             >
               <FaUserGraduate className="w-5 h-5" />
               {isOpen && <span className="ml-3">Estudiantes</span>}
@@ -163,6 +165,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                     : getColorForRoute('/admin/profesores').hover
                 }`
               }
+              title='Profesores'
             >
               <FaChalkboardTeacher className="w-5 h-5" />
               {isOpen && <span className="ml-3">Profesores</span>}
@@ -179,6 +182,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                     : getColorForRoute('/admin/representantes').hover
                 }`
               }
+              title='Representantes'
             >
               <FaUsers className="w-5 h-5" />
               {isOpen && <span className="ml-3">Representantes</span>}
@@ -195,6 +199,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                     : getColorForRoute('/admin/empleados').hover
                 }`
               }
+              title='Empleados'
             >
               <FaUserTie className="w-5 h-5" />
               {isOpen && <span className="ml-3">Empleados</span>}
@@ -211,6 +216,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                     : getColorForRoute('/admin/pagos').hover
                 }`
               }
+              title='Pagos'
             >
               <FaMoneyBillWave className="w-5 h-5" />
               {isOpen && <span className="ml-3">Pagos</span>}
@@ -227,6 +233,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                     : getColorForRoute('/admin/inscripciones').hover
                 }`
               }
+              title='Inscripciones'
             >
               <FaClipboardList className="w-5 h-5" />
               {isOpen && <span className="ml-3">Inscripciones</span>}
@@ -266,6 +273,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                             : getColorForRoute('/admin/academico/grados').hover
                         }`
                       }
+                      title='Grados'
                     >
                       <FaGraduationCap className="w-4 h-4" />
                       <span className="ml-3">Grados</span>
@@ -296,6 +304,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                             : getColorForRoute('/admin/academico/secciones').hover
                         }`
                       }
+                      title='Materias'
                     >
                       <FaChalkboard className="w-4 h-4" />
                       <span className="ml-3">Secciones</span>
@@ -316,13 +325,13 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                     : getColorForRoute('/admin/cupos').hover
                 }`
               }
+              title='Cupos'
             >
               <FaSchool className="w-5 h-5" />
               {isOpen && <span className="ml-3">Gestión de Cupos</span>}
             </NavLink>
           </li>
           
-          {/* Solo visible para el rol owner */}
             <li>
               <NavLink
                 to="/admin/configuracion"
@@ -333,6 +342,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
                       : getColorForRoute('/admin/configuracion').hover
                   }`
                 }
+                title='Configuración'
               >
                 <FaCog className="w-5 h-5" />
                 {isOpen && <span className="ml-3">Configuración</span>}
