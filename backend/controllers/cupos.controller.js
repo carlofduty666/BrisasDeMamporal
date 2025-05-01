@@ -45,7 +45,6 @@ const cupoController = {
       res.status(500).json({ message: err.message });
     }
   },
-
   // Añadir esta función para obtener un cupo por ID
   getCupoById: async (req, res) => {
     try {
@@ -78,7 +77,6 @@ const cupoController = {
       res.status(500).json({ message: err.message });
     }
   },
-
   // Añadir esta función para obtener cupos por sección
   getCuposBySeccion: async (req, res) => {
     try {
@@ -118,7 +116,6 @@ const cupoController = {
       res.status(500).json({ message: err.message });
     }
   },
-  
   // Obtener cupos por grado
   getCuposByGrado: async (req, res) => {
     try {
@@ -200,160 +197,156 @@ const cupoController = {
       res.status(500).json({ message: err.message });
     }
   },
-  
-// Obtener resumen de cupos por grado
-getResumenCupos: async (req, res) => {
-  try {
-    const { annoEscolarID } = req.query;
-    
-    // Verificar que los modelos necesarios existen
-    if (!db || !db.Grados || !db.Secciones || !db.AnnoEscolar || !db.Seccion_Personas) {
-      console.error('Error: Uno o más modelos no están definidos correctamente');
-      return res.status(500).json({ 
-        message: 'Error interno del servidor: modelos no definidos correctamente',
-        details: {
-          dbExists: !!db,
-          gradosExists: !!(db && db.Grados),
-          seccionesExists: !!(db && db.Secciones),
-          annoEscolarExists: !!(db && db.AnnoEscolar),
-          seccionPersonasExists: !!(db && db.Seccion_Personas)
-        }
-      });
-    }
-    
-    // Obtener año escolar activo si no se especifica
-    let annoEscolarActivo = annoEscolarID;
-    if (!annoEscolarActivo) {
-      const annoEscolar = await db.AnnoEscolar.findOne({
-        where: { activo: true }
-      });
+  // Obtener resumen de cupos por grado
+  getResumenCupos: async (req, res) => {
+    try {
+      const { annoEscolarID } = req.query;
       
-      if (annoEscolar) {
-        annoEscolarActivo = annoEscolar.id;
-      } else {
-        return res.status(404).json({ message: 'No hay un año escolar activo' });
-      }
-    }
-    
-    // Obtener todos los grados
-    const grados = await db.Grados.findAll({
-      order: [['nombre_grado', 'ASC']]
-    });
-    
-    if (!grados || grados.length === 0) {
-      return res.json({
-        annoEscolarID: annoEscolarActivo,
-        resumenCupos: [],
-        cuposPorGrado: {} // Añadido para compatibilidad con el frontend
-      });
-    }
-    
-    const resumenCupos = [];
-    const cuposPorGrado = {}; // Nuevo objeto para la estructura que espera el frontend
-    
-    for (const grado of grados) {
-      let totalCapacidad = 0;
-      let totalOcupados = 0;
-      let totalDisponibles = 0;
-      
-      // Buscar cupos registrados para este grado
-      let cuposRegistrados = [];
-      try {
-        if (db.Cupos) {
-          cuposRegistrados = await db.Cupos.findAll({
-            where: {
-              gradoID: grado.id,
-              annoEscolarID: annoEscolarActivo
-            }
-          });
-        }
-      } catch (error) {
-        console.error(`Error al buscar cupos registrados para grado ${grado.id}:`, error);
+      // Verificar que los modelos necesarios existen
+      if (!db || !db.Grados || !db.Secciones || !db.AnnoEscolar || !db.Seccion_Personas) {
+        console.error('Error: Uno o más modelos no están definidos correctamente');
+        return res.status(500).json({ 
+          message: 'Error interno del servidor: modelos no definidos correctamente',
+          details: {
+            dbExists: !!db,
+            gradosExists: !!(db && db.Grados),
+            seccionesExists: !!(db && db.Secciones),
+            annoEscolarExists: !!(db && db.AnnoEscolar),
+            seccionPersonasExists: !!(db && db.Seccion_Personas)
+          }
+        });
       }
       
-      if (cuposRegistrados && cuposRegistrados.length > 0) {
-        // Usar cupos registrados
-        for (const cupo of cuposRegistrados) {
-          totalCapacidad += cupo.capacidad || 0;
-          totalOcupados += cupo.ocupados || 0;
-          totalDisponibles += cupo.disponibles || 0;
+      // Obtener año escolar activo si no se especifica
+      let annoEscolarActivo = annoEscolarID;
+      if (!annoEscolarActivo) {
+        const annoEscolar = await db.AnnoEscolar.findOne({
+          where: { activo: true }
+        });
+        
+        if (annoEscolar) {
+          annoEscolarActivo = annoEscolar.id;
+        } else {
+          return res.status(404).json({ message: 'No hay un año escolar activo' });
         }
-      } else {
-        // Obtener secciones directamente
-        let secciones = [];
+      }
+      
+      // Obtener todos los grados
+      const grados = await db.Grados.findAll({
+        order: [['nombre_grado', 'ASC']]
+      });
+      
+      if (!grados || grados.length === 0) {
+        return res.json({
+          annoEscolarID: annoEscolarActivo,
+          resumenCupos: [],
+          cuposPorGrado: {} // Añadido para compatibilidad con el frontend
+        });
+      }
+      
+      const resumenCupos = [];
+      const cuposPorGrado = {}; // Nuevo objeto para la estructura que espera el frontend
+      
+      for (const grado of grados) {
+        let totalCapacidad = 0;
+        let totalOcupados = 0;
+        let totalDisponibles = 0;
+        
+        // Buscar cupos registrados para este grado
+        let cuposRegistrados = [];
         try {
-          secciones = await db.Secciones.findAll({
-            where: { gradoID: grado.id }
-          });
+          if (db.Cupos) {
+            cuposRegistrados = await db.Cupos.findAll({
+              where: {
+                gradoID: grado.id,
+                annoEscolarID: annoEscolarActivo
+              }
+            });
+          }
         } catch (error) {
-          console.error(`Error al buscar secciones para grado ${grado.id}:`, error);
+          console.error(`Error al buscar cupos registrados para grado ${grado.id}:`, error);
         }
         
-        if (secciones && secciones.length > 0) {
-          for (const seccion of secciones) {
-            const capacidad = seccion.capacidad || 30;
-            
-            // Contar estudiantes inscritos
-            let estudiantesInscritos = 0;
-            try {
-              estudiantesInscritos = await db.Seccion_Personas.count({
-                where: {
-                  seccionID: seccion.id,
-                  annoEscolarID: annoEscolarActivo
-                }
-              });
-            } catch (error) {
-              console.error(`Error al contar estudiantes para sección ${seccion.id}:`, error);
-            }
-            
-            totalCapacidad += capacidad;
-            totalOcupados += estudiantesInscritos;
-            totalDisponibles += Math.max(0, capacidad - estudiantesInscritos);
+        if (cuposRegistrados && cuposRegistrados.length > 0) {
+          // Usar cupos registrados
+          for (const cupo of cuposRegistrados) {
+            totalCapacidad += cupo.capacidad || 0;
+            totalOcupados += cupo.ocupados || 0;
+            totalDisponibles += cupo.disponibles || 0;
           }
         } else {
-          // Si no hay secciones, asignar valores predeterminados
-          totalCapacidad = 30;
-          totalOcupados = 0;
-          totalDisponibles = 30;
+          // Obtener secciones directamente
+          let secciones = [];
+          try {
+            secciones = await db.Secciones.findAll({
+              where: { gradoID: grado.id }
+            });
+          } catch (error) {
+            console.error(`Error al buscar secciones para grado ${grado.id}:`, error);
+          }
+          
+          if (secciones && secciones.length > 0) {
+            for (const seccion of secciones) {
+              const capacidad = seccion.capacidad || 30;
+              
+              // Contar estudiantes inscritos
+              let estudiantesInscritos = 0;
+              try {
+                estudiantesInscritos = await db.Seccion_Personas.count({
+                  where: {
+                    seccionID: seccion.id,
+                    annoEscolarID: annoEscolarActivo
+                  }
+                });
+              } catch (error) {
+                console.error(`Error al contar estudiantes para sección ${seccion.id}:`, error);
+              }
+              
+              totalCapacidad += capacidad;
+              totalOcupados += estudiantesInscritos;
+              totalDisponibles += Math.max(0, capacidad - estudiantesInscritos);
+            }
+          } else {
+            // Si no hay secciones, asignar valores predeterminados
+            totalCapacidad = 30;
+            totalOcupados = 0;
+            totalDisponibles = 30;
+          }
         }
+        
+        // Añadir al array de resumen
+        resumenCupos.push({
+          gradoID: grado.id,
+          nombre_grado: grado.nombre_grado,
+          totalCapacidad,
+          totalOcupados,
+          totalDisponibles,
+          porcentajeOcupacion: totalCapacidad > 0 ? Math.round((totalOcupados / totalCapacidad) * 100) : 0
+        });
+        
+        // Añadir al objeto cuposPorGrado para compatibilidad con el frontend
+        cuposPorGrado[grado.id] = {
+          capacidadTotal: totalCapacidad,
+          ocupados: totalOcupados,
+          disponibles: totalDisponibles,
+          nombre: grado.nombre_grado,
+          porcentajeOcupacion: totalCapacidad > 0 ? Math.round((totalOcupados / totalCapacidad) * 100) : 0
+        };
       }
       
-      // Añadir al array de resumen
-      resumenCupos.push({
-        gradoID: grado.id,
-        nombre_grado: grado.nombre_grado,
-        totalCapacidad,
-        totalOcupados,
-        totalDisponibles,
-        porcentajeOcupacion: totalCapacidad > 0 ? Math.round((totalOcupados / totalCapacidad) * 100) : 0
+      res.json({
+        annoEscolarID: annoEscolarActivo,
+        resumenCupos,
+        cuposPorGrado // Añadido para compatibilidad con el frontend
       });
-      
-      // Añadir al objeto cuposPorGrado para compatibilidad con el frontend
-      cuposPorGrado[grado.id] = {
-        capacidadTotal: totalCapacidad,
-        ocupados: totalOcupados,
-        disponibles: totalDisponibles,
-        nombre: grado.nombre_grado,
-        porcentajeOcupacion: totalCapacidad > 0 ? Math.round((totalOcupados / totalCapacidad) * 100) : 0
-      };
+    } catch (err) {
+      console.error('Error en getResumenCupos:', err);
+      res.status(500).json({ 
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
     }
-    
-    res.json({
-      annoEscolarID: annoEscolarActivo,
-      resumenCupos,
-      cuposPorGrado // Añadido para compatibilidad con el frontend
-    });
-  } catch (err) {
-    console.error('Error en getResumenCupos:', err);
-    res.status(500).json({ 
-      message: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-  }
-},
-
-
-  
+  },
   // Crear cupo
   createCupo: async (req, res) => {
     try {
@@ -436,7 +429,6 @@ getResumenCupos: async (req, res) => {
       res.status(500).json({ message: err.message });
     }
   },
-
   // Añadir esta función para actualizar cupos basados en estudiantes reales
   actualizarCuposReales: async (req, res) => {
     try {
@@ -522,7 +514,6 @@ getResumenCupos: async (req, res) => {
       res.status(500).json({ message: err.message });
     }
   },
-  
   // Actualizar capacidad de cupo
   updateCapacidadCupo: async (req, res) => {
     try {
@@ -560,7 +551,6 @@ getResumenCupos: async (req, res) => {
       res.status(500).json({ message: err.message });
     }
   },
-  
   // Eliminar cupo
   deleteCupo: async (req, res) => {
     try {

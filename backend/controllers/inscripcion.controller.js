@@ -162,7 +162,7 @@ const inscripcionController = {
     }
   },
 
-    getInscripcionActualByEstudiante: async (req, res) => {
+  getInscripcionActualByEstudiante: async (req, res) => {
       try {
         const { estudianteID } = req.params;
         
@@ -206,105 +206,105 @@ const inscripcionController = {
         console.error(err);
         res.status(500).json({ message: err.message });
       }
-    },
+  },
 
   
   // Obtener cupos disponibles por grado
-getCuposDisponibles: async (req, res) => {
-  try {
-    // Obtener el año escolar activo
-    const annoEscolar = await AnnoEscolar.findOne({
-      where: { activo: true }
-    });
-    
-    if (!annoEscolar) {
-      return res.status(404).json({ message: 'No hay un año escolar activo' });
-    }
-    
-    // Obtener todos los grados
-    const grados = await Grados.findAll({
-      include: [
-        {
-          model: Secciones,
-          as: 'Secciones'  // Asegúrate de que este alias coincida con tu modelo
-        }
-      ]
-    });
-    
-    // Calcular cupos disponibles por grado y sección
-    const cuposDisponibles = {};
-    
-    for (const grado of grados) {
-      cuposDisponibles[grado.id] = {
-        nombre: grado.nombre_grado,
-        secciones: {},
-        totalDisponibles: 0
-      };
+  getCuposDisponibles: async (req, res) => {
+    try {
+      // Obtener el año escolar activo
+      const annoEscolar = await AnnoEscolar.findOne({
+        where: { activo: true }
+      });
       
-      // Verificar si grado.Secciones existe y es un array
-      const secciones = grado.Secciones || [];
+      if (!annoEscolar) {
+        return res.status(404).json({ message: 'No hay un año escolar activo' });
+      }
       
-      if (Array.isArray(secciones) && secciones.length > 0) {
-        for (const seccion of secciones) {
-          // Contar estudiantes inscritos en esta sección para el año escolar activo
-          const estudiantesInscritos = await Seccion_Personas.count({
-            where: {
-              seccionID: seccion.id,
-              annoEscolarID: annoEscolar.id
-            }
-          });
-          
-          const capacidad = seccion.capacidad || 30;
-          const disponibles = Math.max(0, capacidad - estudiantesInscritos);
-          
-          cuposDisponibles[grado.id].secciones[seccion.id] = {
-            nombre: seccion.nombre_seccion,
-            capacidad: capacidad,
-            ocupados: estudiantesInscritos,
-            disponibles: disponibles
-          };
-          
-          cuposDisponibles[grado.id].totalDisponibles += disponibles;
-        }
-      } else {
-        console.log(`No hay secciones para el grado ${grado.id} o no es un array`);
-        // Si no hay secciones, intentar obtener secciones directamente
-        const seccionesSeparadas = await Secciones.findAll({
-          where: { gradoID: grado.id }
-        });
+      // Obtener todos los grados
+      const grados = await Grados.findAll({
+        include: [
+          {
+            model: Secciones,
+            as: 'Secciones'  // Asegúrate de que este alias coincida con tu modelo
+          }
+        ]
+      });
+      
+      // Calcular cupos disponibles por grado y sección
+      const cuposDisponibles = {};
+      
+      for (const grado of grados) {
+        cuposDisponibles[grado.id] = {
+          nombre: grado.nombre_grado,
+          secciones: {},
+          totalDisponibles: 0
+        };
         
-        for (const seccion of seccionesSeparadas) {
-          const estudiantesInscritos = await Seccion_Personas.count({
-            where: {
-              seccionID: seccion.id,
-              annoEscolarID: annoEscolar.id
-            }
+        // Verificar si grado.Secciones existe y es un array
+        const secciones = grado.Secciones || [];
+        
+        if (Array.isArray(secciones) && secciones.length > 0) {
+          for (const seccion of secciones) {
+            // Contar estudiantes inscritos en esta sección para el año escolar activo
+            const estudiantesInscritos = await Seccion_Personas.count({
+              where: {
+                seccionID: seccion.id,
+                annoEscolarID: annoEscolar.id
+              }
+            });
+            
+            const capacidad = seccion.capacidad || 30;
+            const disponibles = Math.max(0, capacidad - estudiantesInscritos);
+            
+            cuposDisponibles[grado.id].secciones[seccion.id] = {
+              nombre: seccion.nombre_seccion,
+              capacidad: capacidad,
+              ocupados: estudiantesInscritos,
+              disponibles: disponibles
+            };
+            
+            cuposDisponibles[grado.id].totalDisponibles += disponibles;
+          }
+        } else {
+          console.log(`No hay secciones para el grado ${grado.id} o no es un array`);
+          // Si no hay secciones, intentar obtener secciones directamente
+          const seccionesSeparadas = await Secciones.findAll({
+            where: { gradoID: grado.id }
           });
           
-          const capacidad = seccion.capacidad || 30;
-          const disponibles = Math.max(0, capacidad - estudiantesInscritos);
-          
-          cuposDisponibles[grado.id].secciones[seccion.id] = {
-            nombre: seccion.nombre_seccion,
-            capacidad: capacidad,
-            ocupados: estudiantesInscritos,
-            disponibles: disponibles
-          };
-          
-          cuposDisponibles[grado.id].totalDisponibles += disponibles;
+          for (const seccion of seccionesSeparadas) {
+            const estudiantesInscritos = await Seccion_Personas.count({
+              where: {
+                seccionID: seccion.id,
+                annoEscolarID: annoEscolar.id
+              }
+            });
+            
+            const capacidad = seccion.capacidad || 30;
+            const disponibles = Math.max(0, capacidad - estudiantesInscritos);
+            
+            cuposDisponibles[grado.id].secciones[seccion.id] = {
+              nombre: seccion.nombre_seccion,
+              capacidad: capacidad,
+              ocupados: estudiantesInscritos,
+              disponibles: disponibles
+            };
+            
+            cuposDisponibles[grado.id].totalDisponibles += disponibles;
+          }
         }
       }
+      
+      res.json({
+        annoEscolar,
+        cuposDisponibles
+      });
+    } catch (err) {
+      console.error('Error en getCuposDisponibles:', err);
+      res.status(500).json({ message: err.message });
     }
-    
-    res.json({
-      annoEscolar,
-      cuposDisponibles
-    });
-  } catch (err) {
-    console.error('Error en getCuposDisponibles:', err);
-    res.status(500).json({ message: err.message });
-  }
-},
+  },
 
   
   // Crear nueva inscripción
@@ -478,450 +478,258 @@ getCuposDisponibles: async (req, res) => {
     }
   },
   
-// Crear nuevo estudiante e inscripción en un solo paso
-// crearNuevoEstudiante: async (req, res) => {
-//   const transaction = await db.sequelize.transaction();
-//   try {
-//     console.log("Iniciando creación de nuevo estudiante");
-//     console.log("Archivos recibidos:", req.files ? Object.keys(req.files) : "No hay archivos");
-    
-//     // ================== VALIDACIONES INICIALES ==================
-//     const annoEscolar = await AnnoEscolar.findOne({ 
-//       where: { activo: true },
-//       transaction 
-//     });
-//     if (!annoEscolar) {
-//       await transaction.rollback();
-//       return res.status(404).json({ message: 'No hay año escolar activo' });
-//     }
 
-//     // Extraer datos del body
-//     const { 
-//       cedula, nombre, apellido, fechaNacimiento, 
-//       lugarNacimiento, genero, direccion, gradoID, 
-//       observaciones, documentosCompletos
-//     } = req.body;
-
-//     // ================== VALIDAR ESTUDIANTE ==================
-//     if (await Personas.findOne({ where: { cedula, tipo: 'estudiante' }, transaction })) {
-//       await transaction.rollback();
-//       return res.status(400).json({ message: 'Estudiante ya existe' });
-//     }
-
-//     // ================== REPRESENTANTE ==================
-//     const representanteData = {
-//       cedula: req.body.rep_cedula,
-//       nombre: req.body.rep_nombre,
-//       apellido: req.body.rep_apellido,
-//       telefono: req.body.rep_telefono,
-//       email: req.body.rep_email,
-//       direccion: req.body.rep_direccion,
-//       profesion: req.body.rep_profesion,
-//       tipo: 'representante'
-//     };
-
-//     let representante = await Personas.findOne({
-//       where: { cedula: representanteData.cedula, tipo: 'representante' },
-//       transaction
-//     });
-
-//     if (!representante) {
-//       representante = await Personas.create(representanteData, { transaction });
-//     }
-
-//     // ================== VALIDAR GRADO ==================
-//     const grado = await Grados.findByPk(gradoID, { transaction });
-//     if (!grado) {
-//       await transaction.rollback();
-//       return res.status(404).json({ message: 'Grado no existe' });
-//     }
-
-//     // ================== CREAR ESTUDIANTE ==================
-//     const nuevoEstudiante = await Personas.create({
-//       cedula,
-//       nombre,
-//       apellido,
-//       fechaNacimiento,
-//       lugarNacimiento,
-//       genero,
-//       direccion,
-//       tipo: 'estudiante',
-//       observaciones
-//     }, { transaction });
-
-//     // ================== PROCESAR ARCHIVOS ==================
-//     // Convertir el string 'true'/'false' a booleano
-//     const tieneDocumentos = documentosCompletos === 'true';
-    
-//     if (req.files && Object.keys(req.files).length > 0) {
-//       console.log("Procesando archivos...");
-//       const uploadDir = path.join(__dirname, '../uploads/documentos');
-//       if (!fs.existsSync(uploadDir)) {
-//         fs.mkdirSync(uploadDir, { recursive: true });
-//       }
-    
-//       for (const fieldName of Object.keys(req.files)) {
-//         const file = req.files[fieldName];
-//         let personaID, tipoDocumento;
-        
-//         console.log(`Procesando archivo: ${fieldName}, nombre: ${file.name}`);
-    
-//         try {
-//           // Procesar representante/estudiante
-//           if (fieldName.includes('representante')) {
-//             tipoDocumento = fieldName.split('_').pop();
-//             personaID = representante.id;
-//           } else {
-//             tipoDocumento = fieldName.split('_').pop();
-//             personaID = nuevoEstudiante.id;
-//           }
-    
-//           // Mover archivo
-//           const uniqueFilename = `${Date.now()}-${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
-//           const filePath = path.join(uploadDir, uniqueFilename);
-          
-//           await file.mv(filePath);
-    
-//           // Guardar en DB
-//           await Documentos.create({ 
-//             personaID,
-//             tipoDocumento,
-//             urlDocumento: `/uploads/documentos/${uniqueFilename}`,
-//             nombre_archivo: file.name,
-//             tamano: file.size,
-//             tipo_archivo: file.mimetype,
-//             descripcion: `Documento ${tipoDocumento} subido durante inscripción`
-//           }, { transaction });
-    
-//         } catch (error) {
-//           console.error(`Error procesando archivo ${fieldName}:`, error);
-//           await transaction.rollback();
-//           return res.status(500).json({ 
-//             message: `Error al procesar el archivo ${fieldName}: ${error.message}`
-//           });
-//         }
-//       }
-//     } else {
-//       console.log("No se recibieron archivos para procesar");
-//     }
-
-//     // ================== ASIGNAR SECCIÓN ==================
-//     const seccionAsignada = await Secciones.findOne({
-//       where: {
-//         gradoID,
-//         capacidad: { [Op.gt]: literal('(SELECT COUNT(*) FROM `Seccion_Personas` WHERE `seccionID` = `Secciones`.`id`)') }
-//       },
-//       transaction
-//     });
-
-//     if (!seccionAsignada) {
-//       await transaction.rollback();
-//       return res.status(400).json({ message: 'No hay cupos disponibles' });
-//     }
-
-//     // ================== CREAR INSCRIPCIÓN ==================
-//     // IMPORTANTE: Usar el valor de documentosCompletos que viene del frontend
-//     const inscripcion = await Inscripciones.create({
-//       estudianteID: nuevoEstudiante.id,
-//       representanteID: representante.id,
-//       gradoID,
-//       seccionID: seccionAsignada.id,
-//       annoEscolarID: annoEscolar.id,
-//       fechaInscripcion: new Date(),
-//       estado: 'pendiente',
-//       observaciones,
-//       documentosCompletos: tieneDocumentos,
-//       pagoInscripcionCompletado: false,
-//       montoInscripcion: (await db.Aranceles.findOne({ 
-//         where: { nombre: { [Op.like]: '%inscripci%' }, activo: true }, 
-//         transaction 
-//       }))?.monto || 0
-//     }, { transaction });
-
-//     await Promise.all([
-//       Grado_Personas.create({
-//         personaID: nuevoEstudiante.id,
-//         gradoID,
-//         annoEscolarID: annoEscolar.id
-//       }, { transaction }),
-
-//       Seccion_Personas.create({
-//         personaID: nuevoEstudiante.id,
-//         seccionID: seccionAsignada.id,
-//         annoEscolarID: annoEscolar.id
-//       }, { transaction })
-//     ]);
-
-//     // ================== CONFIRMAR TRANSACCIÓN ==================
-//     await transaction.commit();
-
-//     res.status(201).json({
-//       message: 'Estudiante inscrito correctamente',
-//       estudiante: nuevoEstudiante,
-//       inscripcionId: inscripcion.id
-//     });
-
-//   } catch (err) {
-//     await transaction.rollback();
-//     console.error('Error general:', err);
-//     res.status(500).json({ 
-//       message: err.message,
-//       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-//     });
-//   }
-// },
-
-// Crear nuevo estudiante e inscripción en un solo paso
-crearNuevoEstudiante: async (req, res) => {
-  const transaction = await db.sequelize.transaction();
-  try {
-    console.log("Iniciando creación de nuevo estudiante");
-    console.log("Archivos recibidos:", req.files ? Object.keys(req.files) : "No hay archivos");
-    
-    // ================== VALIDACIONES INICIALES ==================
-    const annoEscolar = await AnnoEscolar.findOne({ 
-      where: { activo: true },
-      transaction 
-    });
-    if (!annoEscolar) {
-      await transaction.rollback();
-      return res.status(404).json({ message: 'No hay año escolar activo' });
-    }
-
-    // Extraer datos del body
-    const { 
-      cedula, nombre, apellido, fechaNacimiento, 
-      lugarNacimiento, genero, direccion, gradoID, 
-      observaciones, documentosCompletos
-    } = req.body;
-
-    // ================== VALIDAR ESTUDIANTE ==================
-    if (await Personas.findOne({ where: { cedula, tipo: 'estudiante' }, transaction })) {
-      await transaction.rollback();
-      return res.status(400).json({ message: 'Estudiante ya existe' });
-    }
-
-    // ================== REPRESENTANTE ==================
-    const representanteData = {
-      cedula: req.body.rep_cedula,
-      nombre: req.body.rep_nombre,
-      apellido: req.body.rep_apellido,
-      telefono: req.body.rep_telefono,
-      email: req.body.rep_email,
-      direccion: req.body.rep_direccion,
-      profesion: req.body.rep_profesion,
-      tipo: 'representante'
-    };
-
-    let representante = await Personas.findOne({
-      where: { cedula: representanteData.cedula, tipo: 'representante' },
-      transaction
-    });
-
-    if (!representante) {
-      representante = await Personas.create(representanteData, { transaction });
-    }
-
-    // ================== VALIDAR GRADO ==================
-    const grado = await Grados.findByPk(gradoID, { transaction });
-    if (!grado) {
-      await transaction.rollback();
-      return res.status(404).json({ message: 'Grado no existe' });
-    }
-
-    // ================== CREAR ESTUDIANTE ==================
-    const nuevoEstudiante = await Personas.create({
-      cedula,
-      nombre,
-      apellido,
-      fechaNacimiento,
-      lugarNacimiento,
-      genero,
-      direccion,
-      tipo: 'estudiante',
-      observaciones
-    }, { transaction });
-
-    // ================== PROCESAR ARCHIVOS ==================
-    // Convertir el string 'true'/'false' a booleano
-    const tieneDocumentos = documentosCompletos === 'true';
-    
-    if (req.files && Object.keys(req.files).length > 0) {
-      console.log("Procesando archivos...");
-      const uploadDir = path.join(__dirname, '../uploads/documentos');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+  // Crear nuevo estudiante e inscripción en un solo paso
+  crearNuevoEstudiante: async (req, res) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+      console.log("Iniciando creación de nuevo estudiante");
+      console.log("Archivos recibidos:", req.files ? Object.keys(req.files) : "No hay archivos");
+      
+      // ================== VALIDACIONES INICIALES ==================
+      const annoEscolar = await AnnoEscolar.findOne({ 
+        where: { activo: true },
+        transaction 
+      });
+      if (!annoEscolar) {
+        await transaction.rollback();
+        return res.status(404).json({ message: 'No hay año escolar activo' });
       }
-    
-      for (const fieldName of Object.keys(req.files)) {
-        const file = req.files[fieldName];
-        let personaID, tipoDocumento;
-        
-        console.log(`Procesando archivo: ${fieldName}, nombre: ${file.name}`);
-    
-        try {
-          // Procesar representante/estudiante
-          if (fieldName.includes('representante')) {
-            tipoDocumento = fieldName.split('_').pop();
-            personaID = representante.id;
-          } else {
-            tipoDocumento = fieldName.split('_').pop();
-            personaID = nuevoEstudiante.id;
-          }
-    
-          // Mover archivo
-          const uniqueFilename = `${Date.now()}-${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
-          const filePath = path.join(uploadDir, uniqueFilename);
-          
-          await file.mv(filePath);
-    
-          // Guardar en DB
-          await Documentos.create({ 
-            personaID,
-            tipoDocumento,
-            urlDocumento: `/uploads/documentos/${uniqueFilename}`,
-            nombre_archivo: file.name,
-            tamano: file.size,
-            tipo_archivo: file.mimetype,
-            descripcion: `Documento ${tipoDocumento} subido durante inscripción`
-          }, { transaction });
-    
-        } catch (error) {
-          console.error(`Error procesando archivo ${fieldName}:`, error);
-          await transaction.rollback();
-          return res.status(500).json({ 
-            message: `Error al procesar el archivo ${fieldName}: ${error.message}`
-          });
+
+      // Extraer datos del body
+      const { 
+        cedula, nombre, apellido, fechaNacimiento, 
+        lugarNacimiento, genero, direccion, gradoID, 
+        observaciones, documentosCompletos
+      } = req.body;
+
+      // ================== VALIDAR ESTUDIANTE ==================
+      if (await Personas.findOne({ where: { cedula, tipo: 'estudiante' }, transaction })) {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'Estudiante ya existe' });
+      }
+
+      // ================== REPRESENTANTE ==================
+      const representanteData = {
+        cedula: req.body.rep_cedula,
+        nombre: req.body.rep_nombre,
+        apellido: req.body.rep_apellido,
+        telefono: req.body.rep_telefono,
+        email: req.body.rep_email,
+        direccion: req.body.rep_direccion,
+        profesion: req.body.rep_profesion,
+        tipo: 'representante'
+      };
+
+      let representante = await Personas.findOne({
+        where: { cedula: representanteData.cedula, tipo: 'representante' },
+        transaction
+      });
+
+      if (!representante) {
+        representante = await Personas.create(representanteData, { transaction });
+      }
+
+      // ================== VALIDAR GRADO ==================
+      const grado = await Grados.findByPk(gradoID, { transaction });
+      if (!grado) {
+        await transaction.rollback();
+        return res.status(404).json({ message: 'Grado no existe' });
+      }
+
+      // ================== CREAR ESTUDIANTE ==================
+      const nuevoEstudiante = await Personas.create({
+        cedula,
+        nombre,
+        apellido,
+        fechaNacimiento,
+        lugarNacimiento,
+        genero,
+        direccion,
+        tipo: 'estudiante',
+        observaciones
+      }, { transaction });
+
+      // ================== PROCESAR ARCHIVOS ==================
+      // Convertir el string 'true'/'false' a booleano
+      const tieneDocumentos = documentosCompletos === 'true';
+      
+      if (req.files && Object.keys(req.files).length > 0) {
+        console.log("Procesando archivos...");
+        const uploadDir = path.join(__dirname, '../uploads/documentos');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
         }
+      
+        for (const fieldName of Object.keys(req.files)) {
+          const file = req.files[fieldName];
+          let personaID, tipoDocumento;
+          
+          console.log(`Procesando archivo: ${fieldName}, nombre: ${file.name}`);
+      
+          try {
+            // Procesar representante/estudiante
+            if (fieldName.includes('representante')) {
+              tipoDocumento = fieldName.split('_').pop();
+              personaID = representante.id;
+            } else {
+              tipoDocumento = fieldName.split('_').pop();
+              personaID = nuevoEstudiante.id;
+            }
+      
+            // Mover archivo
+            const uniqueFilename = `${Date.now()}-${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
+            const filePath = path.join(uploadDir, uniqueFilename);
+            
+            await file.mv(filePath);
+      
+            // Guardar en DB
+            await Documentos.create({ 
+              personaID,
+              tipoDocumento,
+              urlDocumento: `/uploads/documentos/${uniqueFilename}`,
+              nombre_archivo: file.name,
+              tamano: file.size,
+              tipo_archivo: file.mimetype,
+              descripcion: `Documento ${tipoDocumento} subido durante inscripción`
+            }, { transaction });
+      
+          } catch (error) {
+            console.error(`Error procesando archivo ${fieldName}:`, error);
+            await transaction.rollback();
+            return res.status(500).json({ 
+              message: `Error al procesar el archivo ${fieldName}: ${error.message}`
+            });
+          }
+        }
+      } else {
+        console.log("No se recibieron archivos para procesar");
       }
-    } else {
-      console.log("No se recibieron archivos para procesar");
-    }
 
-    // ================== ASIGNAR SECCIÓN ==================
-    const seccionAsignada = await Secciones.findOne({
-      where: {
-        gradoID,
-        capacidad: { [Op.gt]: literal('(SELECT COUNT(*) FROM `Seccion_Personas` WHERE `seccionID` = `Secciones`.`id`)') }
-      },
-      transaction
-    });
+      // ================== ASIGNAR SECCIÓN ==================
+      const seccionAsignada = await Secciones.findOne({
+        where: {
+          gradoID,
+          capacidad: { [Op.gt]: literal('(SELECT COUNT(*) FROM `Seccion_Personas` WHERE `seccionID` = `Secciones`.`id`)') }
+        },
+        transaction
+      });
 
-    if (!seccionAsignada) {
-      await transaction.rollback();
-      return res.status(400).json({ message: 'No hay cupos disponibles' });
-    }
+      if (!seccionAsignada) {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'No hay cupos disponibles' });
+      }
 
-    // ================== CREAR INSCRIPCIÓN ==================
-    // Obtener el arancel de inscripción
-    const arancelInscripcion = await db.Aranceles.findOne({ 
-      where: { nombre: { [Op.like]: '%inscripci%' }, activo: true }, 
-      transaction 
-    });
-    
-    const montoInscripcion = arancelInscripcion?.monto || 0;
+      // ================== CREAR INSCRIPCIÓN ==================
+      // Obtener el arancel de inscripción
+      const arancelInscripcion = await db.Aranceles.findOne({ 
+        where: { nombre: { [Op.like]: '%inscripci%' }, activo: true }, 
+        transaction 
+      });
+      
+      const montoInscripcion = arancelInscripcion?.monto || 0;
 
-    // IMPORTANTE: Usar el valor de documentosCompletos que viene del frontend
-    const inscripcion = await Inscripciones.create({
-      estudianteID: nuevoEstudiante.id,
-      representanteID: representante.id,
-      gradoID,
-      seccionID: seccionAsignada.id,
-      annoEscolarID: annoEscolar.id,
-      fechaInscripcion: new Date(),
-      estado: 'pendiente',
-      observaciones,
-      documentosCompletos: tieneDocumentos,
-      pagoInscripcionCompletado: false,
-      montoInscripcion
-    }, { transaction });
-
-    await Promise.all([
-      Grado_Personas.create({
-        personaID: nuevoEstudiante.id,
-        gradoID,
-        annoEscolarID: annoEscolar.id
-      }, { transaction }),
-
-      Seccion_Personas.create({
-        personaID: nuevoEstudiante.id,
-        seccionID: seccionAsignada.id,
-        annoEscolarID: annoEscolar.id
-      }, { transaction })
-    ]);
-
-    // ================== CREAR PAGO PENDIENTE ==================
-    // Verificar si existe un método de pago por defecto para inscripciones
-    const metodoPagoDefault = await db.MetodoPagos.findOne({
-      where: { nombre: { [Op.like]: '%transferencia%' }, activo: true },
-      transaction
-    }) || await db.MetodoPagos.findOne({
-      where: { activo: true },
-      transaction
-    });
-
-    if (arancelInscripcion) {
-      // Crear un pago pendiente para la inscripción
-      await PagoEstudiantes.create({
-        // personaID: nuevoEstudiante.id,
+      // IMPORTANTE: Usar el valor de documentosCompletos que viene del frontend
+      const inscripcion = await Inscripciones.create({
         estudianteID: nuevoEstudiante.id,
         representanteID: representante.id,
-        arancelID: arancelInscripcion.id,
-        metodoPagoID: metodoPagoDefault ? metodoPagoDefault.id : null,
-        inscripcionID: inscripcion.id,
-        monto: montoInscripcion,
-        fechaPago: new Date(),
+        gradoID,
+        seccionID: seccionAsignada.id,
+        annoEscolarID: annoEscolar.id,
+        fechaInscripcion: new Date(),
         estado: 'pendiente',
-        observaciones: 'Pago de inscripción pendiente de verificación',
-        annoEscolarID: annoEscolar.id
+        observaciones,
+        documentosCompletos: tieneDocumentos,
+        pagoInscripcionCompletado: false,
+        montoInscripcion
       }, { transaction });
+
+      await Promise.all([
+        Grado_Personas.create({
+          personaID: nuevoEstudiante.id,
+          gradoID,
+          annoEscolarID: annoEscolar.id
+        }, { transaction }),
+
+        Seccion_Personas.create({
+          personaID: nuevoEstudiante.id,
+          seccionID: seccionAsignada.id,
+          annoEscolarID: annoEscolar.id
+        }, { transaction })
+      ]);
+
+      // ================== CREAR PAGO PENDIENTE ==================
+      // Verificar si existe un método de pago por defecto para inscripciones
+      const metodoPagoDefault = await db.MetodoPagos.findOne({
+        where: { nombre: { [Op.like]: '%transferencia%' }, activo: true },
+        transaction
+      }) || await db.MetodoPagos.findOne({
+        where: { activo: true },
+        transaction
+      });
+
+      if (arancelInscripcion) {
+        // Crear un pago pendiente para la inscripción
+        await PagoEstudiantes.create({
+          // personaID: nuevoEstudiante.id,
+          estudianteID: nuevoEstudiante.id,
+          representanteID: representante.id,
+          arancelID: arancelInscripcion.id,
+          metodoPagoID: metodoPagoDefault ? metodoPagoDefault.id : null,
+          inscripcionID: inscripcion.id,
+          monto: montoInscripcion,
+          fechaPago: new Date(),
+          estado: 'pendiente',
+          observaciones: 'Pago de inscripción pendiente de verificación',
+          annoEscolarID: annoEscolar.id
+        }, { transaction });
+      }
+
+      // ================== CONFIRMAR TRANSACCIÓN ==================
+      await transaction.commit();
+
+      res.status(201).json({
+        message: 'Estudiante inscrito correctamente',
+        estudiante: nuevoEstudiante,
+        inscripcionId: inscripcion.id
+      });
+
+    } catch (err) {
+      await transaction.rollback();
+      console.error('Error general:', err);
+      res.status(500).json({ 
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
     }
-
-    // ================== CONFIRMAR TRANSACCIÓN ==================
-    await transaction.commit();
-
-    res.status(201).json({
-      message: 'Estudiante inscrito correctamente',
-      estudiante: nuevoEstudiante,
-      inscripcionId: inscripcion.id
-    });
-
-  } catch (err) {
-    await transaction.rollback();
-    console.error('Error general:', err);
-    res.status(500).json({ 
-      message: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-  }
-},
+  },
 
 
-// Añadir este método al controlador de inscripciones
-updateInscripcionDocumentos: async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { documentosCompletos } = req.body;
-    
-    const inscripcion = await Inscripciones.findByPk(id);
-    
-    if (!inscripcion) {
-      return res.status(404).json({ message: 'Inscripción no encontrada' });
+  // Añadir este método al controlador de inscripciones
+  updateInscripcionDocumentos: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { documentosCompletos } = req.body;
+      
+      const inscripcion = await Inscripciones.findByPk(id);
+      
+      if (!inscripcion) {
+        return res.status(404).json({ message: 'Inscripción no encontrada' });
+      }
+      
+      await inscripcion.update({
+        documentosCompletos: documentosCompletos === true || documentosCompletos === 'true'
+      });
+      
+      res.json({
+        message: 'Estado de documentos actualizado correctamente',
+        inscripcion
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
     }
-    
-    await inscripcion.update({
-      documentosCompletos: documentosCompletos === true || documentosCompletos === 'true'
-    });
-    
-    res.json({
-      message: 'Estado de documentos actualizado correctamente',
-      inscripcion
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: err.message });
-  }
-},
+  },
   
   
   // Actualizar estado de inscripción

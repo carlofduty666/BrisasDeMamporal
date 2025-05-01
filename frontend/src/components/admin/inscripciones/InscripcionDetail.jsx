@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FaArrowLeft, FaEdit, FaCheck, FaTimes, FaFileDownload, FaMoneyBillWave, FaUserGraduate, FaEye, FaUpload, FaTrash } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaCheck, FaTimes, FaFileDownload, FaMoneyBillWave, FaUserGraduate, FaEye, FaUpload, FaTrash, FaExchangeAlt } from 'react-icons/fa';
 import { formatearFecha } from '../../../utils/formatters';
 import AdminLayout from '../layout/AdminLayout';
 
@@ -30,6 +30,16 @@ const InscripcionDetail = () => {
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [subiendoDocumento, setSubiendoDocumento] = useState(false);
   const [documentoRepresentanteSeleccionado, setDocumentoRepresentanteSeleccionado] = useState(null);
+
+  // Estados para la transferencia de grado
+  const [showTransferirGradoModal, setShowTransferirGradoModal] = useState(false);
+  const [transferirGradoData, setTransferirGradoData] = useState({
+    gradoDestinoID: '',
+    annoEscolarID: ''
+  });
+  const [annoEscolarActual, setAnnoEscolarActual] = useState(null);
+  const [seccionesPorGrado, setSeccionesPorGrado] = useState([]);
+  const [historialTransferencias, setHistorialTransferencias] = useState([]);
 
   // Estado para el modal de pago
   const [showPagoModal, setShowPagoModal] = useState(false);
@@ -86,84 +96,121 @@ const InscripcionDetail = () => {
 
   const fileInputRef = useRef(null);
   
-  // Cargar datos de la inscripción
-  useEffect(() => {
-    const fetchInscripcion = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-        
-        const config = {
-          headers: { 'Authorization': `Bearer ${token}` }
-        };
-        
-        // Obtener datos de la inscripción
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${id}`,
-          config
-        );
-        
-        setInscripcion(response.data);
-        setEditData({
-          estado: response.data.estado,
-          gradoID: response.data.gradoID,
-          seccionID: response.data.seccionID,
-          observaciones: response.data.observaciones || ''
-        });
-        
-        // Obtener documentos del estudiante
-        if (response.data.estudiante) {
-          const documentosResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/persona/${response.data.estudiante.id}`,
-            config
-          );
+    // Cargar datos de la inscripción
+    useEffect(() => {
+      const fetchInscripcion = async () => {
+        try {
+          setLoading(true);
+          const token = localStorage.getItem('token');
           
-          setDocumentosEstudiante(documentosResponse.data);
+          if (!token) {
+            navigate('/login');
+            return;
+          }
           
-          // Obtener lista de documentos requeridos
-          const documentosRequeridosResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/verificar/${response.data.estudiante.id}/estudiante`,
-            config
-          );
-          
-          setDocumentosRequeridos(documentosRequeridosResponse.data.documentosRequeridos);
-        }
-        
-        // Obtener grados y secciones
-        const gradosResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados`,
-          config
-        );
-        
-        setGrados(gradosResponse.data);
-        
-        const seccionesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones`,
-          config
-        );
-        
-        setSecciones(seccionesResponse.data);
-        
-        setLoading(false);
-      } catch (err) {
-        console.error('Error al cargar datos:', err);
-        setError('Error al cargar los datos. Por favor, intente nuevamente.');
-        setLoading(false);
-        
-        if (err.response && err.response.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-        }
-      }
-    };
+          const config = {
+            headers: { 'Authorization': `Bearer ${token}` }
+          };
     
-    fetchInscripcion();
-  }, [id, navigate]);
+          // Obtener año escolar actual
+          const annoResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/anno-escolar/actual`,
+            config
+          );
+          setAnnoEscolarActual(annoResponse.data);
+          
+          // Obtener datos de la inscripción
+          const response = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${id}`,
+            config
+          );
+          
+          setInscripcion(response.data);
+          setEditData({
+            estado: response.data.estado,
+            gradoID: response.data.gradoID,
+            seccionID: response.data.seccionID,
+            observaciones: response.data.observaciones || ''
+          });
+    
+          // Si hay un estudiante, obtener su sección actual
+          if (response.data.estudiante) {
+            try {
+              // Obtener la sección actual del estudiante
+              const seccionesEstudianteResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/estudiante/${response.data.estudiante.id}`,
+                {
+                  ...config,
+                  params: { annoEscolarID: annoResponse.data.id }
+                }
+              );
+              
+              if (seccionesEstudianteResponse.data && seccionesEstudianteResponse.data.length > 0) {
+                const seccionActual = seccionesEstudianteResponse.data[0];
+                
+                // Si la sección actual es diferente a la de la inscripción, actualizar
+                if (seccionActual.id !== response.data.seccionID) {
+                  setInscripcion(prev => ({
+                    ...prev,
+                    seccionActualID: seccionActual.id,
+                    seccionActual: seccionActual,
+                    // También obtener el grado de esta sección
+                    gradoActualID: seccionActual.gradoID
+                  }));
+                }
+              }
+            } catch (err) {
+              console.error('Error al cargar sección actual del estudiante:', err);
+              // No interrumpimos el flujo si falla esta petición
+            }
+            
+            // Obtener documentos del estudiante
+            const documentosResponse = await axios.get(
+              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/persona/${response.data.estudiante.id}`,
+              config
+            );
+            
+            setDocumentosEstudiante(documentosResponse.data);
+            
+            // Obtener lista de documentos requeridos
+            const documentosRequeridosResponse = await axios.get(
+              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/verificar/${response.data.estudiante.id}/estudiante`,
+              config
+            );
+            
+            setDocumentosRequeridos(documentosRequeridosResponse.data.documentosRequeridos);
+          }
+          
+          // Obtener grados y secciones
+          const gradosResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados`,
+            config
+          );
+          
+          setGrados(gradosResponse.data);
+          
+          const seccionesResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones`,
+            config
+          );
+          
+          setSecciones(seccionesResponse.data);
+          
+          setLoading(false);
+        } catch (err) {
+          console.error('Error al cargar datos:', err);
+          setError('Error al cargar los datos. Por favor, intente nuevamente.');
+          setLoading(false);
+          
+          if (err.response && err.response.status === 401) {
+            localStorage.removeItem('token');
+            navigate('/login');
+          }
+        }
+      };
+      
+      fetchInscripcion();
+    }, [id, navigate]);
 
     // Cargar documentos del representante
     useEffect(() => {
@@ -347,6 +394,29 @@ const InscripcionDetail = () => {
     const seccion = secciones.find(s => s.id == seccionID);
     return seccion ? seccion.nombre_seccion : 'No asignada';
   };
+
+  // Función para cargar secciones por grado
+  const loadSeccionesByGrado = async (gradoID) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/grado/${gradoID}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      setSeccionesPorGrado(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error al cargar secciones por grado:', err);
+      setSeccionesPorGrado([]);
+      setLoading(false);
+    }
+  };
+
   
   // Manejar cambios en el formulario de edición
   const handleEditChange = (e) => {
@@ -393,6 +463,64 @@ const InscripcionDetail = () => {
     } catch (err) {
       console.error('Error al guardar cambios:', err);
       setError('Error al guardar los cambios. Por favor, intente nuevamente.');
+      setLoading(false);
+    }
+  };
+
+  // Función para manejar la transferencia de grado
+  const handleTransferirGrado = async (e) => {
+    e.preventDefault();
+
+    if (!transferirGradoData.gradoDestinoID) {
+      setError('Debe seleccionar un grado destino');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/transferir-estudiante`,
+        {
+          estudianteID: inscripcion.estudiante.id,
+          gradoOrigenID: inscripcion.gradoID,
+          gradoDestinoID: transferirGradoData.gradoDestinoID,
+          annoEscolarID: annoEscolarActual.id,
+          seccionOrigenID: inscripcion.seccionID,
+          seccionDestinoID: transferirGradoData.seccionID
+        },
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      // Recargar los datos de la inscripción para obtener la información actualizada
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${id}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      setInscripcion(response.data);
+      
+      setSuccess('Estudiante transferido correctamente');
+      setShowTransferirGradoModal(false);
+      setTransferirGradoData({
+        gradoDestinoID: '',
+        seccionID: '',
+        motivo: ''
+      });
+
+      setTimeout(() => {
+        setSuccess('');
+      }, 3000);
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Error al transferir estudiante:', err);
+      setError(err.response?.data?.message || 'Error al transferir estudiante. Por favor, intente nuevamente.');
       setLoading(false);
     }
   };
@@ -715,7 +843,6 @@ const InscripcionDetail = () => {
   };
   
   // Función para eliminar documento
-
   const handleDeleteDocument = async (documentoId) => {
     if (!confirm('¿Está seguro de eliminar este documento?')) {
       return;
@@ -845,6 +972,103 @@ const InscripcionDetail = () => {
        
     );
   }
+
+  // // Modal para transferir grado
+  const TransferirGradoModal = () => {
+    if (!showTransferirGradoModal) return null;
+    
+    return (
+      <div className="fixed z-10 inset-0 overflow-y-auto">
+        <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+          </div>
+          
+          <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+          
+          <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="sm:flex sm:items-start">
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                    Transferir Estudiante a Otro Grado
+                  </h3>
+                  <div className="mt-2">
+                    <form>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            Grado Actual
+                          </label>
+                          <input
+                            type="text"
+                            className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-gray-100 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            value={getNombreGrado(inscripcion?.gradoID)}
+                            disabled
+                          />
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="gradoDestinoID" className="block text-sm font-medium text-gray-700">
+                            Nuevo Grado *
+                          </label>
+                          <select
+                            id="gradoDestinoID"
+                            name="gradoDestinoID"
+                            required
+                            className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            value={transferirGradoData.gradoDestinoID}
+                            onChange={(e) => setTransferirGradoData({...transferirGradoData, gradoDestinoID: e.target.value})}
+                          >
+                            <option value="">Seleccione un grado</option>
+                            {grados.map((grado) => (
+                              <option key={grado.id} value={grado.id}>
+                                {grado.nombre_grado}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="annoEscolar" className="block text-sm font-medium text-gray-700">
+                            Año Escolar
+                          </label>
+                          <input
+                            type="text"
+                            id="annoEscolar"
+                            className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-gray-100 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            value={annoEscolarActual ? annoEscolarActual.periodo : 'Cargando...'}
+                            disabled
+                          />
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <button
+                type="button"
+                onClick={handleTransferirGrado}
+                disabled={loading}
+                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+              >
+                {loading ? 'Procesando...' : 'Transferir'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTransferirGradoModal(false)}
+                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   
   return (
      
@@ -994,49 +1218,22 @@ const InscripcionDetail = () => {
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Grado</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {isEditing ? (
-                    <select
-                    name="gradoID"
-                    value={editData.gradoID}
-                    onChange={handleEditChange}
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  {getNombreGrado(inscripcion?.gradoID)}
+                </dd>
+              </div>
+
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Sección</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {getNombreSeccion(inscripcion?.seccionID)}
+                  <button
+                    onClick={() => setShowTransferirGradoModal(true)}
+                    className="ml-3 inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
-                    <option value="">Seleccione un grado</option>
-                    {grados.map(grado => (
-                      <option key={grado.id} value={grado.id}>
-                        {grado.nombre_grado.replace(/_/g, ' ')}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  getNombreGrado(inscripcion?.gradoID)
-                )}
-              </dd>
-            </div>
-            
-            <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-              <dt className="text-sm font-medium text-gray-500">Sección</dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {isEditing ? (
-                  <select
-                    name="seccionID"
-                    value={editData.seccionID}
-                    onChange={handleEditChange}
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    disabled={!editData.gradoID}
-                  >
-                    <option value="">Seleccione una sección</option>
-                    {seccionesFiltradas.map(seccion => (
-                      <option key={seccion.id} value={seccion.id}>
-                        {seccion.nombre_seccion}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  getNombreSeccion(inscripcion?.seccionID)
-                )}
-              </dd>
-            </div>
+                    <FaExchangeAlt className="mr-1" /> Cambiar Grado/Sección
+                  </button>
+                </dd>
+              </div>
             
             <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Observaciones</dt>
@@ -1056,20 +1253,25 @@ const InscripcionDetail = () => {
             </div>
           </dl>
         </div>
-      </div>
+        </div>
       
-      {/* Información del estudiante */}
-      {inscripcion?.estudiante && (
+        {/* Información del estudiante */}
+        {inscripcion?.estudiante && (
         <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Información del Estudiante
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Datos personales del estudiante.
-            </p>
+          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+            <div>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Información del Estudiante</h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">Datos personales y académicos</p>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowTransferirGradoModal(true)}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <FaExchangeAlt className="mr-1" /> Cambiar Grado
+              </button>
+            </div>
           </div>
-          
           <div className="border-t border-gray-200">
             <dl>
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -1078,193 +1280,236 @@ const InscripcionDetail = () => {
                   {inscripcion.estudiante.nombre} {inscripcion.estudiante.apellido}
                 </dd>
               </div>
-              
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Cédula/Documento</dt>
+                <dt className="text-sm font-medium text-gray-500">Cédula / Documento</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {inscripcion.estudiante.cedula}
                 </dd>
               </div>
-              
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Fecha de Nacimiento</dt>
+                <dt className="text-sm font-medium text-gray-500">Fecha de nacimiento</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {formatearFecha(inscripcion.estudiante.fechaNacimiento)}
                 </dd>
               </div>
-              
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Género</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {inscripcion.estudiante.genero === 'M' ? 'Masculino' : 'Femenino'}
                 </dd>
               </div>
-              
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Grado</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {getNombreGrado(inscripcion?.gradoActualID || inscripcion?.gradoID)}
+                  
+                  {/* Historial de transferencias */}
+                  {historialTransferencias.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Historial de transferencias:</p>
+                      <ul className="text-xs space-y-1">
+                        {historialTransferencias.map((transferencia, index) => {
+                          const gradoOrigen = grados.find(g => g.id === transferencia.gradoOrigenID);
+                          const gradoDestino = grados.find(g => g.id === transferencia.gradoDestinoID);
+                          return (
+                            <li key={index} className="text-gray-700">
+                              <span className="inline-flex items-center">
+                                <svg className="h-3 w-3 mr-1 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                                Transferido de {gradoOrigen?.nombre_grado.replace(/_/g, ' ') || 'Grado anterior'} a {gradoDestino?.nombre_grado.replace(/_/g, ' ') || 'Grado actual'} el {formatearFecha(transferencia.fechaTransferencia)}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </dd>
+              </div>
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Sección</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {getNombreSeccion(inscripcion?.seccionActualID || inscripcion?.seccionID)}
+                </dd>
+              </div>
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Correo electrónico</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {inscripcion.estudiante.email || 'No registrado'}
+                </dd>
+              </div>
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {inscripcion.estudiante.telefono || 'No registrado'}
+                </dd>
+              </div>
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Dirección</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {inscripcion.estudiante.direccion}
+                  {inscripcion.estudiante.direccion || 'No registrada'}
                 </dd>
               </div>
             </dl>
           </div>
         </div>
-      )}
-      
-      {/* Información del representante */}
-      {inscripcion?.representante && (
+        )}
+        
+        {/* Información del representante */}
+        {inscripcion?.representante && (
+          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+            <div className="px-4 py-5 sm:px-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Información del Representante
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Datos personales del representante.
+              </p>
+            </div>
+            
+            <div className="border-t border-gray-200">
+              <dl>
+                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                  <dt className="text-sm font-medium text-gray-500">Nombre completo</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    {inscripcion.representante.nombre} {inscripcion.representante.apellido}
+                  </dd>
+                </div>
+                
+                <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                  <dt className="text-sm font-medium text-gray-500">Cédula/Documento</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    {inscripcion.representante.cedula}
+                  </dd>
+                </div>
+                
+                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                  <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    {inscripcion.representante.telefono}
+                  </dd>
+                </div>
+                
+                <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                  <dt className="text-sm font-medium text-gray-500">Email</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    {inscripcion.representante.email}
+                  </dd>
+                </div>
+                
+                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                  <dt className="text-sm font-medium text-gray-500">Dirección</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    {inscripcion.representante.direccion}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        )}
+        
+        {/* Documentos del estudiante */}
         <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Información del Representante
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Datos personales del representante.
-            </p>
+          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+            <div>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Documentos del Estudiante
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Documentos requeridos y subidos.
+              </p>
+            </div>
           </div>
           
           <div className="border-t border-gray-200">
-            <dl>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Nombre completo</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {inscripcion.representante.nombre} {inscripcion.representante.apellido}
-                </dd>
-              </div>
-              
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Cédula/Documento</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {inscripcion.representante.cedula}
-                </dd>
-              </div>
-              
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {inscripcion.representante.telefono}
-                </dd>
-              </div>
-              
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Email</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {inscripcion.representante.email}
-                </dd>
-              </div>
-              
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Dirección</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {inscripcion.representante.direccion}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-      )}
-      
-      {/* Documentos del estudiante */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-          <div>
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Documentos del Estudiante
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Documentos requeridos y subidos.
-            </p>
-          </div>
-        </div>
-        
-        <div className="border-t border-gray-200">
-          <div className="px-4 py-5 sm:p-6">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {documentosRequeridos.map((doc) => {
-                // Buscar si existe un documento subido de este tipo
-                const documentoSubido = documentosEstudiante.find(d => d.tipoDocumento === doc.id);
-                
-                return (
-                  <div key={doc.id} className="border rounded-lg overflow-hidden">
-                    <div className={`p-4 ${documentoSubido ? 'bg-green-50' : 'bg-gray-50'}`}>
-                      <div className="flex justify-between items-start">
-                        <h4 className="text-sm font-medium text-gray-900">
-                          {doc.nombre} {doc.obligatorio && <span className="text-red-500">*</span>}
-                        </h4>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${documentoSubido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                          {documentoSubido ? 'Subido' : 'Pendiente'}
-                        </span>
+            <div className="px-4 py-5 sm:p-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {documentosRequeridos.map((doc) => {
+                  // Buscar si existe un documento subido de este tipo
+                  const documentoSubido = documentosEstudiante.find(d => d.tipoDocumento === doc.id);
+                  
+                  return (
+                    <div key={doc.id} className="border rounded-lg overflow-hidden">
+                      <div className={`p-4 ${documentoSubido ? 'bg-green-50' : 'bg-gray-50'}`}>
+                        <div className="flex justify-between items-start">
+                          <h4 className="text-sm font-medium text-gray-900">
+                            {doc.nombre} {doc.obligatorio && <span className="text-red-500">*</span>}
+                          </h4>
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${documentoSubido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {documentoSubido ? 'Subido' : 'Pendiente'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    
-                    {documentoSubido ? (
-                      <div className="p-4">
-                        <div className="flex items-center space-x-4">
-                          {/* Miniatura del documento */}
-                          <div className="flex-shrink-0">
-                            {getThumbnail(documentoSubido)}
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {documentoSubido.nombre_archivo}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {(documentoSubido.tamano / 1024).toFixed(2)} KB
-                            </p>
-                          </div>
-                          
-                          <div className="flex-shrink-0 flex space-x-2">
-                            <button
-                              onClick={() => handlePreviewDocument(documentoSubido)}
-                              className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                              title="Ver documento"
-                            >
-                              <FaEye className="h-4 w-4" />
-                            </button>
+                      
+                      {documentoSubido ? (
+                        <div className="p-4">
+                          <div className="flex items-center space-x-4">
+                            {/* Miniatura del documento */}
+                            <div className="flex-shrink-0">
+                              {getThumbnail(documentoSubido)}
+                            </div>
                             
-                            <button
-                              onClick={() => handleDownloadDocument(documentoSubido.id)}
-                              className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                              title="Descargar documento"
-                            >
-                              <FaFileDownload className="h-4 w-4" />
-                            </button>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {documentoSubido.nombre_archivo}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {(documentoSubido.tamano / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
                             
+                            <div className="flex-shrink-0 flex space-x-2">
+                              <button
+                                onClick={() => handlePreviewDocument(documentoSubido)}
+                                className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                title="Ver documento"
+                              >
+                                <FaEye className="h-4 w-4" />
+                              </button>
+                              
+                              <button
+                                onClick={() => handleDownloadDocument(documentoSubido.id)}
+                                className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                title="Descargar documento"
+                              >
+                                <FaFileDownload className="h-4 w-4" />
+                              </button>
+                              
+                              <button
+                                onClick={() => handleOpenUploadModal(doc)}
+                                className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                title="Resubir documento"
+                              >
+                                <FaUpload className="h-4 w-4" />
+                              </button>
+                              
+                              <button
+                                onClick={() => handleDeleteDocument(documentoSubido.id)}
+                                className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                title="Eliminar documento"
+                              >
+                                <FaTrash className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        ) : (
+                          <div className="p-4">
                             <button
                               onClick={() => handleOpenUploadModal(doc)}
-                              className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                              title="Resubir documento"
+                              className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             >
-                              <FaUpload className="h-4 w-4" />
-                            </button>
-                            
-                            <button
-                              onClick={() => handleDeleteDocument(documentoSubido.id)}
-                              className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                              title="Eliminar documento"
-                            >
-                              <FaTrash className="h-4 w-4" />
+                              <FaUpload className="mr-2" /> Subir documento
                             </button>
                           </div>
-                        </div>
+                        )}
                       </div>
-                      ) : (
-                        <div className="p-4">
-                          <button
-                            onClick={() => handleOpenUploadModal(doc)}
-                            className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                          >
-                            <FaUpload className="mr-2" /> Subir documento
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
         </div>
 
         
@@ -1745,6 +1990,121 @@ const InscripcionDetail = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para transferir grado */}
+        {showTransferirGradoModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Transferir Estudiante de Grado</h3>
+                <button 
+                  onClick={() => setShowTransferirGradoModal(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <form onSubmit={handleTransferirGrado}>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="gradoOrigenID" className="block text-sm font-medium text-gray-700">
+                      Grado Actual
+                    </label>
+                    <input
+                      type="text"
+                      id="gradoOrigenID"
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-gray-100 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      value={getNombreGrado(inscripcion?.gradoActualID || inscripcion?.gradoID)}
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="gradoDestinoID" className="block text-sm font-medium text-gray-700">
+                      Grado Destino *
+                    </label>
+                    <select
+                      id="gradoDestinoID"
+                      name="gradoDestinoID"
+                      required
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      value={transferirGradoData.gradoDestinoID}
+                      onChange={(e) => {
+                        setTransferirGradoData({
+                          ...transferirGradoData,
+                          gradoDestinoID: e.target.value,
+                          seccionID: '' // Resetear la sección al cambiar el grado
+                        });
+                        // Cargar secciones del grado seleccionado
+                        if (e.target.value) {
+                          loadSeccionesByGrado(e.target.value);
+                        }
+                      }}
+                    >
+                      <option value="">Seleccione un grado</option>
+                      {grados.map((grado) => (
+                        <option key={grado.id} value={grado.id}>
+                          {grado.nombre_grado.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="seccionID" className="block text-sm font-medium text-gray-700">
+                      Sección
+                    </label>
+                    <select
+                      id="seccionID"
+                      name="seccionID"
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      value={transferirGradoData.seccionID}
+                      onChange={(e) => setTransferirGradoData({...transferirGradoData, seccionID: e.target.value})}
+                      disabled={!transferirGradoData.gradoDestinoID || seccionesPorGrado.length === 0}
+                    >
+                      <option value="">Seleccione una sección</option>
+                      {seccionesPorGrado.map((seccion) => (
+                        <option key={seccion.id} value={seccion.id}>
+                          {seccion.nombre_seccion}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* <div>
+                    <label htmlFor="motivo" className="block text-sm font-medium text-gray-700">
+                      Motivo de la transferencia
+                    </label>
+                    <textarea
+                      id="motivo"
+                      name="motivo"
+                      rows="3"
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      value={transferirGradoData.motivo}
+                      onChange={(e) => setTransferirGradoData({...transferirGradoData, motivo: e.target.value})}
+                    ></textarea>
+                  </div> */}
+                </div>
+                <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                  <button
+                    type="submit"
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm"
+                    disabled={loading}
+                  >
+                    {loading ? 'Procesando...' : 'Transferir'}
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm"
+                    onClick={() => setShowTransferirGradoModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

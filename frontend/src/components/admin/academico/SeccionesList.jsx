@@ -72,21 +72,21 @@ const SeccionesList = () => {
           `${import.meta.env.VITE_API_URL}/secciones`,
           config
         );
-        console.log("Secciones cargadas:", seccionesResponse.data);
+        // console.log("Secciones cargadas:", seccionesResponse.data);
   
         // Obtener grados
         const gradosResponse = await axios.get(
           `${import.meta.env.VITE_API_URL}/grados`,
           config
         );
-        console.log("Grados cargados:", gradosResponse.data);
+        // console.log("Grados cargados:", gradosResponse.data);
   
         // Obtener niveles
         const nivelesResponse = await axios.get(
           `${import.meta.env.VITE_API_URL}/nivel`,
           config
         );
-        console.log("Niveles cargados:", nivelesResponse.data);
+        // console.log("Niveles cargados:", nivelesResponse.data);
   
         // Obtener año escolar activo
         const annoResponse = await axios.get(
@@ -137,7 +137,7 @@ const SeccionesList = () => {
       });
       
       setGradoNivelMap(mapGradoNivel);
-      console.log("Mapa de grado-nivel creado:", mapGradoNivel);
+      // console.log("Mapa de grado-nivel creado:", mapGradoNivel);
     }
   }, [grados, niveles]);
   

@@ -86,10 +86,10 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole }) => {
   // Aplicar el color de fondo directamente como una clase CSS
   const sidebarBgColor = currentColors.main;
   
-  // Para depuración
-  console.log('Active Section:', activeSection);
-  console.log('Current Colors:', currentColors);
-  console.log('Sidebar BG Color:', sidebarBgColor);
+  // // Para depuración
+  // console.log('Active Section:', activeSection);
+  // console.log('Current Colors:', currentColors);
+  // console.log('Sidebar BG Color:', sidebarBgColor);
  
   return (
     <div 

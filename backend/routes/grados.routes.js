@@ -19,6 +19,8 @@ router.get('/grados/estudiante/:id', authMiddleware.verifyToken, gradosControlle
 router.post('/grados', authMiddleware.verifyToken, gradosController.createGrado);
 router.post('/grados/asignar-estudiante', authMiddleware.verifyToken, gradosController.asignarEstudianteAGrado);
 router.post('/grados/:gradoID/asignar-profesor', authMiddleware.verifyToken, gradosController.asignarProfesor);
+router.post('/grados/transferir-estudiante', authMiddleware.verifyToken, gradosController.transferirEstudianteDeGrado);
+
 
 router.put('/grados/:id', authMiddleware.verifyToken, gradosController.updateGrado);
 
