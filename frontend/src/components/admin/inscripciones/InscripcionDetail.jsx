@@ -469,60 +469,71 @@ const InscripcionDetail = () => {
 
   // Función para manejar la transferencia de grado
   const handleTransferirGrado = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!transferirGradoData.gradoDestinoID) {
-      setError('Debe seleccionar un grado destino');
-      return;
-    }
+  if (!transferirGradoData.gradoDestinoID) {
+    setError('Debe seleccionar un grado destino');
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    const token = localStorage.getItem('token');
     
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      
-      await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/transferir-estudiante`,
-        {
-          estudianteID: inscripcion.estudiante.id,
-          gradoOrigenID: inscripcion.gradoID,
-          gradoDestinoID: transferirGradoData.gradoDestinoID,
-          annoEscolarID: annoEscolarActual.id,
-          seccionOrigenID: inscripcion.seccionID,
-          seccionDestinoID: transferirGradoData.seccionID
-        },
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
-      
-      // Recargar los datos de la inscripción para obtener la información actualizada
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${id}`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
-      
-      setInscripcion(response.data);
-      
-      setSuccess('Estudiante transferido correctamente');
-      setShowTransferirGradoModal(false);
-      setTransferirGradoData({
-        gradoDestinoID: '',
-        seccionID: '',
-        motivo: ''
-      });
+    // Obtener el grado y sección actuales del estudiante
+    const gradoOrigenID = inscripcion.gradoID;
+    const seccionOrigenID = inscripcion.seccionID;
+    
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/transferir-estudiante`,
+      {
+        estudianteID: inscripcion.estudiante.id,
+        gradoOrigenID,
+        gradoDestinoID: transferirGradoData.gradoDestinoID,
+        annoEscolarID: annoEscolarActual.id,
+        seccionOrigenID,
+        seccionDestinoID: transferirGradoData.seccionID
+      },
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+    
+    // Recargar los datos de la inscripción para obtener la información actualizada
+    const inscripcionResponse = await axios.get(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/${id}`,
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+    
+    setInscripcion(inscripcionResponse.data);
+    
+    // Actualizar los datos de edición
+    setEditData({
+      ...editData,
+      gradoID: transferirGradoData.gradoDestinoID,
+      seccionID: transferirGradoData.seccionID
+    });
+    
+    setSuccessMessage('Estudiante transferido correctamente');
+    setShowTransferirGradoModal(false);
+    setTransferirGradoData({
+      gradoDestinoID: '',
+      seccionID: '',
+      motivo: ''
+    });
 
-      setTimeout(() => {
-        setSuccess('');
-      }, 3000);
+    setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
 
-      setLoading(false);
-    } catch (err) {
-      console.error('Error al transferir estudiante:', err);
-      setError(err.response?.data?.message || 'Error al transferir estudiante. Por favor, intente nuevamente.');
-      setLoading(false);
-    }
+    setLoading(false);
+  } catch (err) {
+    console.error('Error al transferir estudiante:', err);
+    setError(err.response?.data?.message || 'Error al transferir estudiante. Por favor, intente nuevamente.');
+    setLoading(false);
+  }
   };
   
   // Aprobar inscripción
@@ -1219,6 +1230,12 @@ const InscripcionDetail = () => {
                 <dt className="text-sm font-medium text-gray-500">Grado</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {getNombreGrado(inscripcion?.gradoID)}
+                  <button
+                    onClick={() => setShowTransferirGradoModal(true)}
+                    className="ml-3 inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <FaExchangeAlt className="mr-1" /> Cambiar Grado
+                  </button>
                 </dd>
               </div>
 
@@ -1226,12 +1243,7 @@ const InscripcionDetail = () => {
                 <dt className="text-sm font-medium text-gray-500">Sección</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {getNombreSeccion(inscripcion?.seccionID)}
-                  <button
-                    onClick={() => setShowTransferirGradoModal(true)}
-                    className="ml-3 inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    <FaExchangeAlt className="mr-1" /> Cambiar Grado/Sección
-                  </button>
+                  
                 </dd>
               </div>
             

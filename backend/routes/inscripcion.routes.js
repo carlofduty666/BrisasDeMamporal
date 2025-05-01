@@ -32,6 +32,7 @@ router.post(
   inscripcionController.crearNuevoEstudiante
 );
 router.put('/inscripciones/:id/estado', authMiddleware.verifyToken, inscripcionController.updateEstadoInscripcion);
+router.put('/:id/datos', authMiddleware.verifyToken, inscripcionController.updateInscripcionData);
 router.post('/inscripciones/:id/pago', authMiddleware.verifyToken, inscripcionController.registrarPagoInscripcion);
 router.get('/inscripciones/:id/comprobante', authMiddleware.verifyToken, inscripcionController.getComprobanteInscripcion);
 router.delete('/inscripciones/:id', authMiddleware.verifyToken, inscripcionController.deleteInscripcion);

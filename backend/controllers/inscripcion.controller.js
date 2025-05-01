@@ -704,7 +704,6 @@ const inscripcionController = {
     }
   },
 
-
   // Añadir este método al controlador de inscripciones
   updateInscripcionDocumentos: async (req, res) => {
     try {
@@ -757,6 +756,78 @@ const inscripcionController = {
       res.json({
         message: `Estudiante ${estado} correctamente`,
         inscripcion
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  // Actualizar datos de inscripción (grado, sección, etc.)
+  updateInscripcionData: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { gradoID, seccionID, observaciones } = req.body;
+      
+      const inscripcion = await Inscripciones.findByPk(id);
+      
+      if (!inscripcion) {
+        return res.status(404).json({ message: 'Inscripción no encontrada' });
+      }
+      
+      // Verificar que el grado existe si se proporciona
+      if (gradoID) {
+        const grado = await db.Grados.findByPk(gradoID);
+        if (!grado) {
+          return res.status(404).json({ message: 'Grado no encontrado' });
+        }
+      }
+      
+      // Verificar que la sección existe si se proporciona
+      if (seccionID) {
+        const seccion = await db.Secciones.findByPk(seccionID);
+        if (!seccion) {
+          return res.status(404).json({ message: 'Sección no encontrada' });
+        }
+      }
+      
+      // Actualizar los campos proporcionados
+      const updateData = {};
+      if (gradoID !== undefined) updateData.gradoID = gradoID;
+      if (seccionID !== undefined) updateData.seccionID = seccionID;
+      if (observaciones !== undefined) updateData.observaciones = observaciones;
+      
+      await inscripcion.update(updateData);
+      
+      // Obtener la inscripción actualizada con sus relaciones
+      const updatedInscripcion = await Inscripciones.findByPk(id, {
+        include: [
+          {
+            model: db.Personas,
+            as: 'estudiante'
+          },
+          {
+            model: db.Personas,
+            as: 'representante'
+          },
+          {
+            model: db.AnnoEscolar,
+            as: 'annoEscolar'
+          },
+          {
+            model: db.Grados,
+            as: 'grado'
+          },
+          {
+            model: db.Secciones,
+            as: 'Secciones'
+          }
+        ]
+      });
+      
+      res.json({
+        message: 'Datos de inscripción actualizados correctamente',
+        inscripcion: updatedInscripcion
       });
     } catch (err) {
       console.error(err);

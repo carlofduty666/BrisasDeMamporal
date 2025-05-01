@@ -512,131 +512,237 @@ const CuposManager = () => {
           <>
             {/* Mostrar cupos agrupados por grado */}
             {Object.keys(cuposPorGrado).length > 0 ? (
-              Object.keys(cuposPorGrado).map(gradoID => {
-                const cuposDelGrado = cuposPorGrado[gradoID];
-                const gradoInfo = cuposDelGrado[0]?.grado || grados.find(g => g.id == gradoID);
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Columna izquierda: Primaria (1er - 6to grado) */}
+      <div className="space-y-8">
+        <h2 className="text-xl font-semibold text-indigo-700 border-b pb-2">Primaria</h2>
+        {Object.keys(cuposPorGrado)
+          .filter(gradoID => {
+            const gradoInfo = grados.find(g => g.id === parseInt(gradoID));
+            return gradoInfo && gradoInfo.nombre_grado.toLowerCase().includes('grado');
+          })
+          .map(gradoID => {
+            const gradoInfo = grados.find(g => g.id === parseInt(gradoID));
+            const cuposDelGrado = cuposPorGrado[gradoID];
+
+            return (
+              <div key={gradoID} className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b">
+                  <h3 className="text-lg font-medium text-gray-800">
+                    {gradoInfo ? formatearNombreGrado(gradoInfo.nombre_grado) : `Grado ${gradoID}`}
+                  </h3>
+                </div>
                 
-                return (
-                  <div key={gradoID} className="mb-8">
-                    <h2 className="text-xl font-medium text-gray-800 mb-4">
-                      {gradoInfo ? formatearNombreGrado(gradoInfo.nombre_grado) : `Grado ${gradoID}`}
-                    </h2>
-                    
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Sección
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Capacidad
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Ocupados
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Disponibles
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Estado
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {cuposDelGrado.map((cupo) => {
-                              const seccionNombre = cupo.Secciones ? cupo.Secciones.nombre_seccion : 'No disponible';
-                              const cupoKey = `${cupo.gradoID}_${cupo.seccionID}`;
-                              const isModified = cuposModificados[cupoKey];
-                              
-                              return (
-                                <tr key={cupo.id || `${cupo.gradoID}_${cupo.seccionID}`} 
-                                    className={isModified ? 'bg-yellow-50' : ''}>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-900">{seccionNombre}</div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={cupo.capacidad}
-                                      onChange={(e) => handleCapacidadChange(
-                                        cupo.id, 
-                                        cupo.gradoID, 
-                                        cupo.seccionID, 
-                                        e.target.value
-                                      )}
-                                      className={`w-20 px-2 py-1 border rounded-md ${
-                                        isModified ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300'
-                                      }`}
-                                    />
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-900">{cupo.ocupados}</div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-900">{cupo.disponibles}</div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                      cupo.disponibles > 0 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-red-100 text-red-800'
-                                    }`}>
-                                      {cupo.disponibles > 0 ? 'Disponible' : 'Completo'}
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                <p className="text-gray-500">No hay cupos configurados para el año escolar actual.</p>
-                <button
-                  onClick={handleCrearTodosCupos}
-                  disabled={saving}
-                  className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-md inline-flex items-center"
-                >
-                  <FaPlus className="mr-2" /> Crear Cupos para Todos los Grados
-                </button>
-              </div>
-            )}
-            
-            {/* Mostrar grados sin cupos configurados */}
-            {grados.length > 0 && Object.keys(cuposPorGrado).length > 0 && 
-             grados.filter(grado => !Object.keys(cuposPorGrado).includes(grado.id.toString())).length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-xl font-medium text-gray-800 mb-4">
-                  Grados sin Cupos Configurados
-                </h2>
-                
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {grados
-                      .filter(grado => !Object.keys(cuposPorGrado).includes(grado.id.toString()))
-                      .map(grado => (
-                        <div key={grado.id} className="p-4 border rounded-md">
-                          <h3 className="font-medium text-gray-800">{formatearNombreGrado(grado.nombre_grado)}</h3>
-                          <p className="text-sm text-gray-500 mt-1">
-                            No hay cupos configurados para este grado.
-                          </p>
-                        </div>
-                      ))
-                    }
-                  </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Sección
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Capacidad
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Ocupados
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Disponibles
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Estado
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {cuposDelGrado.map((cupo) => {
+                        const seccionNombre = cupo.Secciones ? cupo.Secciones.nombre_seccion : 'No disponible';
+                        const cupoKey = `${cupo.gradoID}_${cupo.seccionID}`;
+                        const isModified = cuposModificados[cupoKey];
+                        
+                        return (
+                          <tr key={cupo.id || `${cupo.gradoID}_${cupo.seccionID}`} 
+                              className={isModified ? 'bg-yellow-50' : ''}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{seccionNombre}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <input
+                                type="number"
+                                min="0"
+                                value={cupo.capacidad}
+                                onChange={(e) => handleCapacidadChange(
+                                  cupo.id, 
+                                  cupo.gradoID, 
+                                  cupo.seccionID, 
+                                  e.target.value
+                                )}
+                                className={`w-20 px-2 py-1 border rounded-md ${
+                                  isModified ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300'
+                                }`}
+                              />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{cupo.ocupados}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{cupo.disponibles}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                cupo.disponibles > 0 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {cupo.disponibles > 0 ? 'Disponible' : 'Completo'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            )}
-          </>
-        )}
+            );
+          })}
+      </div>
+
+      {/* Columna derecha: Secundaria (1er - 5to año) */}
+      <div className="space-y-8">
+        <h2 className="text-xl font-semibold text-teal-700 border-b pb-2">Secundaria</h2>
+        {Object.keys(cuposPorGrado)
+          .filter(gradoID => {
+            const gradoInfo = grados.find(g => g.id === parseInt(gradoID));
+            return gradoInfo && gradoInfo.nombre_grado.toLowerCase().includes('año');
+          })
+          .map(gradoID => {
+            const gradoInfo = grados.find(g => g.id === parseInt(gradoID));
+            const cuposDelGrado = cuposPorGrado[gradoID];
+
+            return (
+              <div key={gradoID} className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b">
+                  <h3 className="text-lg font-medium text-gray-800">
+                    {gradoInfo ? formatearNombreGrado(gradoInfo.nombre_grado) : `Año ${gradoID}`}
+                  </h3>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Sección
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Capacidad
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Ocupados
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Disponibles
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Estado
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {cuposDelGrado.map((cupo) => {
+                        const seccionNombre = cupo.Secciones ? cupo.Secciones.nombre_seccion : 'No disponible';
+                        const cupoKey = `${cupo.gradoID}_${cupo.seccionID}`;
+                        const isModified = cuposModificados[cupoKey];
+                        
+                        return (
+                          <tr key={cupo.id || `${cupo.gradoID}_${cupo.seccionID}`} 
+                              className={isModified ? 'bg-yellow-50' : ''}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{seccionNombre}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <input
+                                type="number"
+                                min="0"
+                                value={cupo.capacidad}
+                                onChange={(e) => handleCapacidadChange(
+                                  cupo.id, 
+                                  cupo.gradoID, 
+                                  cupo.seccionID, 
+                                  e.target.value
+                                )}
+                                className={`w-20 px-2 py-1 border rounded-md ${
+                                  isModified ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300'
+                                }`}
+                              />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{cupo.ocupados}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{cupo.disponibles}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                cupo.disponibles > 0 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {cupo.disponibles > 0 ? 'Disponible' : 'Completo'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
+      </div>
+    </div>
+  ) : (
+    <div className="bg-white rounded-lg shadow-md p-8 text-center">
+      <p className="text-gray-500">No hay cupos configurados para el año escolar actual.</p>
+      <button
+        onClick={handleCrearTodosCupos}
+        disabled={saving}
+        className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-md inline-flex items-center"
+      >
+        <FaPlus className="mr-2" /> Crear Cupos para Todos los Grados
+      </button>
+    </div>
+  )}
+  
+  {/* Mostrar grados sin cupos configurados */}
+  {grados.length > 0 && Object.keys(cuposPorGrado).length > 0 && 
+   grados.filter(grado => !Object.keys(cuposPorGrado).includes(grado.id.toString())).length > 0 && (
+    <div className="mt-8">
+      <h2 className="text-xl font-medium text-gray-800 mb-4">
+        Grados sin Cupos Configurados
+      </h2>
+      
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {grados
+            .filter(grado => !Object.keys(cuposPorGrado).includes(grado.id.toString()))
+            .map(grado => (
+              <div key={grado.id} className="p-4 border rounded-md">
+                <h3 className="font-medium text-gray-800">{formatearNombreGrado(grado.nombre_grado)}</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  No hay cupos configurados para este grado.
+                </p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  )}
+</>
+)}
     </div>
   );
 };

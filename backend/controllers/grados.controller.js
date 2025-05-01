@@ -438,7 +438,7 @@ const gradosController = {
         res.status(500).json({ message: err.message });
         }
     },
-    // Transferir estudiante a grado
+    // Transferir estudiante a otro grado
     transferirEstudianteDeGrado: async (req, res) => {
       try {
         const { estudianteID, gradoOrigenID, gradoDestinoID, annoEscolarID, seccionOrigenID, seccionDestinoID } = req.body;
@@ -601,7 +601,7 @@ const gradosController = {
           if (inscripcion) {
             await inscripcion.update({
               gradoID: gradoDestinoID,
-              seccionID: seccionDestinoID || inscripcion.seccionID
+              seccionID: seccionDestinoID || null
             }, { transaction: t });
           }
           
@@ -610,7 +610,8 @@ const gradosController = {
           
           res.status(200).json({ 
             message: 'Estudiante transferido correctamente',
-            asignacion: newAssignment
+            asignacion: newAssignment,
+            inscripcionID: inscripcion ? inscripcion.id : null
           });
         } catch (error) {
           // Si hay un error, revertir la transacción
@@ -622,6 +623,7 @@ const gradosController = {
         res.status(500).json({ message: err.message });
       }
     },
+    
     updateGrado: async (req, res) => {
         try {
             const updated = await Grados.update(req.body, { where: { id: req.params.id } });
