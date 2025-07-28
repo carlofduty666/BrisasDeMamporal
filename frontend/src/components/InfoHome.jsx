@@ -745,10 +745,10 @@ function InfoHome() {
                     <div className='border-t border-gray-700 mt-12 pt-8'>
                         <div className='grid grid-cols-1 md:grid-cols-2 gap-4 items-center'>
                             <div className='text-gray-400 text-sm'>
-                                <p>&copy; 2024 Unidad Educativa Brisas de Mamporal. Todos los derechos reservados.</p>
+                                <p>&copy; 2025 Unidad Educativa Privada Brisas de Mamporal. Todos los derechos reservados.</p>
                             </div>
                             <div className='text-gray-400 text-sm md:text-right'>
-                                <p>Desarrollado con ❤️ para la educación venezolana</p>
+                                <p>Desarrollado por Carlos Longa</p>
                             </div>
                         </div>
                     </div>

@@ -568,10 +568,45 @@ const evaluacionesController = {
         console.error(err);
         res.status(500).json({ message: err.message });
         }
+    },
+
+    // Obtener evaluaciones por profesor
+    getEvaluacionesByProfesor: async (req, res) => {
+        try {
+            const { profesorID } = req.params;
+            const { annoEscolarID, materiaID, gradoID, seccionID, lapso } = req.query;
+
+            if (!profesorID) {
+                return res.status(400).json({ message: 'Se requiere el ID del profesor' });
+            }
+
+            // Construir filtros
+            const whereClause = { profesorID };
+            if (annoEscolarID) whereClause.annoEscolarID = annoEscolarID;
+            if (materiaID) whereClause.materiaID = materiaID;
+            if (gradoID) whereClause.gradoID = gradoID;
+            if (seccionID) whereClause.seccionID = seccionID;
+            if (lapso) whereClause.lapso = lapso;
+
+            const evaluaciones = await Evaluaciones.findAll({
+                where: whereClause,
+                include: [
+                    { model: Materias, as: 'Materias' },
+                    { model: Grados, as: 'Grado' },
+                    { model: Secciones, as: 'Seccion' },
+                    { model: Personas, as: 'Profesor', attributes: ['id', 'nombre', 'apellido'] },
+                    { model: AnnoEscolar, as: 'AnnoEscolar' },
+                    { model: ArchivosEvaluaciones, as: 'Archivos' }
+                ],
+                order: [['createdAt', 'DESC']]
+            });
+
+            res.json(evaluaciones);
+        } catch (err) {
+            console.error('Error al obtener evaluaciones del profesor:', err);
+            res.status(500).json({ message: err.message });
+        }
     }
-    
-    
-    
 }
 
 module.exports = evaluacionesController;

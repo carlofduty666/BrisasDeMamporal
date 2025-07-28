@@ -1,65 +1,124 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaUserGraduate, FaClipboardList, FaBook, FaChalkboardTeacher, FaPlus, FaEdit, FaTrash, FaFilter, FaSearch, FaSave } from 'react-icons/fa';
+import { 
+  FaUsers, 
+  FaClipboardList, 
+  FaBook, 
+  FaPlus, 
+  FaEdit, 
+  FaTrash, 
+  FaEye,
+  FaGraduationCap,
+  FaTasks,
+  FaChartBar,
+  FaTimes,
+  FaSave,
+  FaSpinner,
+  FaFileAlt,
+  FaUserCheck,
+  FaChevronDown,
+  FaChevronUp
+} from 'react-icons/fa';
 
 const ProfesorDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('estudiantes');
   
   // Datos del profesor
   const [profesor, setProfesor] = useState(null);
+  const [annoEscolar, setAnnoEscolar] = useState(null);
+  
+  // Datos para resumen
+  const [resumenData, setResumenData] = useState({
+    totalEstudiantes: 0,
+    totalEvaluaciones: 0,
+    totalMaterias: 0,
+    evaluacionesPendientes: 0
+  });
+
+  // Datos de estadísticas
+  const [estadisticas, setEstadisticas] = useState({
+    estadisticasGenerales: {
+      totalEvaluaciones: 0,
+      totalCalificaciones: 0,
+      promedioGeneral: 0,
+      evaluacionesPendientes: 0
+    },
+    estadisticasPorMateria: []
+  });
+  
+  const [promediosEstudiantes, setPromediosEstudiantes] = useState([]);
   
   // Datos académicos
-  const [annoEscolar, setAnnoEscolar] = useState(null);
-  const [materias, setMaterias] = useState([]);
   const [grados, setGrados] = useState([]);
-  const [secciones, setSecciones] = useState([]);
-  const [estudiantes, setEstudiantes] = useState([]);
-  const [evaluaciones, setEvaluaciones] = useState([]);
-  
-  // Filtros
-  const [filtros, setFiltros] = useState({
-    gradoID: '',
-    seccionID: '',
-    materiaID: '',
-    busqueda: ''
-  });
+  const [materiasResumen, setMateriasResumen] = useState([]);
+  const [estudiantesRecientes, setEstudiantesRecientes] = useState([]);
+  const [evaluacionesRecientes, setEvaluacionesRecientes] = useState([]);
   
   // Estados para modales
   const [showEvaluacionModal, setShowEvaluacionModal] = useState(false);
   const [showCalificacionModal, setShowCalificacionModal] = useState(false);
-  const [selectedEvaluacion, setSelectedEvaluacion] = useState(null);
-  const [selectedEstudiante, setSelectedEstudiante] = useState(null);
-  const [savingEvaluacion, setSavingEvaluacion] = useState(false);
-  const [savingCalificacion, setSavingCalificacion] = useState(false);
+  const [showEstudiantesModal, setShowEstudiantesModal] = useState(false);
+  const [showEvaluacionesModal, setShowEvaluacionesModal] = useState(false);
+  const [showCalificarModal, setShowCalificarModal] = useState(false);
+  const [showEstadisticasModal, setShowEstadisticasModal] = useState(false);
+  const [showPromediosModal, setShowPromediosModal] = useState(false);
+  const [showEditarEvaluacionModal, setShowEditarEvaluacionModal] = useState(false);
   
-  // Formularios
+  // Estados para selecciones
+  const [selectedMateria, setSelectedMateria] = useState(null);
+  const [selectedGrado, setSelectedGrado] = useState(null);
+  const [selectedSeccion, setSelectedSeccion] = useState(null);
+  const [selectedEstudiante, setSelectedEstudiante] = useState(null);
+  const [selectedEvaluacion, setSelectedEvaluacion] = useState(null);
+  
+  // Estados para datos de modales
+  const [estudiantesModal, setEstudiantesModal] = useState([]);
+  const [evaluacionesModal, setEvaluacionesModal] = useState([]);
+  const [materiasModal, setMateriasModal] = useState([]);
+  const [seccionesModal, setSeccionesModal] = useState([]);
+  const [calificacionesModal, setCalificacionesModal] = useState([]);
+  const [gradosModal, setGradosModal] = useState([]);
+  const [seccionesModalFiltro, setSeccionesModalFiltro] = useState([]);
+  
+  // Estados para filtros de modales
+  const [filtroGradoEstudiantes, setFiltroGradoEstudiantes] = useState('');
+  const [filtroSeccionEstudiantes, setFiltroSeccionEstudiantes] = useState('');
+  const [filtroGradoEvaluaciones, setFiltroGradoEvaluaciones] = useState('');
+  const [filtroMateriaEvaluaciones, setFiltroMateriaEvaluaciones] = useState('');
+  
+  // Estados para formularios
   const [evaluacionForm, setEvaluacionForm] = useState({
     nombreEvaluacion: '',
     descripcion: '',
-    tipoEvaluacion: '',
+    tipoEvaluacion: 'Examen',
     fechaEvaluacion: '',
     materiaID: '',
     gradoID: '',
     seccionID: '',
     porcentaje: '',
-    lapso: '',
-    requiereEntrega: false,
+    lapso: '1',
+    requiereEntrega: true, // Por defecto true
     fechaLimiteEntrega: ''
   });
-  
-  const [calificacionForm, setCalificacionForm] = useState({
-    valor: '',
-    observaciones: ''
-  });
-  
-  // Archivo para evaluación
+
+  // Estado para archivos
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [evaluacionToEdit, setEvaluacionToEdit] = useState(null);
   
+  // Estados de carga
+  const [savingEvaluacion, setSavingEvaluacion] = useState(false);
+  const [savingCalificacion, setSavingCalificacion] = useState(false);
+  const [loadingModal, setLoadingModal] = useState(false);
+  
+  // Estado para expandir progreso de estudiantes
+  const [estudianteExpandido, setEstudianteExpandido] = useState(null);
+  const [progresoEstudiante, setProgresoEstudiante] = useState({});
+
   // Cargar datos iniciales
   useEffect(() => {
     const fetchData = async () => {
@@ -72,75 +131,28 @@ const ProfesorDashboard = () => {
           return;
         }
         
-        // Decodificar token para obtener datos del usuario
         const userData = JSON.parse(atob(token.split('.')[1]));
+        const config = { headers: { 'Authorization': `Bearer ${token}` } };
         
-        const config = {
-          headers: { 'Authorization': `Bearer ${token}` }
-        };
-        
-        // Obtener datos del profesor
+        // Cargar datos del profesor
         const profesorResponse = await axios.get(
           `${import.meta.env.VITE_API_URL}/personas/${userData.personaID}`,
           config
         );
-        const profesorData = profesorResponse.data;
-        setProfesor(profesorData);
+        setProfesor(profesorResponse.data);
         
-        // Obtener año escolar activo
+        // Cargar año escolar activo
         const annoResponse = await axios.get(
           `${import.meta.env.VITE_API_URL}/anno-escolar/actual`,
           config
         );
         setAnnoEscolar(annoResponse.data);
         
-        // Obtener materias del profesor
-        const materiasResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/materias/profesor/${userData.personaID}`,
-          config
-        );
-        setMaterias(materiasResponse.data);
+        // Cargar datos de resumen
+        await cargarResumenData(userData.personaID, annoResponse.data.id, config);
         
-        // Obtener grados donde enseña el profesor
-        const gradosResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/grados/profesor/${userData.personaID}`,
-          config
-        );
-        setGrados(gradosResponse.data);
-        
-        
-        // Obtener secciones
-        const seccionesPromises = gradosResponse.data.map(grado => 
-          axios.get(`${import.meta.env.VITE_API_URL}/secciones/grado/${grado.id}`, config)
-        );
-        
-        const seccionesResponses = await Promise.all(seccionesPromises);
-        const todasSecciones = seccionesResponses.flatMap(response => response.data);
-        setSecciones(todasSecciones);
-        
-        // Obtener estudiantes de los grados/secciones donde enseña el profesor
-        const estudiantesPromises = gradosResponse.data.map(grado => 
-          axios.get(`${import.meta.env.VITE_API_URL}/grados/${grado.id}/estudiantes`, {
-            ...config,
-            params: { annoEscolarID: annoResponse.data.id }
-          })
-        );
-
-        const estudiantesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/personas/profesor/${profesorData.id}/estudiantes`,
-          {
-            ...config,
-            params: { annoEscolarID: annoResponse.data.id }
-          }
-        );
-        setEstudiantes(estudiantesResponse.data);
-        
-        // Obtener evaluaciones creadas por el profesor
-        const evaluacionesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/evaluaciones/profesor/${userData.personaID}`,
-          config
-        );
-        setEvaluaciones(evaluacionesResponse.data);
+        // Cargar estadísticas
+        await cargarEstadisticas(userData.personaID, annoResponse.data.id, config);
         
         setLoading(false);
       } catch (err) {
@@ -152,1365 +164,1932 @@ const ProfesorDashboard = () => {
     
     fetchData();
   }, [navigate]);
-  
-  // Filtrar estudiantes según los criterios seleccionados
-  const estudiantesFiltrados = estudiantes.filter(estudiante => {
-    // Filtrar por grado
-    if (filtros.gradoID && estudiante.gradoID !== parseInt(filtros.gradoID)) {
-      return false;
-    }
-    
-    // Filtrar por sección
-    if (filtros.seccionID && estudiante.seccionID !== parseInt(filtros.seccionID)) {
-      return false;
-    }
-    
-    // Filtrar por búsqueda (nombre, apellido o cédula)
-    if (filtros.busqueda) {
-      const busqueda = filtros.busqueda.toLowerCase();
-      const nombreCompleto = `${estudiante.nombre} ${estudiante.apellido}`.toLowerCase();
-      const cedula = estudiante.cedula ? estudiante.cedula.toLowerCase() : '';
+
+  const cargarResumenData = async (profesorID, annoEscolarID, config) => {
+    try {
+      // Cargar grados donde enseña el profesor
+      const gradosResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/grados/profesor/${profesorID}?annoEscolarID=${annoEscolarID}`,
+        config
+      );
+      setGrados(gradosResponse.data);
       
-      if (!nombreCompleto.includes(busqueda) && !cedula.includes(busqueda)) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
-  
-  // Filtrar evaluaciones según los criterios seleccionados
-  const evaluacionesFiltradas = evaluaciones.filter(evaluacion => {
-    // Filtrar por materia
-    if (filtros.materiaID && evaluacion.materiaID !== parseInt(filtros.materiaID)) {
-      return false;
-    }
-    
-    // Filtrar por grado
-    if (filtros.gradoID && evaluacion.gradoID !== parseInt(filtros.gradoID)) {
-      return false;
-    }
-    
-    // Filtrar por búsqueda (nombre o descripción)
-    if (filtros.busqueda) {
-      const busqueda = filtros.busqueda.toLowerCase();
-      const nombre = evaluacion.nombreEvaluacion.toLowerCase();
-      const descripcion = evaluacion.descripcion ? evaluacion.descripcion.toLowerCase() : '';
+      // Cargar materias del profesor
+      const materiasResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/materias/profesor/${profesorID}?annoEscolarID=${annoEscolarID}`,
+        config
+      );
+      setMateriasResumen(materiasResponse.data);
       
-      if (!nombre.includes(busqueda) && !descripcion.includes(busqueda)) {
-        return false;
-      }
+      // Cargar estudiantes recientes
+      const estudiantesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/personas/profesor/${profesorID}/estudiantes?annoEscolarID=${annoEscolarID}`,
+        config
+      );
+      setEstudiantesRecientes(estudiantesResponse.data.slice(0, 5));
+      
+      // Cargar evaluaciones del profesor
+      const evaluacionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/evaluaciones/profesor/${profesorID}`,
+        config
+      );
+      
+      // Ordenar por fecha de creación desc para mostrar las más recientes
+      const evaluacionesOrdenadas = evaluacionesResponse.data.sort((a, b) => 
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      
+      setEvaluacionesRecientes(evaluacionesOrdenadas.slice(0, 5));
+      
+      // Calcular resumen
+      const totalEstudiantes = estudiantesResponse.data.length;
+      const totalEvaluaciones = evaluacionesResponse.data.length;
+      const totalMaterias = materiasResponse.data.length;
+      const evaluacionesPendientes = evaluacionesResponse.data.filter(e => {
+        const fechaEval = new Date(e.fechaEvaluacion);
+        const hoy = new Date();
+        return fechaEval <= hoy && !e.calificada;
+      }).length;
+      
+      setResumenData({
+        totalEstudiantes,
+        totalEvaluaciones,
+        totalMaterias,
+        evaluacionesPendientes
+      });
+      
+    } catch (err) {
+      console.error('Error al cargar resumen:', err);
     }
-    
-    return true;
-  });
-  
-  // Manejar cambios en los filtros
-  const handleFiltroChange = (e) => {
-    const { name, value } = e.target;
-    setFiltros({
-      ...filtros,
-      [name]: value
-    });
-  };
-  
-  // Limpiar filtros
-  const handleLimpiarFiltros = () => {
-    setFiltros({
-      gradoID: '',
-      seccionID: '',
-      materiaID: '',
-      busqueda: ''
-    });
   };
 
- // Cuando el profesor selecciona un grado
-const handleGradoChange = async (e) => {
-  const gradoID = e.target.value;
-  setEvaluacionForm({
-    ...evaluacionForm,
-    gradoID,
-    materiaID: '', // Resetear la materia seleccionada
-    seccionID: ''  // También resetear la sección seleccionada
-  });
-  
-  if (gradoID) {
+  const cargarEstadisticas = async (profesorID, annoEscolarID, config) => {
     try {
-      setSavingEvaluacion(true); // Usar el estado existente para indicar carga
+      // Cargar estadísticas generales
+      const estadisticasResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/estadisticas/profesor/${profesorID}?annoEscolarID=${annoEscolarID}`,
+        config
+      );
+      setEstadisticas(estadisticasResponse.data);
+
+      // Cargar promedios de estudiantes
+      const promediosResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/promedios/estudiantes/${profesorID}?annoEscolarID=${annoEscolarID}`,
+        config
+      );
+      setPromediosEstudiantes(promediosResponse.data.slice(0, 10)); // Solo los primeros 10
+      
+    } catch (err) {
+      console.error('Error al cargar estadísticas:', err);
+    }
+  };
+
+  // FUNCIONES PARA MODAL DE ESTUDIANTES
+
+  // Mostrar todos los estudiantes con filtros
+  const handleVerTodosEstudiantes = async () => {
+    setLoadingModal(true);
+    setShowEstudiantesModal(true);
+    setSelectedMateria(null);
+    setSelectedGrado(null);
+    setFiltroGradoEstudiantes('');
+    setFiltroSeccionEstudiantes('');
+    
+    try {
       const token = localStorage.getItem('token');
       const config = { headers: { 'Authorization': `Bearer ${token}` } };
       
-      // Obtener las materias asignadas a este grado
-      const materiasGradoResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/grados/${gradoID}/materias`,
+      // Cargar todos los estudiantes del profesor
+      const estudiantesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/personas/profesor/${profesor.id}/estudiantes?annoEscolarID=${annoEscolar.id}`,
         config
       );
       
-      // Obtener las materias que imparte el profesor
-      const materiasProfesorResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/materias/profesor/${profesor.id}`,
-        config
-      );
+      setEstudiantesModal(estudiantesResponse.data);
+      setGradosModal(grados);
       
-      // Filtrar para obtener solo las materias que están en ambos conjuntos
-      const materiasGrado = materiasGradoResponse.data;
-      const materiasProfesor = materiasProfesorResponse.data;
-      
-      const materiasDisponibles = materiasGrado.filter(materiaGrado => 
-        materiasProfesor.some(materiaProf => materiaProf.id === materiaGrado.id)
-      );
-      
-      // Actualizar el estado de materias
-      setMaterias(materiasDisponibles);
-      
-      // También obtener las secciones para este grado
-      const seccionesResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/secciones/grado/${gradoID}`,
-        config
-      );
-      
-      if (seccionesResponse.data && Array.isArray(seccionesResponse.data)) {
-        setSecciones(seccionesResponse.data);
-      }
-      
-      if (materiasDisponibles.length === 0) {
-        setError('No tienes materias asignadas para este grado');
-      } else {
-        setError(''); // Limpiar error si hay materias disponibles
-      }
-      
-      setSavingEvaluacion(false);
-    } catch (error) {
-      console.error('Error al cargar materias:', error);
-      setError('Error al cargar las materias disponibles');
-      setSavingEvaluacion(false);
+    } catch (err) {
+      console.error('Error al cargar estudiantes:', err);
+      setError('Error al cargar estudiantes');
     }
-  } else {
-    // Si no se selecciona un grado, limpiar las materias
-    setMaterias([]);
-  }
-};
-  
-  // Manejar cambios en el formulario de evaluación
-  const handleEvaluacionChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setEvaluacionForm({
-      ...evaluacionForm,
-      [name]: type === 'checkbox' ? checked : value
-    });
+    
+    setLoadingModal(false);
   };
-  
-  // Manejar cambios en el formulario de calificación
-  const handleCalificacionChange = (e) => {
-    const { name, value } = e.target;
-    setCalificacionForm({
-      ...calificacionForm,
-      [name]: value
-    });
+
+  // Mostrar estudiantes de una materia específica
+  const handleVerEstudiantesMateria = async (materia) => {
+    setLoadingModal(true);
+    setShowEstudiantesModal(true);
+    setSelectedMateria(materia);
+    setFiltroGradoEstudiantes('');
+    setFiltroSeccionEstudiantes('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      // Cargar estudiantes que tienen esta materia
+      const estudiantesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/personas/profesor/${profesor.id}/estudiantes?annoEscolarID=${annoEscolar.id}`,
+        config
+      );
+      
+      setEstudiantesModal(estudiantesResponse.data);
+      setGradosModal(grados);
+      
+    } catch (err) {
+      console.error('Error al cargar estudiantes:', err);
+      setError('Error al cargar estudiantes');
+    }
+    
+    setLoadingModal(false);
   };
-  
-  // Manejar cambio de archivo
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
+
+  // Filtrar estudiantes por grado
+  const handleFiltroGradoEstudiantes = async (gradoID) => {
+    setFiltroGradoEstudiantes(gradoID);
+    setFiltroSeccionEstudiantes('');
+    
+    if (gradoID) {
+      try {
+        const token = localStorage.getItem('token');
+        const config = { headers: { 'Authorization': `Bearer ${token}` } };
+        
+        // Cargar secciones del grado
+        const seccionesResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/secciones/grado/${gradoID}`,
+          config
+        );
+        setSeccionesModalFiltro(seccionesResponse.data);
+        
+        // Cargar estudiantes del grado
+        const estudiantesResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/grados/${gradoID}/estudiantes?annoEscolarID=${annoEscolar.id}`,
+          config
+        );
+        setEstudiantesModal(estudiantesResponse.data);
+        
+      } catch (err) {
+        console.error('Error al filtrar estudiantes:', err);
+        setError('Error al filtrar estudiantes');
+      }
+    } else {
+      // Mostrar todos los estudiantes
+      handleVerTodosEstudiantes();
+    }
   };
-  
-  // Abrir modal para nueva evaluación
+
+  // Filtrar estudiantes por sección
+  const handleFiltroSeccionEstudiantes = async (seccionID) => {
+    setFiltroSeccionEstudiantes(seccionID);
+    
+    if (seccionID && filtroGradoEstudiantes) {
+      try {
+        const token = localStorage.getItem('token');
+        const config = { headers: { 'Authorization': `Bearer ${token}` } };
+        
+        // Cargar estudiantes de la sección específica
+        const estudiantesResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/grados/${filtroGradoEstudiantes}/estudiantes?annoEscolarID=${annoEscolar.id}&seccionID=${seccionID}`,
+          config
+        );
+        setEstudiantesModal(estudiantesResponse.data);
+        
+      } catch (err) {
+        console.error('Error al filtrar por sección:', err);
+        setError('Error al filtrar por sección');
+      }
+    }
+  };
+
+  // Ver progreso de un estudiante
+  const handleVerProgresoEstudiante = async (estudiante) => {
+    if (estudianteExpandido === estudiante.id) {
+      setEstudianteExpandido(null);
+      return;
+    }
+    
+    setEstudianteExpandido(estudiante.id);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      // Cargar evaluaciones y calificaciones del estudiante
+      const evaluacionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/evaluaciones/profesor/${profesor.id}`,
+        config
+      );
+      
+      const calificacionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/calificaciones/estudiante/${estudiante.id}?annoEscolarID=${annoEscolar.id}`,
+        config
+      );
+      
+      const evaluaciones = evaluacionesResponse.data;
+      const calificaciones = calificacionesResponse.data;
+      
+      // Combinar evaluaciones con calificaciones
+      const progreso = evaluaciones.map(evaluacion => {
+        const calificacion = calificaciones.find(c => c.evaluacionID === evaluacion.id);
+        return {
+          ...evaluacion,
+          calificacion: calificacion ? calificacion.calificacion : null,
+          observaciones: calificacion ? calificacion.observaciones : '',
+          calificacionID: calificacion ? calificacion.id : null
+        };
+      });
+      
+      setProgresoEstudiante(prev => ({
+        ...prev,
+        [estudiante.id]: progreso
+      }));
+      
+    } catch (err) {
+      console.error('Error al cargar progreso:', err);
+      setError('Error al cargar el progreso del estudiante');
+    }
+  };
+
+  // FUNCIONES PARA MODAL DE EVALUACIONES
+
+  // Mostrar todas las evaluaciones con filtros
+  const handleVerTodasEvaluaciones = async () => {
+    setLoadingModal(true);
+    setShowEvaluacionesModal(true);
+    setSelectedMateria(null);
+    setFiltroGradoEvaluaciones('');
+    setFiltroMateriaEvaluaciones('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      // Cargar todas las evaluaciones del profesor
+      const evaluacionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/evaluaciones/profesor/${profesor.id}`,
+        config
+      );
+      
+      setEvaluacionesModal(evaluacionesResponse.data);
+      
+    } catch (err) {
+      console.error('Error al cargar evaluaciones:', err);
+      setError('Error al cargar evaluaciones');
+    }
+    
+    setLoadingModal(false);
+  };
+
+  // Mostrar evaluaciones de una materia
+  const handleVerEvaluacionesMateria = async (materia) => {
+    setLoadingModal(true);
+    setShowEvaluacionesModal(true);
+    setSelectedMateria(materia);
+    setFiltroMateriaEvaluaciones(materia.id);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      // Cargar evaluaciones de la materia
+      const evaluacionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/evaluaciones/filtradas?profesorID=${profesor.id}&materiaID=${materia.id}`,
+        config
+      );
+      
+      setEvaluacionesModal(evaluacionesResponse.data);
+      
+    } catch (err) {
+      console.error('Error al cargar evaluaciones:', err);
+      setError('Error al cargar evaluaciones');
+    }
+    
+    setLoadingModal(false);
+  };
+
+  // FUNCIONES PARA MODAL DE CALIFICAR
+
+  // Mostrar modal para seleccionar evaluación a calificar
+  const handleMostrarCalificar = async () => {
+    setLoadingModal(true);
+    setShowCalificarModal(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      // Cargar evaluaciones pendientes de calificar
+      const evaluacionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/evaluaciones/profesor/${profesor.id}`,
+        config
+      );
+      
+      setEvaluacionesModal(evaluacionesResponse.data);
+      
+    } catch (err) {
+      console.error('Error al cargar evaluaciones:', err);
+      setError('Error al cargar evaluaciones para calificar');
+    }
+    
+    setLoadingModal(false);
+  };
+
+  // Calificar una evaluación específica
+  const handleCalificarEvaluacion = async (evaluacion) => {
+    setLoadingModal(true);
+    setSelectedEvaluacion(evaluacion);
+    setShowCalificarModal(false);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      // Cargar estudiantes del grado y sección
+      const estudiantesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/grados/${evaluacion.gradoID}/estudiantes?annoEscolarID=${annoEscolar.id}`,
+        config
+      );
+      
+      // Cargar calificaciones existentes
+      const calificacionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/calificaciones/evaluacion/${evaluacion.id}`,
+        config
+      );
+      
+      const estudiantes = estudiantesResponse.data;
+      const calificaciones = calificacionesResponse.data;
+      
+      // Combinar estudiantes con sus calificaciones
+      const estudiantesConCalificaciones = estudiantes.map(estudiante => {
+        const calificacion = calificaciones.find(c => c.personaID === estudiante.id);
+        return {
+          ...estudiante,
+          calificacion: calificacion ? calificacion.calificacion : null,
+          observaciones: calificacion ? calificacion.observaciones : '',
+          calificacionID: calificacion ? calificacion.id : null
+        };
+      });
+      
+      setCalificacionesModal(estudiantesConCalificaciones);
+      setShowCalificacionModal(true);
+      
+    } catch (err) {
+      console.error('Error al cargar datos para calificar:', err);
+      setError('Error al cargar datos para calificar');
+    }
+    
+    setLoadingModal(false);
+  };
+
+  // Guardar calificación individual
+  const handleGuardarCalificacion = async (estudiante, calificacion, observaciones) => {
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      if (estudiante.calificacionID) {
+        // Actualizar calificación existente
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/calificaciones/${estudiante.calificacionID}`,
+          { calificacion, observaciones },
+          config
+        );
+      } else {
+        // Crear nueva calificación
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/calificaciones`,
+          {
+            evaluacionID: selectedEvaluacion.id,
+            personaID: estudiante.id,
+            calificacion,
+            observaciones,
+            annoEscolarID: annoEscolar.id
+          },
+          config
+        );
+      }
+      
+      // Actualizar la lista local
+      setCalificacionesModal(prev => prev.map(est => 
+        est.id === estudiante.id 
+          ? { ...est, calificacion, observaciones }
+          : est
+      ));
+      
+      setSuccess('Calificación guardada correctamente');
+      setTimeout(() => setSuccess(''), 3000);
+      
+      // Recargar datos del resumen
+      await cargarResumenData(profesor.id, annoEscolar.id, { headers: { 'Authorization': `Bearer ${token}` } });
+      
+    } catch (err) {
+      console.error('Error al guardar calificación:', err);
+      setError('Error al guardar la calificación');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  // FUNCIONES PARA CREAR EVALUACIÓN
+
+  // FUNCIONES PARA ESTADÍSTICAS Y PROMEDIOS
+
+  // Mostrar modal de estadísticas
+  const handleVerEstadisticas = () => {
+    setShowEstadisticasModal(true);
+  };
+
+  // Mostrar modal de promedios
+  const handleVerPromedios = async () => {
+    setLoadingModal(true);
+    setShowPromediosModal(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      // Cargar todos los promedios de estudiantes
+      const promediosResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/promedios/estudiantes/${profesor.id}?annoEscolarID=${annoEscolar.id}`,
+        config
+      );
+      setPromediosEstudiantes(promediosResponse.data);
+      
+    } catch (err) {
+      console.error('Error al cargar promedios:', err);
+      setError('Error al cargar promedios');
+    }
+    
+    setLoadingModal(false);
+  };
+
+  // FUNCIONES PARA CREAR/EDITAR EVALUACIÓN
+
+  // Crear nueva evaluación
   const handleNuevaEvaluacion = () => {
-    setSelectedEvaluacion(null);
+    setIsEditMode(false);
+    setEvaluacionToEdit(null);
+    setSelectedFile(null);
     setEvaluacionForm({
       nombreEvaluacion: '',
       descripcion: '',
-      tipoEvaluacion: '',
+      tipoEvaluacion: 'Examen',
       fechaEvaluacion: '',
       materiaID: '',
       gradoID: '',
       seccionID: '',
       porcentaje: '',
-      lapso: '',
-      requiereEntrega: false,
+      lapso: '1',
+      requiereEntrega: true,
       fechaLimiteEntrega: ''
     });
-    setSelectedFile(null);
+    setMateriasModal([]);
+    setSeccionesModal([]);
     setShowEvaluacionModal(true);
   };
-  
-  // Abrir modal para editar evaluación
-  const handleEditarEvaluacion = (evaluacion) => {
-    setSelectedEvaluacion(evaluacion);
+
+  // Editar evaluación existente
+  const handleEditarEvaluacion = async (evaluacion) => {
+    setIsEditMode(true);
+    setEvaluacionToEdit(evaluacion);
+    setSelectedFile(null);
+    
+    // Cargar materias del grado
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      const materiasResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/materias/profesor/${profesor.id}/grado/${evaluacion.gradoID}?annoEscolarID=${annoEscolar.id}`,
+        config
+      );
+      setMateriasModal(materiasResponse.data);
+      
+      const seccionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/secciones/grado/${evaluacion.gradoID}`,
+        config
+      );
+      setSeccionesModal(seccionesResponse.data);
+      
+    } catch (err) {
+      console.error('Error al cargar datos para editar:', err);
+    }
+    
     setEvaluacionForm({
       nombreEvaluacion: evaluacion.nombreEvaluacion,
       descripcion: evaluacion.descripcion || '',
       tipoEvaluacion: evaluacion.tipoEvaluacion,
-      fechaEvaluacion: evaluacion.fechaEvaluacion.split('T')[0],
-      materiaID: evaluacion.materiaID.toString(),
-      gradoID: evaluacion.gradoID.toString(),
-      seccionID: evaluacion.seccionID.toString(),
-      porcentaje: evaluacion.porcentaje.toString(),
-      lapso: evaluacion.lapso.toString(),
-      requiereEntrega: evaluacion.requiereEntrega || false,
+      fechaEvaluacion: evaluacion.fechaEvaluacion ? evaluacion.fechaEvaluacion.split('T')[0] : '',
+      materiaID: evaluacion.materiaID,
+      gradoID: evaluacion.gradoID,
+      seccionID: evaluacion.seccionID,
+      porcentaje: evaluacion.porcentaje,
+      lapso: evaluacion.lapso,
+      requiereEntrega: evaluacion.requiereEntrega,
       fechaLimiteEntrega: evaluacion.fechaLimiteEntrega ? evaluacion.fechaLimiteEntrega.split('T')[0] : ''
     });
-    setSelectedFile(null);
+    
     setShowEvaluacionModal(true);
   };
-  
-  // Eliminar evaluación
-  const handleEliminarEvaluacion = async (evaluacionId) => {
-    if (!confirm('¿Está seguro de eliminar esta evaluación? Esta acción no se puede deshacer.')) {
-      return;
-    }
+
+  // Cargar materias cuando se selecciona un grado
+  const handleGradoChangeEvaluacion = async (e) => {
+    const gradoID = e.target.value;
+    setEvaluacionForm({ ...evaluacionForm, gradoID, materiaID: '', seccionID: '' });
     
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL}/evaluaciones/${evaluacionId}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      
-      // Actualizar lista de evaluaciones
-      setEvaluaciones(evaluaciones.filter(ev => ev.id !== evaluacionId));
-      
-      setSuccess('Evaluación eliminada correctamente');
-      setTimeout(() => setSuccess(''), 3000);
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Error al eliminar evaluación:', err);
-      setError('Error al eliminar la evaluación. Por favor, intente nuevamente.');
-      setLoading(false);
+    if (gradoID) {
+      try {
+        const token = localStorage.getItem('token');
+        const config = { headers: { 'Authorization': `Bearer ${token}` } };
+        
+        // Cargar materias que el profesor imparte en este grado
+        const materiasResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/materias/profesor/${profesor.id}/grado/${gradoID}?annoEscolarID=${annoEscolar.id}`,
+          config
+        );
+        setMateriasModal(materiasResponse.data);
+        
+        // Cargar secciones del grado
+        const seccionesResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/secciones/grado/${gradoID}`,
+          config
+        );
+        setSeccionesModal(seccionesResponse.data);
+        
+      } catch (err) {
+        console.error('Error al cargar materias/secciones:', err);
+        setError('Error al cargar las opciones disponibles');
+      }
+    } else {
+      setMateriasModal([]);
+      setSeccionesModal([]);
     }
   };
-  
-  // Guardar evaluación (crear o actualizar)
-  const handleSubmitEvaluacion = async (e) => {
+
+  // Guardar evaluación (crear o editar)
+  const handleGuardarEvaluacion = async (e) => {
     e.preventDefault();
+    setSavingEvaluacion(true);
     
     try {
-      setSavingEvaluacion(true);
       const token = localStorage.getItem('token');
       
+      // Crear FormData para manejar archivos
       const formData = new FormData();
+      
+      // Agregar datos del formulario
       Object.keys(evaluacionForm).forEach(key => {
-        formData.append(key, evaluacionForm[key]);
+        if (evaluacionForm[key] !== null && evaluacionForm[key] !== '') {
+          formData.append(key, evaluacionForm[key]);
+        }
       });
       
+      // Agregar datos adicionales
+      formData.append('profesorID', profesor.id);
+      formData.append('annoEscolarID', annoEscolar.id);
+      
+      // Agregar archivo si existe
       if (selectedFile) {
         formData.append('archivo', selectedFile);
       }
       
-      let response;
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      };
       
-      if (selectedEvaluacion) {
+      if (isEditMode && evaluacionToEdit) {
         // Actualizar evaluación existente
-        response = await axios.put(
-          `${import.meta.env.VITE_API_URL}/evaluaciones/${selectedEvaluacion.id}`,
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/evaluaciones/${evaluacionToEdit.id}`,
           formData,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
-            }
-          }
+          config
         );
-        
-        // Actualizar la evaluación en la lista
-        setEvaluaciones(evaluaciones.map(ev => 
-          ev.id === selectedEvaluacion.id ? response.data : ev
-        ));
-        
         setSuccess('Evaluación actualizada correctamente');
       } else {
         // Crear nueva evaluación
-        formData.append('profesorID', profesor.id);
-        
-        response = await axios.post(
+        await axios.post(
           `${import.meta.env.VITE_API_URL}/evaluaciones`,
           formData,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
-            }
-          }
+          config
         );
-        
-        // Añadir la nueva evaluación a la lista
-        setEvaluaciones([...evaluaciones, response.data]);
-        
         setSuccess('Evaluación creada correctamente');
       }
       
       setTimeout(() => setSuccess(''), 3000);
       
-      // Cerrar modal y limpiar formulario
       setShowEvaluacionModal(false);
-      setSelectedEvaluacion(null);
-      setSavingEvaluacion(false);
+      setSelectedFile(null);
+      
+      // Recargar datos
+      const configJson = { headers: { 'Authorization': `Bearer ${token}` } };
+      await cargarResumenData(profesor.id, annoEscolar.id, configJson);
+      await cargarEstadisticas(profesor.id, annoEscolar.id, configJson);
+      
     } catch (err) {
       console.error('Error al guardar evaluación:', err);
-      setError('Error al guardar la evaluación. Por favor, intente nuevamente.');
-      setSavingEvaluacion(false);
-    }
-  };
-  
-  // Abrir modal para calificar estudiante
-  const handleCalificarEstudiante = (estudiante, evaluacion) => {
-    setSelectedEstudiante(estudiante);
-    setSelectedEvaluacion(evaluacion);
-    
-    // Verificar si ya existe una calificación para este estudiante y evaluación
-    const buscarCalificacion = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/calificaciones/evaluacion/${evaluacion.id}`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        
-        const calificaciones = response.data;
-        const calificacionExistente = calificaciones.find(cal => cal.estudianteID === estudiante.id);
-        
-        if (calificacionExistente) {
-          setCalificacionForm({
-            valor: calificacionExistente.valor,
-            observaciones: calificacionExistente.observaciones || ''
-          });
-        } else {
-          setCalificacionForm({
-            valor: '',
-            observaciones: ''
-          });
-        }
-      } catch (err) {
-        console.error('Error al buscar calificación:', err);
-        setCalificacionForm({
-          valor: '',
-          observaciones: ''
-        });
-      }
-    };
-    
-    buscarCalificacion();
-    setShowCalificacionModal(true);
-  };
-  
-  // Guardar calificación
-  const handleSubmitCalificacion = async (e) => {
-    e.preventDefault();
-    
-    if (!selectedEstudiante || !selectedEvaluacion) {
-      setError('Datos incompletos para registrar la calificación');
-      return;
+      setError(err.response?.data?.message || 'Error al guardar la evaluación');
+      setTimeout(() => setError(''), 3000);
     }
     
-    try {
-      setSavingCalificacion(true);
-      const token = localStorage.getItem('token');
-      
-      // Verificar si ya existe una calificación para este estudiante y evaluación
-      const calificacionesResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/calificaciones/evaluacion/${selectedEvaluacion.id}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      
-      const calificaciones = calificacionesResponse.data;
-      const calificacionExistente = calificaciones.find(cal => cal.estudianteID === selectedEstudiante.id);
-      
-      let response;
-      
-      if (calificacionExistente) {
-        // Actualizar calificación existente
-        response = await axios.put(
-          `${import.meta.env.VITE_API_URL}/calificaciones/${calificacionExistente.id}`,
-          {
-            calificacion: calificacionForm.valor,
-            observaciones: calificacionForm.observaciones
-          },
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        
-        setSuccess('Calificación actualizada correctamente');
-      } else {
-        // Crear nueva calificación
-        response = await axios.post(
-          `${import.meta.env.VITE_API_URL}/calificaciones`,
-          {
-            personaID: selectedEstudiante.id,
-            evaluacionID: selectedEvaluacion.id,
-            calificacion: calificacionForm.valor,
-            observaciones: calificacionForm.observaciones,
-            fecha: new Date().toISOString()
-          },
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        
-        setSuccess('Calificación registrada correctamente');
-      }
-      
-      setTimeout(() => setSuccess(''), 3000);
-      
-      // Cerrar modal y limpiar formulario
-      setShowCalificacionModal(false);
-      setSelectedEstudiante(null);
-      setSelectedEvaluacion(null);
-      setSavingCalificacion(false);
-    } catch (err) {
-      console.error('Error al guardar calificación:', err);
-      setError('Error al guardar la calificación. Por favor, intente nuevamente.');
-      setSavingCalificacion(false);
-    }
+    setSavingEvaluacion(false);
   };
-  
-  if (loading && !profesor) {
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <FaSpinner className="animate-spin h-12 w-12 text-slate-600 mx-auto mb-4" />
+          <p className="text-gray-600">Cargando panel del profesor...</p>
+        </div>
       </div>
     );
   }
-  
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-slate-800 shadow-lg">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Panel del Profesor</h1>
-            <div className="flex items-center">
-              <span className="text-gray-600 mr-4">{profesor?.nombre} {profesor?.apellido}</span>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('token');
-                  window.location.href = '/login';
-                }}
-                className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition-colors"
-              >
-                Cerrar Sesión
-              </button>
+            <div>
+              <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+              <p className="text-slate-300 mt-1">
+                {profesor?.nombre} {profesor?.apellido} • {annoEscolar?.periodo}
+              </p>
             </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors"
+            >
+              Cerrar Sesión
+            </button>
           </div>
         </div>
       </header>
-      
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Mensajes de error y éxito */}
-        {error && (
-          <div className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
-            <p>{error}</p>
-          </div>
-        )}
-        
-        {success && (
-          <div className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4">
-            <p>{success}</p>
-          </div>
-        )}
-        
-        {/* Pestañas de navegación */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab('estudiantes')}
-                className={`${
-                  activeTab === 'estudiantes'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <FaUserGraduate className="inline-block mr-2" /> Estudiantes
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('evaluaciones')}
-                className={`${
-                  activeTab === 'evaluaciones'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <FaClipboardList className="inline-block mr-2" /> Evaluaciones
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('materias')}
-                className={`${
-                  activeTab === 'materias'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <FaBook className="inline-block mr-2" /> Materias
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('grados')}
-                className={`${
-                  activeTab === 'grados'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <FaChalkboardTeacher className="inline-block mr-2" /> Grados y Secciones
-              </button>
-            </nav>
+
+      {/* Mensajes */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
           </div>
         </div>
-        
-        {/* Contenido de la pestaña Estudiantes */}
-        {activeTab === 'estudiantes' && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Mis Estudiantes</h2>
-              
-              {/* Filtros */}
-              <div className="flex space-x-4">
-                <select
-                  name="gradoID"
-                  value={filtros.gradoID}
-                  onChange={handleFiltroChange}
-                  className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                >
-                  <option value="">Todos los grados</option>
-                  {grados.map(grado => (
-                    <option key={grado.id} value={grado.id}>
-                      {grado.nombre_grado}
-                    </option>
+      )}
+      
+      {success && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+            {success}
+          </div>
+        </div>
+      )}
+
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 space-y-6">
+        {/* Tarjetas de resumen */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-blue-100">
+                <FaUsers className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Estudiantes</p>
+                <p className="text-2xl font-bold text-gray-900">{resumenData.totalEstudiantes}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleVerTodosEstudiantes}
+              className="mt-4 w-full text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Ver todos los estudiantes
+            </button>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-green-100">
+                <FaTasks className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Evaluaciones</p>
+                <p className="text-2xl font-bold text-gray-900">{resumenData.totalEvaluaciones}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleVerTodasEvaluaciones}
+              className="mt-4 w-full text-sm text-green-600 hover:text-green-800 font-medium"
+            >
+              Ver todas las evaluaciones
+            </button>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-purple-100">
+                <FaBook className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Promedio General</p>
+                <p className="text-2xl font-bold text-gray-900">{estadisticas.estadisticasGenerales.promedioGeneral}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleVerPromedios}
+              className="mt-4 w-full text-sm text-purple-600 hover:text-purple-800 font-medium"
+            >
+              Ver promedios detallados
+            </button>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-yellow-100">
+                <FaChartBar className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pendientes</p>
+                <p className="text-2xl font-bold text-gray-900">{resumenData.evaluacionesPendientes}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleVerEstadisticas}
+              className="mt-4 w-full text-sm text-yellow-600 hover:text-yellow-800 font-medium"
+            >
+              Ver estadísticas completas
+            </button>
+          </div>
+        </div>
+
+        {/* Acciones rápidas */}
+        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <button
+              onClick={handleNuevaEvaluacion}
+              className="flex items-center p-4 bg-slate-50 hover:bg-slate-100 rounded-lg border border-gray-200 transition-colors"
+            >
+              <FaPlus className="h-5 w-5 text-slate-600 mr-3" />
+              <span className="text-slate-700 font-medium">Nueva Evaluación</span>
+            </button>
+            
+            <button
+              onClick={handleVerTodosEstudiantes}
+              className="flex items-center p-4 bg-slate-50 hover:bg-slate-100 rounded-lg border border-gray-200 transition-colors"
+            >
+              <FaUsers className="h-5 w-5 text-slate-600 mr-3" />
+              <span className="text-slate-700 font-medium">Ver Estudiantes</span>
+            </button>
+            
+            <button
+              onClick={handleMostrarCalificar}
+              className="flex items-center p-4 bg-slate-50 hover:bg-slate-100 rounded-lg border border-gray-200 transition-colors"
+            >
+              <FaUserCheck className="h-5 w-5 text-slate-600 mr-3" />
+              <span className="text-slate-700 font-medium">Calificar</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Materias que imparte */}
+          <div className="bg-white rounded-lg shadow-md border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Mis Materias</h2>
+            </div>
+            <div className="p-6">
+              {materiasResumen.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No hay materias asignadas</p>
+              ) : (
+                <div className="space-y-3">
+                  {materiasResumen.slice(0, 5).map((materia) => (
+                    <div key={materia.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center">
+                        <FaBook className="h-4 w-4 text-slate-600 mr-3" />
+                        <span className="font-medium text-gray-900">{materia.asignatura}</span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleVerEstudiantesMateria(materia)}
+                          className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          Estudiantes
+                        </button>
+                        <button
+                          onClick={() => handleVerEvaluacionesMateria(materia)}
+                          className="text-sm text-green-600 hover:text-green-800"
+                        >
+                          Evaluaciones
+                        </button>
+                      </div>
+                    </div>
                   ))}
-                </select>
-                
-                <select
-                  name="seccionID"
-                  value={filtros.seccionID}
-                  onChange={handleFiltroChange}
-                  className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                  disabled={!filtros.gradoID}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Evaluaciones recientes */}
+          <div className="bg-white rounded-lg shadow-md border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Evaluaciones Recientes</h2>
+            </div>
+            <div className="p-6">
+              {evaluacionesRecientes.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No hay evaluaciones registradas</p>
+              ) : (
+                <div className="space-y-3">
+                  {evaluacionesRecientes.map((evaluacion) => (
+                    <div key={evaluacion.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-900">{evaluacion.nombreEvaluacion}</p>
+                        <p className="text-sm text-gray-500">
+                          {evaluacion.Materias?.asignatura} • Lapso {evaluacion.lapso}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleCalificarEvaluacion(evaluacion)}
+                        className="text-sm bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded"
+                      >
+                        Calificar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Modal de Nueva Evaluación */}
+      {showEvaluacionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {isEditMode ? 'Editar Evaluación' : 'Nueva Evaluación'}
+                </h2>
+                <button
+                  onClick={() => setShowEvaluacionModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  <option value="">Todas las secciones</option>
-                  {secciones
-                    .filter(seccion => !filtros.gradoID || seccion.gradoID === parseInt(filtros.gradoID))
-                    .map(seccion => (
+                  <FaTimes className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <form onSubmit={handleGuardarEvaluacion} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre de la Evaluación *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={evaluacionForm.nombreEvaluacion}
+                    onChange={(e) => setEvaluacionForm({...evaluacionForm, nombreEvaluacion: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Evaluación *
+                  </label>
+                  <select
+                    required
+                    value={evaluacionForm.tipoEvaluacion}
+                    onChange={(e) => setEvaluacionForm({...evaluacionForm, tipoEvaluacion: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                  >
+                    <option value="Examen">Examen</option>
+                    <option value="Prueba">Prueba</option>
+                    <option value="Tarea">Tarea</option>
+                    <option value="Proyecto">Proyecto</option>
+                    <option value="Participación">Participación</option>
+                    <option value="Quiz">Quiz</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Grado *
+                  </label>
+                  <select
+                    required
+                    value={evaluacionForm.gradoID}
+                    onChange={handleGradoChangeEvaluacion}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                  >
+                    <option value="">Seleccionar grado</option>
+                    {grados.map(grado => (
+                      <option key={grado.id} value={grado.id}>
+                        {grado.nombre_grado}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Materia *
+                  </label>
+                  <select
+                    required
+                    value={evaluacionForm.materiaID}
+                    onChange={(e) => setEvaluacionForm({...evaluacionForm, materiaID: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                    disabled={!evaluacionForm.gradoID}
+                  >
+                    <option value="">Seleccionar materia</option>
+                    {materiasModal.map(materia => (
+                      <option key={materia.id} value={materia.id}>
+                        {materia.asignatura}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sección *
+                  </label>
+                  <select
+                    required
+                    value={evaluacionForm.seccionID}
+                    onChange={(e) => setEvaluacionForm({...evaluacionForm, seccionID: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                    disabled={!evaluacionForm.gradoID}
+                  >
+                    <option value="">Seleccionar sección</option>
+                    {seccionesModal.map(seccion => (
                       <option key={seccion.id} value={seccion.id}>
                         {seccion.nombre_seccion}
                       </option>
                     ))}
-                </select>
+                  </select>
+                </div>
                 
-                <div className="relative">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Fecha de Evaluación *
+                  </label>
                   <input
-                    type="text"
-                    name="busqueda"
-                    value={filtros.busqueda}
-                    onChange={handleFiltroChange}
-                    placeholder="Buscar estudiante..."
-                    className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 pl-10"
+                    type="date"
+                    required
+                    value={evaluacionForm.fechaEvaluacion}
+                    onChange={(e) => setEvaluacionForm({...evaluacionForm, fechaEvaluacion: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
                   />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaSearch className="text-gray-400" />
-                  </div>
                 </div>
                 
-                <button
-                  onClick={handleLimpiarFiltros}
-                  className="px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Limpiar filtros
-                </button>
-              </div>
-            </div>
-            
-            {/* Lista de estudiantes */}
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              {estudiantesFiltrados.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {estudiantesFiltrados.map(estudiante => {
-                    const gradoEstudiante = grados.find(g => g.id === estudiante.gradoID);
-                    const seccionEstudiante = secciones.find(s => s.id === estudiante.seccionID);
-                    
-                    return (
-                      <li key={estudiante.id}>
-                        <div className="px-4 py-4 sm:px-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                                <span className="text-indigo-700 font-semibold">
-                                  {estudiante.nombre.charAt(0)}{estudiante.apellido.charAt(0)}
-                                </span>
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-indigo-600">
-                                  {estudiante.nombre} {estudiante.apellido}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {estudiante.cedula || 'Sin cédula'}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center">
-                              <div className="mr-8 text-sm text-gray-500">
-                                <span className="font-medium">Grado:</span> {gradoEstudiante?.nombre_grado || 'No asignado'}
-                                <span className="mx-2">|</span>
-                                <span className="font-medium">Sección:</span> {seccionEstudiante?.nombre_seccion || 'No asignada'}
-                              </div>
-                              <div>
-                                <button
-                                  onClick={() => navigate(`/admin/estudiantes/${estudiante.id}`)}
-                                  className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                >
-                                  Ver detalles
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <div className="px-4 py-5 sm:px-6 text-center text-gray-500">
-                  No se encontraron estudiantes con los filtros seleccionados.
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Porcentaje *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="100"
+                    value={evaluacionForm.porcentaje}
+                    onChange={(e) => setEvaluacionForm({...evaluacionForm, porcentaje: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                  />
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Contenido de la pestaña Evaluaciones */}
-        {activeTab === 'evaluaciones' && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Mis Evaluaciones</h2>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lapso *
+                  </label>
+                  <select
+                    required
+                    value={evaluacionForm.lapso}
+                    onChange={(e) => setEvaluacionForm({...evaluacionForm, lapso: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                  >
+                    <option value="1">Primer Lapso</option>
+                    <option value="2">Segundo Lapso</option>
+                    <option value="3">Tercer Lapso</option>
+                  </select>
+                </div>
+              </div>
               
-              <div className="flex space-x-4">
-                <select
-                  name="materiaID"
-                  value={filtros.materiaID}
-                  onChange={handleFiltroChange}
-                  className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                >
-                  <option value="">Todas las materias</option>
-                  {materias.map(materia => (
-                    <option key={materia.id} value={materia.id}>
-                      {materia.asignatura}
-                    </option>
-                  ))}
-                </select>
-                
-                <select
-                  name="gradoID"
-                  value={filtros.gradoID}
-                  onChange={handleFiltroChange}
-                  className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                >
-                  <option value="">Todos los grados</option>
-                  {grados.map(grado => (
-                    <option key={grado.id} value={grado.id}>
-                      {grado.nombre_grado}
-                    </option>
-                  ))}
-                </select>
-                
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="busqueda"
-                    value={filtros.busqueda}
-                    onChange={handleFiltroChange}
-                    placeholder="Buscar evaluación..."
-                    className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 pl-10"
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaSearch className="text-gray-400" />
-                  </div>
-                </div>
-                
-                <button
-                  onClick={handleLimpiarFiltros}
-                  className="px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Limpiar filtros
-                </button>
-                
-                <button
-                  onClick={handleNuevaEvaluacion}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <FaPlus className="mr-2" /> Nueva Evaluación
-                </button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descripción
+                </label>
+                <textarea
+                  value={evaluacionForm.descripcion}
+                  onChange={(e) => setEvaluacionForm({...evaluacionForm, descripcion: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                  rows="3"
+                />
               </div>
-            </div>
-            
-            {/* Lista de evaluaciones */}
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              {evaluacionesFiltradas.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {evaluacionesFiltradas.map(evaluacion => {
-                    const materia = materias.find(m => m.id === evaluacion.materiaID);
-                    const grado = grados.find(g => g.id === evaluacion.gradoID);
-                    const seccion = secciones.find(s => s.id === evaluacion.seccionID);
-                    
-                    return (
-                      <li key={evaluacion.id}>
-                        <div className="px-4 py-4 sm:px-6">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="text-lg font-medium text-indigo-600">{evaluacion.nombreEvaluacion}</h3>
-                              <div className="mt-1 text-sm text-gray-500">
-                                <span className="font-medium">Materia:</span> {materia?.asignatura || 'No disponible'}
-                                <span className="mx-2">|</span>
-                                <span className="font-medium">Grado:</span> {grado?.nombre_grado || 'No disponible'}
-                                <span className="mx-2">|</span>
-                                <span className="font-medium">Sección:</span> {seccion?.nombre_seccion || 'No disponible'}
-                              </div>
-                              <div className="mt-1 text-sm text-gray-500">
-                                <span className="font-medium">Tipo:</span> {evaluacion.tipoEvaluacion}
-                                <span className="mx-2">|</span>
-                                <span className="font-medium">Fecha:</span> {new Date(evaluacion.fechaEvaluacion).toLocaleDateString()}
-                                <span className="mx-2">|</span>
-                                <span className="font-medium">Lapso:</span> {evaluacion.lapso}
-                                <span className="mx-2">|</span>
-                                <span className="font-medium">Porcentaje:</span> {evaluacion.porcentaje}%
-                              </div>
-                              {evaluacion.descripcion && (
-                                <div className="mt-1 text-sm text-gray-500">
-                                  <span className="font-medium">Descripción:</span> {evaluacion.descripcion}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleEditarEvaluacion(evaluacion)}
-                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                              >
-                                <FaEdit className="mr-1" /> Editar
-                              </button>
-                              <button
-                                onClick={() => handleEliminarEvaluacion(evaluacion.id)}
-                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                              >
-                                <FaTrash className="mr-1" /> Eliminar
-                              </button>
-                            </div>
-                          </div>
-                          
-                          {/* Lista de estudiantes para calificar */}
-                          <div className="mt-4">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Calificar Estudiantes:</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                              {estudiantes
-                                .filter(est => est.gradoID === evaluacion.gradoID && est.seccionID === evaluacion.seccionID)
-                                .map(estudiante => (
-                                  <button
-                                    key={estudiante.id}
-                                    onClick={() => handleCalificarEstudiante(estudiante, evaluacion)}
-                                    className="text-left px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
-                                  >
-                                    {estudiante.nombre} {estudiante.apellido}
-                                  </button>
-                                ))}
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <div className="px-4 py-5 sm:px-6 text-center text-gray-500">
-                  No se encontraron evaluaciones con los filtros seleccionados.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Contenido de la pestaña Materias */}
-        {activeTab === 'materias' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Mis Materias</h2>
-            
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              {materias.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {materias.map(materia => {
-                    // Encontrar los grados donde se imparte esta materia
-                    const gradosMateria = grados.filter(grado => 
-                      materia.grados && materia.grados.some(g => g.id === grado.id)
-                    );
-                    
-                    return (
-                      <li key={materia.id}>
-                        <div className="px-4 py-4 sm:px-6">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="text-lg font-medium text-indigo-600">{materia.asignatura}</h3>
-                              <div className="mt-1 text-sm text-gray-500">
-                                {materia.descripcion || 'Sin descripción'}
-                              </div>
-                              <div className="mt-2">
-                                <h4 className="text-sm font-medium text-gray-700">Grados:</h4>
-                                <div className="flex flex-wrap gap-2 mt-1">
-                                  {gradosMateria.length > 0 ? (
-                                    gradosMateria.map(grado => (
-                                      <span 
-                                        key={grado.id}
-                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
-                                      >
-                                        {grado.nombre_grado}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="text-sm text-gray-500">No asignada a ningún grado</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <div className="px-4 py-5 sm:px-6 text-center text-gray-500">
-                  No tiene materias asignadas.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Contenido de la pestaña Grados y Secciones */}
-        {activeTab === 'grados' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Mis Grados y Secciones</h2>
-            
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              {grados.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {grados.map(grado => {
-                    // Encontrar las secciones de este grado
-                    const seccionesGrado = secciones.filter(seccion => seccion.gradoID === grado.id);
-                    
-                    return (
-                      <li key={grado.id}>
-                        <div className="px-4 py-4 sm:px-6">
-                          <div>
-                            <h3 className="text-lg font-medium text-indigo-600">{grado.nombre_grado}</h3>
-                            
-                            <div className="mt-2">
-                              <h4 className="text-sm font-medium text-gray-700">Secciones:</h4>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                {seccionesGrado.length > 0 ? (
-                                  seccionesGrado.map(seccion => (
-                                    <span 
-                                      key={seccion.id}
-                                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
-                                    >
-                                      {seccion.nombre_seccion}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="text-sm text-gray-500">No hay secciones asignadas</span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="mt-2">
-                              <h4 className="text-sm font-medium text-gray-700">Materias:</h4>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                {materias
-                                  .filter(materia => 
-                                    materia.grados && materia.grados.some(g => g.id === grado.id)
-                                  )
-                                  .map(materia => (
-                                    <span 
-                                      key={materia.id}
-                                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                                    >
-                                      {materia.asignatura}
-                                    </span>
-                                  ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <div className="px-4 py-5 sm:px-6 text-center text-gray-500">
-                  No tiene grados asignados.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </main>
-      
-      {/* Modal para crear/editar evaluación */}
-{/* Modal para crear/editar evaluación */}
-{showEvaluacionModal && (
-  <div className="fixed z-10 inset-0 overflow-y-auto">
-    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-        <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-      </div>
-      
-      <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-      
-      <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
-        <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <div className="sm:flex sm:items-start">
-            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-              <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                {selectedEvaluacion ? 'Editar Evaluación' : 'Nueva Evaluación'}
-              </h3>
-              <div className="mt-2">
-                <form onSubmit={handleSubmitEvaluacion} className="space-y-6">
-                  <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                    <div className="sm:col-span-6">
-                    <label htmlFor="nombreEvaluacion" className="block text-sm font-medium text-gray-700">
-                        Nombre de la Evaluación
-                      </label>
-                      <div className="mt-1">
-                        <input
-                          type="text"
-                          id="nombreEvaluacion"
-                          name="nombreEvaluacion"
-                          value={evaluacionForm.nombreEvaluacion}
-                          onChange={handleEvaluacionChange}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="sm:col-span-6">
-                      <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">
-                        Descripción
-                      </label>
-                      <div className="mt-1">
-                        <textarea
-                          id="descripcion"
-                          name="descripcion"
-                          rows="3"
-                          value={evaluacionForm.descripcion}
-                          onChange={handleEvaluacionChange}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        ></textarea>
-                      </div>
-                    </div>
-                    
-                    <div className="sm:col-span-3">
-                      <label htmlFor="tipoEvaluacion" className="block text-sm font-medium text-gray-700">
-                        Tipo de Evaluación
-                      </label>
-                      <div className="mt-1">
-                        <select
-                          id="tipoEvaluacion"
-                          name="tipoEvaluacion"
-                          value={evaluacionForm.tipoEvaluacion}
-                          onChange={handleEvaluacionChange}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          required
-                        >
-                          <option value="">Seleccione un tipo</option>
-                          <option value="Examen">Examen</option>
-                          <option value="Tarea">Tarea</option>
-                          <option value="Proyecto">Proyecto</option>
-                          <option value="Exposición">Exposición</option>
-                          <option value="Participación">Participación</option>
-                          <option value="Prueba Corta">Prueba Corta</option>
-                          <option value="Otro">Otro</option>
-                        </select>
-                      </div>
-                    </div>
-                    
-                    <div className="sm:col-span-3">
-                      <label htmlFor="fechaEvaluacion" className="block text-sm font-medium text-gray-700">
-                        Fecha de Evaluación
-                      </label>
-                      <div className="mt-1">
-                        <input
-                          type="date"
-                          id="fechaEvaluacion"
-                          name="fechaEvaluacion"
-                          value={evaluacionForm.fechaEvaluacion}
-                          onChange={handleEvaluacionChange}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Aquí está el cambio principal: Primero seleccionar grado */}
-                    <div className="sm:col-span-2">
-                      <label htmlFor="gradoID" className="block text-sm font-medium text-gray-700">
-                        Grado
-                      </label>
-                      <div className="mt-1">
-                        <select
-                          id="gradoID"
-                          name="gradoID"
-                          value={evaluacionForm.gradoID}
-                          onChange={handleGradoChange}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          required
-                        >
-                          <option value="">Seleccione un grado</option>
-                          {grados.map(grado => (
-                            <option key={grado.id} value={grado.id}>
-                              {grado.nombre_grado}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    
-                    <div className="sm:col-span-2">
-                      <label htmlFor="seccionID" className="block text-sm font-medium text-gray-700">
-                        Sección
-                      </label>
-                      <div className="mt-1">
-                        <select
-                          id="seccionID"
-                          name="seccionID"
-                          value={evaluacionForm.seccionID}
-                          onChange={handleEvaluacionChange}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          required
-                          disabled={!evaluacionForm.gradoID}
-                        >
-                          <option value="">Seleccione una sección</option>
-                          {secciones
-                            .filter(seccion => !evaluacionForm.gradoID || seccion.gradoID === parseInt(evaluacionForm.gradoID))
-                            .map(seccion => (
-                              <option key={seccion.id} value={seccion.id}>
-                                {seccion.nombre_seccion}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    </div>
-                    
-                    <div className="sm:col-span-2">
-                      <label htmlFor="materiaID" className="block text-sm font-medium text-gray-700">
-                        Materia
-                      </label>
-                      <div className="mt-1">
-                        <select
-                          id="materiaID"
-                          name="materiaID"
-                          value={evaluacionForm.materiaID}
-                          onChange={handleEvaluacionChange}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          required
-                          disabled={!evaluacionForm.gradoID || materias.length === 0}
-                        >
-                          <option value="">Seleccione una materia</option>
-                          {materias.map(materia => (
-                            <option key={materia.id} value={materia.id}>
-                              {materia.asignatura}
-                            </option>
-                          ))}
-                        </select>
-                        {materias.length === 0 && evaluacionForm.gradoID && (
-                          <p className="mt-1 text-xs text-red-500">
-                            No tienes materias asignadas para este grado
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="sm:col-span-2">
-                      <label htmlFor="porcentaje" className="block text-sm font-medium text-gray-700">
-                        Porcentaje (%)
-                      </label>
-                      <div className="mt-1">
-                        <input
-                          type="number"
-                          id="porcentaje"
-                          name="porcentaje"
-                          min="1"
-                          max="100"
-                          value={evaluacionForm.porcentaje}
-                          onChange={handleEvaluacionChange}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="sm:col-span-2">
-                      <label htmlFor="lapso" className="block text-sm font-medium text-gray-700">
-                        Lapso
-                      </label>
-                      <div className="mt-1">
-                        <select
-                          id="lapso"
-                          name="lapso"
-                          value={evaluacionForm.lapso}
-                          onChange={handleEvaluacionChange}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          required
-                        >
-                          <option value="">Seleccione un lapso</option>
-                          <option value="1">Primer Lapso</option>
-                          <option value="2">Segundo Lapso</option>
-                          <option value="3">Tercer Lapso</option>
-                        </select>
-                      </div>
-                    </div>
-                    
-                    <div className="sm:col-span-2">
-                      <div className="flex items-start mt-6">
-                        <div className="flex items-center h-5">
-                          <input
-                            id="requiereEntrega"
-                            name="requiereEntrega"
-                            type="checkbox"
-                            checked={evaluacionForm.requiereEntrega}
-                            onChange={handleEvaluacionChange}
-                            className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                          />
-                        </div>
-                        <div className="ml-3 text-sm">
-                          <label htmlFor="requiereEntrega" className="font-medium text-gray-700">
-                            Requiere entrega
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {evaluacionForm.requiereEntrega && (
-  <div className="sm:col-span-3">
-    <label htmlFor="fechaLimiteEntrega" className="block text-sm font-medium text-gray-700">
-      Fecha Límite de Entrega
-    </label>
-    <div className="mt-1">
-      <input
-        type="date"
-        id="fechaLimiteEntrega"
-        name="fechaLimiteEntrega"
-        value={evaluacionForm.fechaLimiteEntrega}
-        onChange={handleEvaluacionChange}
-        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-        required={evaluacionForm.requiereEntrega}
-      />
-    </div>
-  </div>
-)}
 
-{/* Sección para subir archivo */}
-<div className="sm:col-span-6">
-  <label className="block text-sm font-medium text-gray-700">
-    Archivo adjunto (opcional)
-  </label>
-  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-    <div className="space-y-1 text-center">
-      <svg
-        className="mx-auto h-12 w-12 text-gray-400"
-        stroke="currentColor"
-        fill="none"
-        viewBox="0 0 48 48"
-        aria-hidden="true"
-      >
-        <path
-          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <div className="flex text-sm text-gray-600">
-        <label
-          htmlFor="file-upload"
-          className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
-        >
-          <span>Subir un archivo</span>
-          <input
-            id="file-upload"
-            name="file-upload"
-            type="file"
-            className="sr-only"
-            onChange={handleFileChange}
-          />
-        </label>
-        <p className="pl-1">o arrastrar y soltar</p>
-      </div>
-      <p className="text-xs text-gray-500">
-        PDF, DOC, DOCX, PPT, PPTX hasta 10MB
-      </p>
-      {selectedFile && (
-        <p className="text-sm text-indigo-600 mt-2">
-          Archivo seleccionado: {selectedFile.name}
-        </p>
-      )}
-    </div>
-  </div>
-</div>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-          <button
-            type="button"
-            onClick={handleSubmitEvaluacion}
-            disabled={savingEvaluacion}
-            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-          >
-            {savingEvaluacion ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Guardando...
-              </span>
-            ) : (
-              <span className="flex items-center">
-                <FaSave className="mr-2" /> {selectedEvaluacion ? 'Actualizar' : 'Crear'}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowEvaluacionModal(false);
-              setSelectedEvaluacion(null);
-              setEvaluacionForm(initialEvaluacionForm);
-              setSelectedFile(null);
-              setError('');
-            }}
-            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-      
-      {/* Modal para calificar estudiante */}
-      {showCalificacionModal && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                      Calificar Estudiante
-                    </h3>
-                    <div className="mt-2">
-                      <div className="bg-gray-50 p-4 rounded-md mb-4">
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Estudiante:</span> {selectedEstudiante?.nombre} {selectedEstudiante?.apellido}
-                        </p>
-                        <p className="text-sm text-gray-700 mt-1">
-                          <span className="font-medium">Evaluación:</span> {selectedEvaluacion?.nombreEvaluacion}
-                        </p>
-                        <p className="text-sm text-gray-700 mt-1">
-                          <span className="font-medium">Tipo:</span> {selectedEvaluacion?.tipoEvaluacion}
-                        </p>
-                        <p className="text-sm text-gray-700 mt-1">
-                          <span className="font-medium">Fecha:</span> {selectedEvaluacion ? new Date(selectedEvaluacion.fechaEvaluacion).toLocaleDateString() : ''}
-                        </p>
-                      </div>
-                      
-                      <form onSubmit={handleSubmitCalificacion} className="space-y-6">
-                        <div>
-                          <label htmlFor="valor" className="block text-sm font-medium text-gray-700">
-                            Calificación (0-20)
-                          </label>
-                          <div className="mt-1">
-                            <input
-                              type="number"
-                              id="valor"
-                              name="valor"
-                              min="0"
-                              max="20"
-                              step="0.1"
-                              value={calificacionForm.valor}
-                              onChange={handleCalificacionChange}
-                              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                              required
-                            />
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700">
-                            Observaciones
-                          </label>
-                          <div className="mt-1">
-                            <textarea
-                              id="observaciones"
-                              name="observaciones"
-                              rows="3"
-                              value={calificacionForm.observaciones}
-                              onChange={handleCalificacionChange}
-                              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                            ></textarea>
-                          </div>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Fecha de Evaluación
+                  </label>
+                  <input
+                    type="date"
+                    value={evaluacionForm.fechaEvaluacion}
+                    onChange={(e) => setEvaluacionForm({...evaluacionForm, fechaEvaluacion: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                  />
                 </div>
+
+                {evaluacionForm.requiereEntrega && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha Límite de Entrega *
+                    </label>
+                    <input
+                      type="date"
+                      required={evaluacionForm.requiereEntrega}
+                      value={evaluacionForm.fechaLimiteEntrega}
+                      onChange={(e) => setEvaluacionForm({...evaluacionForm, fechaLimiteEntrega: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                    />
+                  </div>
+                )}
               </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="requiereEntrega"
+                  checked={evaluacionForm.requiereEntrega}
+                  onChange={(e) => setEvaluacionForm({...evaluacionForm, requiereEntrega: e.target.checked})}
+                  className="h-4 w-4 text-slate-600 focus:ring-slate-500 border-gray-300 rounded"
+                />
+                <label htmlFor="requiereEntrega" className="ml-2 text-sm font-medium text-gray-700">
+                  Esta evaluación requiere entrega
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Archivo adjunto (opcional)
+                </label>
+                <input
+                  type="file"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                />
+                {selectedFile && (
+                  <p className="text-sm text-green-600 mt-1">
+                    📎 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  </p>
+                )}
+                {isEditMode && evaluacionToEdit?.archivoURL && !selectedFile && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    📎 Archivo actual: {evaluacionToEdit.nombreArchivo}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Formatos admitidos: PDF, Word, PowerPoint, Excel, Imágenes (máx. 10MB)
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
-                  onClick={handleSubmitCalificacion}
-                  disabled={savingCalificacion}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                >
-                  {savingCalificacion ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Guardando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center">
-                      <FaSave className="mr-2" /> Guardar Calificación
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCalificacionModal(false);
-                    setSelectedEstudiante(null);
-                    setSelectedEvaluacion(null);
-                  }}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setShowEvaluacionModal(false)}
+                  className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>
+                <button
+                  type="submit"
+                  disabled={savingEvaluacion}
+                  className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center"
+                >
+                  {savingEvaluacion ? (
+                    <>
+                      <FaSpinner className="animate-spin h-4 w-4 mr-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <FaSave className="h-4 w-4 mr-2" />
+                      {isEditMode ? 'Actualizar Evaluación' : 'Crear Evaluación'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Estudiantes */}
+      {showEstudiantesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Estudiantes
+                  {selectedMateria && (
+                    <span className="text-sm font-normal text-gray-600 ml-2">
+                      - {selectedMateria.asignatura}
+                    </span>
+                  )}
+                </h2>
+                <button
+                  onClick={() => setShowEstudiantesModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* Filtros */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filtrar por Grado
+                  </label>
+                  <select
+                    value={filtroGradoEstudiantes}
+                    onChange={(e) => handleFiltroGradoEstudiantes(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                  >
+                    <option value="">Todos los grados</option>
+                    {gradosModal.map(grado => (
+                      <option key={grado.id} value={grado.id}>
+                        {grado.nombre_grado}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filtrar por Sección
+                  </label>
+                  <select
+                    value={filtroSeccionEstudiantes}
+                    onChange={(e) => handleFiltroSeccionEstudiantes(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                    disabled={!filtroGradoEstudiantes}
+                  >
+                    <option value="">Todas las secciones</option>
+                    {seccionesModalFiltro.map(seccion => (
+                      <option key={seccion.id} value={seccion.id}>
+                        {seccion.nombre_seccion}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {loadingModal ? (
+                <div className="flex justify-center py-8">
+                  <FaSpinner className="animate-spin h-8 w-8 text-slate-600" />
+                </div>
+              ) : estudiantesModal.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No hay estudiantes registrados</p>
+              ) : (
+                <div className="space-y-4">
+                  {estudiantesModal.map((estudiante) => (
+                    <div key={estudiante.id} className="bg-gray-50 rounded-lg">
+                      <div 
+                        className="p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => handleVerProgresoEstudiante(estudiante)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className="p-2 bg-blue-100 rounded-full mr-3">
+                              <FaUsers className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {estudiante.nombre} {estudiante.apellido}
+                              </p>
+                              <p className="text-sm text-gray-500">C.I: {estudiante.cedula}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-500 mr-2">Ver progreso</span>
+                            {estudianteExpandido === estudiante.id ? (
+                              <FaChevronUp className="h-4 w-4 text-gray-400" />
+                            ) : (
+                              <FaChevronDown className="h-4 w-4 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Progreso expandido */}
+                      {estudianteExpandido === estudiante.id && progresoEstudiante[estudiante.id] && (
+                        <div className="px-4 pb-4 border-t border-gray-200">
+                          <h4 className="text-sm font-medium text-gray-700 mb-3 mt-3">
+                            Evaluaciones y Calificaciones
+                          </h4>
+                          <div className="space-y-2">
+                            {progresoEstudiante[estudiante.id].map((evaluacion) => (
+                              <div key={evaluacion.id} className="flex justify-between items-center p-2 bg-white rounded">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {evaluacion.nombreEvaluacion}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {evaluacion.Materias?.asignatura} • Lapso {evaluacion.lapso}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  {evaluacion.calificacion !== null ? (
+                                    <div>
+                                      <p className="text-sm font-bold text-green-700">
+                                        {evaluacion.calificacion}/20
+                                      </p>
+                                      {evaluacion.observaciones && (
+                                        <p className="text-xs text-gray-500">
+                                          {evaluacion.observaciones}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-red-600">Sin calificar</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Evaluaciones */}
+      {showEvaluacionesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Evaluaciones
+                  {selectedMateria && (
+                    <span className="text-sm font-normal text-gray-600 ml-2">
+                      - {selectedMateria.asignatura}
+                    </span>
+                  )}
+                </h2>
+                <button
+                  onClick={() => setShowEvaluacionesModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {loadingModal ? (
+                <div className="flex justify-center py-8">
+                  <FaSpinner className="animate-spin h-8 w-8 text-slate-600" />
+                </div>
+              ) : evaluacionesModal.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No hay evaluaciones registradas</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {evaluacionesModal.map((evaluacion) => (
+                    <div key={evaluacion.id} className="bg-gray-50 rounded-lg p-4">
+                      <div className="mb-3">
+                        <h3 className="font-medium text-gray-900">{evaluacion.nombreEvaluacion}</h3>
+                        <p className="text-sm text-gray-500">
+                          {evaluacion.Materias?.asignatura} • Lapso {evaluacion.lapso}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {evaluacion.tipoEvaluacion} • {evaluacion.porcentaje}%
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Fecha: {new Date(evaluacion.fechaEvaluacion).toLocaleDateString()}
+                        </p>
+                        {evaluacion.requiereEntrega && (
+                          <p className="text-sm text-blue-600">
+                            Requiere entrega • Límite: {evaluacion.fechaLimiteEntrega 
+                              ? new Date(evaluacion.fechaLimiteEntrega).toLocaleDateString() 
+                              : 'No especificado'}
+                          </p>
+                        )}
+                        {evaluacion.archivoURL && (
+                          <p className="text-sm text-green-600">
+                            📎 Archivo adjunto
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleEditarEvaluacion(evaluacion)}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors flex items-center justify-center"
+                        >
+                          <FaEdit className="h-3 w-3 mr-1" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleCalificarEvaluacion(evaluacion)}
+                          className="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm transition-colors"
+                        >
+                          Calificar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Seleccionar Evaluación para Calificar */}
+      {showCalificarModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Seleccionar Evaluación para Calificar
+                </h2>
+                <button
+                  onClick={() => setShowCalificarModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {loadingModal ? (
+                <div className="flex justify-center py-8">
+                  <FaSpinner className="animate-spin h-8 w-8 text-slate-600" />
+                </div>
+              ) : evaluacionesModal.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No hay evaluaciones para calificar</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {evaluacionesModal.map((evaluacion) => (
+                    <div key={evaluacion.id} className="bg-gray-50 rounded-lg p-4">
+                      <div className="mb-3">
+                        <h3 className="font-medium text-gray-900">{evaluacion.nombreEvaluacion}</h3>
+                        <p className="text-sm text-gray-500">
+                          {evaluacion.Materias?.asignatura} • Lapso {evaluacion.lapso}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {evaluacion.tipoEvaluacion} • {evaluacion.porcentaje}%
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Fecha: {new Date(evaluacion.fechaEvaluacion).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleCalificarEvaluacion(evaluacion)}
+                        className="w-full bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm transition-colors"
+                      >
+                        Seleccionar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Calificaciones */}
+      {showCalificacionModal && selectedEvaluacion && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Calificar: {selectedEvaluacion.nombreEvaluacion}
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    {selectedEvaluacion.Materias?.asignatura} • Lapso {selectedEvaluacion.lapso} • {selectedEvaluacion.porcentaje}%
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCalificacionModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {loadingModal ? (
+                <div className="flex justify-center py-8">
+                  <FaSpinner className="animate-spin h-8 w-8 text-slate-600" />
+                </div>
+              ) : calificacionesModal.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No hay estudiantes para calificar</p>
+              ) : (
+                <div className="space-y-4">
+                  {calificacionesModal.map((estudiante) => (
+                    <CalificacionRow
+                      key={estudiante.id}
+                      estudiante={estudiante}
+                      onGuardar={handleGuardarCalificacion}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Estadísticas */}
+      {showEstadisticasModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Estadísticas Completas</h2>
+                <button
+                  onClick={() => setShowEstadisticasModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Estadísticas Generales */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Resumen General</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">{estadisticas.estadisticasGenerales.totalEvaluaciones}</p>
+                    <p className="text-sm text-gray-600">Total Evaluaciones</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{estadisticas.estadisticasGenerales.totalCalificaciones}</p>
+                    <p className="text-sm text-gray-600">Total Calificaciones</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600">{estadisticas.estadisticasGenerales.promedioGeneral}</p>
+                    <p className="text-sm text-gray-600">Promedio General</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-yellow-600">{estadisticas.estadisticasGenerales.evaluacionesPendientes}</p>
+                    <p className="text-sm text-gray-600">Pendientes</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estadísticas por Materia */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Estadísticas por Materia</h3>
+                {estadisticas.estadisticasPorMateria.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No hay datos de materias disponibles</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Materia
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Evaluaciones
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Calificaciones
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Promedio
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Pendientes
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {estadisticas.estadisticasPorMateria.map((materia) => (
+                          <tr key={materia.materiaID}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {materia.asignatura}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {materia.totalEvaluaciones}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {materia.totalCalificaciones}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <span className={`font-medium ${
+                                materia.promedioMateria >= 14 ? 'text-green-600' :
+                                materia.promedioMateria >= 10 ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {materia.promedioMateria}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {materia.evaluacionesPendientes}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Modal de Promedios de Estudiantes */}
+      {showPromediosModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Promedios de Estudiantes</h2>
+                <button
+                  onClick={() => setShowPromediosModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {loadingModal ? (
+                <div className="flex justify-center py-8">
+                  <FaSpinner className="animate-spin h-8 w-8 text-slate-600" />
+                </div>
+              ) : promediosEstudiantes.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No hay datos de estudiantes disponibles</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Estudiante
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Cédula
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Total Calificaciones
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Promedio General
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Materias
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {promediosEstudiantes.map((estudiante) => (
+                        <tr key={estudiante.estudianteID}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {estudiante.nombre} {estudiante.apellido}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {estudiante.cedula}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {estudiante.totalCalificaciones}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <span className={`font-bold ${
+                              estudiante.promedio >= 14 ? 'text-green-600' :
+                              estudiante.promedio >= 10 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {estudiante.promedio}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            <div className="space-y-1">
+                              {Object.entries(estudiante.materias || {}).map(([materia, stats]) => (
+                                <div key={materia} className="flex justify-between">
+                                  <span className="text-xs">{materia}:</span>
+                                  <span className={`text-xs font-medium ${
+                                    stats.promedio >= 14 ? 'text-green-600' :
+                                    stats.promedio >= 10 ? 'text-yellow-600' : 'text-red-600'
+                                  }`}>
+                                    {stats.promedio}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Estadísticas */}
+      {showEstadisticasModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Estadísticas Completas</h2>
+                <button
+                  onClick={() => setShowEstadisticasModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Estadísticas Generales */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Resumen General</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">{estadisticas.estadisticasGenerales.totalEvaluaciones}</p>
+                    <p className="text-sm text-gray-600">Total Evaluaciones</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{estadisticas.estadisticasGenerales.totalCalificaciones}</p>
+                    <p className="text-sm text-gray-600">Total Calificaciones</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600">{estadisticas.estadisticasGenerales.promedioGeneral}</p>
+                    <p className="text-sm text-gray-600">Promedio General</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-yellow-600">{estadisticas.estadisticasGenerales.evaluacionesPendientes}</p>
+                    <p className="text-sm text-gray-600">Pendientes</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estadísticas por Materia */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Estadísticas por Materia</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Materia
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Evaluaciones
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Calificaciones
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Promedio
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Pendientes
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {estadisticas.estadisticasPorMateria.map((materia) => (
+                        <tr key={materia.materiaID}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {materia.asignatura}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {materia.totalEvaluaciones}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {materia.totalCalificaciones}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <span className={`font-medium ${
+                              materia.promedioMateria >= 14 ? 'text-green-600' :
+                              materia.promedioMateria >= 10 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {materia.promedioMateria}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {materia.evaluacionesPendientes}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Promedios de Estudiantes */}
+      {showPromediosModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Promedios de Estudiantes</h2>
+                <button
+                  onClick={() => setShowPromediosModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {loadingModal ? (
+                <div className="flex justify-center py-8">
+                  <FaSpinner className="animate-spin h-8 w-8 text-slate-600" />
+                </div>
+              ) : promediosEstudiantes.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No hay datos de estudiantes disponibles</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Estudiante
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Cédula
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Total Calificaciones
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Promedio General
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Materias
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {promediosEstudiantes.map((estudiante) => (
+                        <tr key={estudiante.estudianteID}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {estudiante.nombre} {estudiante.apellido}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {estudiante.cedula}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {estudiante.totalCalificaciones}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <span className={`font-bold ${
+                              estudiante.promedio >= 14 ? 'text-green-600' :
+                              estudiante.promedio >= 10 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {estudiante.promedio}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            <div className="space-y-1">
+                              {Object.entries(estudiante.materias).map(([materia, stats]) => (
+                                <div key={materia} className="flex justify-between">
+                                  <span className="text-xs">{materia}:</span>
+                                  <span className={`text-xs font-medium ${
+                                    stats.promedio >= 14 ? 'text-green-600' :
+                                    stats.promedio >= 10 ? 'text-yellow-600' : 'text-red-600'
+                                  }`}>
+                                    {stats.promedio}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      
+    </div>
+  );
+};
+
+// Componente para cada fila de calificación
+const CalificacionRow = ({ estudiante, onGuardar }) => {
+  const [calificacion, setCalificacion] = useState(estudiante.calificacion || '');
+  const [observaciones, setObservaciones] = useState(estudiante.observaciones || '');
+  const [guardando, setGuardando] = useState(false);
+
+  const handleGuardar = async () => {
+    if (!calificacion || calificacion < 0 || calificacion > 20) {
+      alert('La calificación debe estar entre 0 y 20');
+      return;
+    }
+    
+    setGuardando(true);
+    await onGuardar(estudiante, parseFloat(calificacion), observaciones);
+    setGuardando(false);
+  };
+
+  return (
+    <div className="bg-gray-50 rounded-lg p-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+        <div className="md:col-span-1">
+          <p className="font-medium text-gray-900">
+            {estudiante.nombre} {estudiante.apellido}
+          </p>
+          <p className="text-sm text-gray-500">C.I: {estudiante.cedula}</p>
+        </div>
+        
+        <div className="md:col-span-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Calificación (0-20)
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="20"
+            step="0.01"
+            value={calificacion}
+            onChange={(e) => setCalificacion(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+            placeholder="0.00"
+          />
+        </div>
+        
+        <div className="md:col-span-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Observaciones
+          </label>
+          <input
+            type="text"
+            value={observaciones}
+            onChange={(e) => setObservaciones(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+            placeholder="Opcional..."
+          />
+        </div>
+        
+        <div className="md:col-span-1 text-right">
+          <button
+            onClick={handleGuardar}
+            disabled={guardando || !calificacion}
+            className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center ml-auto"
+          >
+            {guardando ? (
+              <>
+                <FaSpinner className="animate-spin h-4 w-4 mr-2" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <FaSave className="h-4 w-4 mr-2" />
+                Guardar
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+
     </div>
   );
 };

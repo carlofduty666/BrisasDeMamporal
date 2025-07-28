@@ -44,7 +44,6 @@ import ProfesorDashboard from './components/dashboard/ProfesorDashboard'
 
 // Componentes de home
 import NavBar from './components/NavBar';
-import Carrusel from './components/Carrusel';
 import InfoHome from './components/InfoHome';
 import NuestraInstitucion from './components/NuestraInstitucion';
 import CalendarioAcademico from './components/CalendarioAcademico';
@@ -71,7 +70,6 @@ const HomePage = () => {
   return (
     <div className="min-h-screen">
       <NavBar />
-      {/* <Carrusel /> */}
       <InfoHome />
     </div>
   );

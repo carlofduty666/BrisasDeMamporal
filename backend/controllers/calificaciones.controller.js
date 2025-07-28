@@ -246,6 +246,46 @@ const calificacionesController = {
         res.status(500).json({ message: err.message });
       }
     },
+
+    // Obtener calificaciones de un estudiante específico
+    getCalificacionesByEstudiante: async (req, res) => {
+      try {
+        const { estudianteID } = req.params;
+        const { annoEscolarID } = req.query;
+        
+        if (!estudianteID) {
+          return res.status(400).json({ message: 'Se requiere el ID del estudiante' });
+        }
+        
+        // Construir filtros
+        const whereClause = { personaID: estudianteID };
+        
+        // Buscar calificaciones con evaluaciones incluidas
+        const calificaciones = await Calificaciones.findAll({
+          where: whereClause,
+          include: [
+            {
+              model: Evaluaciones,
+              as: 'Evaluaciones', 
+              where: annoEscolarID ? { annoEscolarID } : {},
+              include: [
+                {
+                  model: db.Materias,
+                  as: 'Materias',
+                  attributes: ['id', 'asignatura']
+                }
+              ]
+            }
+          ],
+          order: [['createdAt', 'DESC']]
+        });
+        
+        res.status(200).json(calificaciones);
+      } catch (error) {
+        console.error('Error al obtener calificaciones del estudiante:', error);
+        res.status(500).json({ message: error.message });
+      }
+    },
     
     // Obtener resumen de calificaciones por estudiante
     getResumenCalificacionesByEstudiante: async (req, res) => {
@@ -462,7 +502,7 @@ const calificacionesController = {
             observaciones: observaciones !== undefined ? observaciones : calificacionExistente.observaciones
         }, { transaction });
         
-        const evaluacion = calificacionExistente.Evaluacion;
+        const evaluacion = calificacionExistente.Evaluaciones;
 
         // Actualizar la nota del lapso
         await actualizarNotaLapso(
@@ -501,7 +541,7 @@ const calificacionesController = {
             return res.status(404).json({ message: 'Calificación no encontrada' });
         }
         
-        const evaluacion = calificacion.Evaluacion;
+        const evaluacion = calificacion.Evaluaciones;
         
         // Eliminar la calificación
         await calificacion.destroy({ transaction });
@@ -965,7 +1005,271 @@ const calificacionesController = {
       console.error(err);
       res.status(500).json({ message: err.message });
     }
+  },
+
+  // Obtener estadísticas generales del profesor
+getEstadisticasProfesor: async (req, res) => {
+  try {
+    const { profesorID } = req.params;
+    const { annoEscolarID } = req.query;
+
+    if (!profesorID) {
+      return res.status(400).json({ message: 'Se requiere el ID del profesor' });
+    }
+
+    // Obtener el año escolar activo si no se proporciona
+    let annoEscolar = annoEscolarID;
+    if (!annoEscolar) {
+      const annoEscolarActivo = await db.AnnoEscolar.findOne({
+        where: { activo: true }
+      });
+      annoEscolar = annoEscolarActivo?.id;
+    }
+
+    // Obtener evaluaciones del profesor
+    const evaluaciones = await Evaluaciones.findAll({
+      where: { 
+        profesorID,
+        annoEscolarID: annoEscolar 
+      },
+      include: [
+        {
+          model: db.Materias,
+          as: 'Materias',
+          attributes: ['id', 'asignatura']
+        }
+      ]
+    });
+
+    // Obtener calificaciones de todas las evaluaciones del profesor
+    const evaluacionesIds = evaluaciones.map(e => e.id);
+    const calificaciones = await Calificaciones.findAll({
+      where: {
+        evaluacionID: evaluacionesIds
+      },
+      include: [
+        {
+          model: Evaluaciones,
+          as: 'Evaluaciones',
+          attributes: ['id', 'nombreEvaluacion', 'materiaID', 'tipoEvaluacion']
+        }
+      ]
+    });
+
+    // Calcular estadísticas por materia
+    const estadisticasPorMateria = {};
+    
+    evaluaciones.forEach(evaluacion => {
+      const materiaID = evaluacion.materiaID;
+      const asignatura = evaluacion.Materias.asignatura;
+      
+      if (!estadisticasPorMateria[materiaID]) {
+        estadisticasPorMateria[materiaID] = {
+          materiaID,
+          asignatura,
+          totalEvaluaciones: 0,
+          totalCalificaciones: 0,
+          sumaCalificaciones: 0,
+          promedioMateria: 0,
+          evaluacionesPendientes: 0
+        };
+      }
+      
+      estadisticasPorMateria[materiaID].totalEvaluaciones++;
+      
+      // Contar calificaciones para esta evaluación
+      const calificacionesEvaluacion = calificaciones.filter(c => c.evaluacionID === evaluacion.id);
+      estadisticasPorMateria[materiaID].totalCalificaciones += calificacionesEvaluacion.length;
+      
+      // Sumar calificaciones
+      const sumaEvaluacion = calificacionesEvaluacion.reduce((sum, c) => sum + c.calificacion, 0);
+      estadisticasPorMateria[materiaID].sumaCalificaciones += sumaEvaluacion;
+      
+      // Verificar si tiene calificaciones pendientes
+      if (calificacionesEvaluacion.length === 0) {
+        estadisticasPorMateria[materiaID].evaluacionesPendientes++;
+      }
+    });
+
+    // Calcular promedios por materia
+    Object.keys(estadisticasPorMateria).forEach(materiaID => {
+      const stats = estadisticasPorMateria[materiaID];
+      if (stats.totalCalificaciones > 0) {
+        stats.promedioMateria = (stats.sumaCalificaciones / stats.totalCalificaciones).toFixed(2);
+      }
+    });
+
+    // Calcular estadísticas generales
+    const totalEvaluaciones = evaluaciones.length;
+    const totalCalificaciones = calificaciones.length;
+    const promedioGeneral = totalCalificaciones > 0 
+      ? (calificaciones.reduce((sum, c) => sum + c.calificacion, 0) / totalCalificaciones).toFixed(2)
+      : 0;
+
+    const totalEvaluacionesPendientes = Object.values(estadisticasPorMateria)
+      .reduce((sum, stats) => sum + stats.evaluacionesPendientes, 0);
+
+    res.status(200).json({
+      estadisticasGenerales: {
+        totalEvaluaciones,
+        totalCalificaciones,
+        promedioGeneral: parseFloat(promedioGeneral),
+        evaluacionesPendientes: totalEvaluacionesPendientes
+      },
+      estadisticasPorMateria: Object.values(estadisticasPorMateria)
+    });
+
+  } catch (error) {
+    console.error('Error al obtener estadísticas del profesor:', error);
+    res.status(500).json({ message: error.message });
   }
+},
+
+// Obtener promedios por estudiante
+getPromediosEstudiantes: async (req, res) => {
+  try {
+    const { profesorID } = req.params;
+    const { annoEscolarID, materiaID, gradoID } = req.query;
+
+    if (!profesorID) {
+      return res.status(400).json({ message: 'Se requiere el ID del profesor' });
+    }
+
+    // Construir filtros para evaluaciones
+    const filtrosEvaluacion = { profesorID };
+    if (annoEscolarID) filtrosEvaluacion.annoEscolarID = annoEscolarID;
+    if (materiaID) filtrosEvaluacion.materiaID = materiaID;
+    if (gradoID) filtrosEvaluacion.gradoID = gradoID;
+
+    // Obtener evaluaciones del profesor con filtros
+    const evaluaciones = await Evaluaciones.findAll({
+      where: filtrosEvaluacion,
+      include: [
+        {
+          model: db.Materias,
+          as: 'Materias',
+          attributes: ['id', 'asignatura']
+        },
+        {
+          model: db.Grados,
+          as: 'Grado',
+          attributes: ['id', 'nombre_grado']
+        }
+      ]
+    });
+
+    if (evaluaciones.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    const evaluacionesIds = evaluaciones.map(e => e.id);
+
+    // Obtener todas las calificaciones de estas evaluaciones
+    const calificaciones = await Calificaciones.findAll({
+      where: {
+        evaluacionID: evaluacionesIds
+      },
+      include: [
+        {
+          model: db.Personas,
+          as: 'Personas',
+          attributes: ['id', 'nombre', 'apellido', 'cedula']
+        },
+        {
+          model: Evaluaciones,
+          as: 'Evaluaciones',
+          attributes: ['id', 'nombreEvaluacion', 'materiaID', 'tipoEvaluacion'],
+          include: [
+            {
+              model: db.Materias,
+              as: 'Materias',
+              attributes: ['asignatura']
+            }
+          ]
+        }
+      ]
+    });
+
+    // Agrupar por estudiante
+    const estudiantesMap = {};
+    
+    calificaciones.forEach(calificacion => {
+      const estudianteID = calificacion.personaID;
+      const estudiante = calificacion.Personas;
+      
+      if (!estudiantesMap[estudianteID]) {
+        estudiantesMap[estudianteID] = {
+          estudianteID,
+          nombre: estudiante.nombre,
+          apellido: estudiante.apellido,
+          cedula: estudiante.cedula,
+          calificaciones: [],
+          totalCalificaciones: 0,
+          sumaCalificaciones: 0,
+          promedio: 0,
+          materias: {}
+        };
+      }
+      
+      estudiantesMap[estudianteID].calificaciones.push({
+        evaluacionID: calificacion.evaluacionID,
+        nombreEvaluacion: calificacion.Evaluaciones.nombreEvaluacion,
+        materia: calificacion.Evaluaciones.Materias.asignatura,
+        tipoEvaluacion: calificacion.Evaluaciones.tipoEvaluacion,
+        calificacion: calificacion.calificacion,
+        observaciones: calificacion.observaciones
+      });
+      
+      estudiantesMap[estudianteID].totalCalificaciones++;
+      estudiantesMap[estudianteID].sumaCalificaciones += calificacion.calificacion;
+      
+      // Agrupar por materia
+      const materia = calificacion.Evaluaciones.Materias.asignatura;
+      if (!estudiantesMap[estudianteID].materias[materia]) {
+        estudiantesMap[estudianteID].materias[materia] = {
+          totalCalificaciones: 0,
+          sumaCalificaciones: 0,
+          promedio: 0
+        };
+      }
+      
+      estudiantesMap[estudianteID].materias[materia].totalCalificaciones++;
+      estudiantesMap[estudianteID].materias[materia].sumaCalificaciones += calificacion.calificacion;
+    });
+
+    // Calcular promedios
+    Object.keys(estudiantesMap).forEach(estudianteID => {
+      const estudiante = estudiantesMap[estudianteID];
+      
+      // Promedio general del estudiante
+      if (estudiante.totalCalificaciones > 0) {
+        estudiante.promedio = parseFloat(
+          (estudiante.sumaCalificaciones / estudiante.totalCalificaciones).toFixed(2)
+        );
+      }
+      
+      // Promedio por materia
+      Object.keys(estudiante.materias).forEach(materia => {
+        const materiaStats = estudiante.materias[materia];
+        if (materiaStats.totalCalificaciones > 0) {
+          materiaStats.promedio = parseFloat(
+            (materiaStats.sumaCalificaciones / materiaStats.totalCalificaciones).toFixed(2)
+          );
+        }
+      });
+    });
+
+    // Convertir a array y ordenar por promedio descendente
+    const promediosEstudiantes = Object.values(estudiantesMap)
+      .sort((a, b) => b.promedio - a.promedio);
+
+    res.status(200).json(promediosEstudiantes);
+
+  } catch (error) {
+    console.error('Error al obtener promedios de estudiantes:', error);
+    res.status(500).json({ message: error.message });
+  }
+}
 };
 
 // Función auxiliar para actualizar la nota del lapso
@@ -1032,6 +1336,7 @@ async function actualizarNotaLapso(estudianteID, materiaID, gradoID, seccionID, 
         },
         defaults: {
           nota: notaLapso,
+          notaFinal: notaLapso, // Agregar notaFinal que es requerido
           porcentajeEvaluado: sumaPorcentajes
         },
         transaction
@@ -1040,6 +1345,7 @@ async function actualizarNotaLapso(estudianteID, materiaID, gradoID, seccionID, 
       if (!created) {
         await notaLapsoRecord.update({
           nota: notaLapso,
+          notaFinal: notaLapso, // Agregar notaFinal en el update también
           porcentajeEvaluado: sumaPorcentajes
         }, { transaction });
       }
@@ -1049,6 +1355,6 @@ async function actualizarNotaLapso(estudianteID, materiaID, gradoID, seccionID, 
       console.error('Error al actualizar nota del lapso:', error);
       throw error;
     }
-}
+};
   
 module.exports = calificacionesController;

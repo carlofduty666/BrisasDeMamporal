@@ -175,6 +175,61 @@ const materiasController = {
         res.status(500).json({ message: err.message });
       }
     },
+    
+    // Obtener materias que un profesor imparte en un grado específico
+    getMateriasByProfesorEnGrado: async (req, res) => {
+      try {
+        const { profesorID, gradoID } = req.params;
+        const { annoEscolarID } = req.query;
+        
+        if (!profesorID || !gradoID) {
+          return res.status(400).json({ message: 'Se requieren los IDs de profesor y grado' });
+        }
+        
+        // Usar el año escolar de la consulta o el activo
+        let idAnnoEscolar = annoEscolarID;
+        if (!idAnnoEscolar) {
+          const annoEscolarActivo = await db.AnnoEscolar.findOne({ where: { activo: true } });
+          if (annoEscolarActivo) {
+            idAnnoEscolar = annoEscolarActivo.id;
+          }
+        }
+        
+        if (!idAnnoEscolar) {
+          return res.status(404).json({ message: 'No se encontró un año escolar activo' });
+        }
+        
+        // Obtener las materias que el profesor imparte en el grado específico
+        const materias = await db.Materias.findAll({
+          include: [
+            {
+              model: db.Personas,
+              as: 'profesores',
+              where: { 
+                id: profesorID,
+                tipo: 'profesor'
+              },
+              through: { 
+                model: db.Profesor_Materia_Grados,
+                where: { 
+                  gradoID: gradoID,
+                  annoEscolarID: idAnnoEscolar 
+                },
+                attributes: []
+              },
+              attributes: []
+            }
+          ],
+          order: [['asignatura', 'ASC']]
+        });
+        
+        res.status(200).json(materias);
+      } catch (error) {
+        console.error('Error al obtener materias por profesor en grado:', error);
+        res.status(500).json({ message: error.message });
+      }
+    },
+    
     getMateriasByEstudiante: async (req, res) => {
         try {
             const personaID = req.params.id;

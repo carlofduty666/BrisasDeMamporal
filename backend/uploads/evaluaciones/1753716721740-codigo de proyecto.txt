@@ -1,0 +1,132 @@
+function readFiles(response, filePath, mimeType = 'text/html', codigoHTTP = 200) {
+    fs.readFile(filePath, (error, content) => { // lee el archivo y lo muestra en el navegador
+      if (!error) {
+        response.writeHead(codigoHTTP, {'Content-type': mimeType})
+        response.end(content);
+      } else {
+        const filePath = path.join(__dirname, '/views/http-screens/500.html');
+        readFiles(response, filePath, codigoHTTP = 500);
+      }
+    });
+}
+
+
+
+const server = http.createServer(function(request, response) {
+    console.log(`Requested URL: ${request.url}`);
+    if (request.url === '/') {
+        const filePath = path.join(__dirname, '/views/home.html');
+        readFiles(response, filePath);
+    }
+    else if (request.url === '/login') {
+        console.log('Login page');
+        const filePath = path.join(__dirname, '/views/login.html');
+        readFiles(response, filePath);
+    }
+    else if (request.url === '/inicio-sesion') {
+        console.log('Sign up page');
+        const filePath = path.join(__dirname, '/views/signUp.html');
+        readFiles(response, filePath);
+    }
+    else if (request.url === '/admin') {
+        console.log('Sign up page');
+        const filePath = path.join(__dirname, '/views/admin.html');
+        readFiles(response, filePath);
+    }
+    else if (request.url === '/style.css') {
+        const filePath = path.join(__dirname, '/views/assets/css/style.css');
+        readFiles(response, filePath, mimeType = 'text/css');
+    }
+    else if (request.url === '/style-admin.css') {
+        const filePath = path.join(__dirname, '/views/assets/css/style-admin.css');
+        readFiles(response, filePath, mimeType = 'text/css');
+    }
+    else if (request.url === '/javascript') {
+        const filePath = path.join(__dirname, '/views/assets/js/app.js');
+        readFiles(response, filePath, mimeType = 'text/javascript');
+    }
+    else if (request.method === 'GET' && request.url.startsWith('/api/db')) {
+        const urlParts = request.url.split('/').filter(part => part); // This removes empty strings
+        
+        // For debugging
+        console.log('URL parts:', urlParts);
+        
+        const dbName = urlParts[2] || 'your_default_db_name'; // Add a default database name
+        
+        readData(dbName).then(data => {
+            response.writeHead(200, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify(data));
+        }).catch(error => {
+            console.error('Error in GET /api/db:', error);
+            response.writeHead(500, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ error: error.message }));
+        });
+    }
+
+    else if (request.method === 'POST' && request.url.startsWith('/api/db/create')) { // Crear una colección
+        let body = "";
+        
+        request.on('data', chunk => { body += chunk.toString(); });
+        
+        request.on('end', () => {
+            const { dbName, collectionName, data } = JSON.parse(body);
+            createData(dbName, collectionName, data).then(id => {
+                response.writeHead(201, { 'Content-Type': 'application/json' });
+                response.end(JSON.stringify({ id }));
+            }).catch(error => {
+                console.error(error);
+            });
+        });
+    }
+
+    else if (request.method === 'PUT' && request.url.startsWith('/api/db/update')) { // Actualizar un documento
+        const urlParts = request.url.split('/');
+        const dbName = urlParts[2];
+        const collectionName = urlParts[3];
+        const id = urlParts[5]; // Suponiendo que el ID está en la URL
+
+        let body = "";
+        
+        request.on('data', chunk => { body += chunk.toString(); });
+        
+        request.on('end', () => {
+            const updatedData = JSON.parse(body);
+            updateData(dbName, collectionName, id, updatedData).then(modifiedCount => {
+                if (modifiedCount === 1) {
+                    response.writeHead(200, { 'Content-Type': 'application/json' });
+                    response.end(JSON.stringify({ message: 'Documento actualizado' }));
+                }
+            }).catch(error => {
+                console.error(error);
+            });
+        });
+    }
+
+    else if (request.method === 'DELETE' && request.url.startsWith('/api/db/delete')) { // Eliminar un documento
+        const urlParts = request.url.split('/');
+        const dbName = urlParts[2];
+        const collectionName = urlParts[3];
+        const id = urlParts[5]; // Suponiendo que el ID está en la URL
+
+        deleteData(dbName, collectionName, id).then(deletedCount => {
+            if (deletedCount === 1) {
+                response.writeHead(200, { 'Content-Type': 'application/json' });
+                response.end(JSON.stringify({ message: 'Documento eliminado' }));
+            }
+        }).catch(error => {
+            console.error(error);
+        });
+    }
+    else {
+        const filePath = path.join(__dirname, '/views/http-screens/404.html');
+        readFiles(response, filePath, codigoHTTP = 404);
+    }
+})
+
+connectDB().then(() => {
+    server.listen(9999, () => {
+        console.log('Servidor iniciado en: http://localhost:9999');
+    });
+}).catch(error => {
+    console.error('Error al conectar a la base de datos:', error);
+});
