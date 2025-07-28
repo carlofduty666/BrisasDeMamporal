@@ -17,11 +17,12 @@ const inscripcionController = {
   // Obtener todas las inscripciones
   getAllInscripciones: async (req, res) => {
     try {
-      const { annoEscolarID, estado } = req.query;
+      const { annoEscolarID, estado, estudianteID } = req.query;
       
       const whereClause = {};
       if (annoEscolarID) whereClause.annoEscolarID = annoEscolarID;
       if (estado) whereClause.estado = estado;
+      if (estudianteID) whereClause.estudianteID = estudianteID;
       
       const inscripciones = await Inscripciones.findAll({
         where: whereClause,

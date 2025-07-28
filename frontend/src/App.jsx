@@ -71,7 +71,7 @@ const HomePage = () => {
   return (
     <div className="min-h-screen">
       <NavBar />
-      <Carrusel />
+      {/* <Carrusel /> */}
       <InfoHome />
     </div>
   );

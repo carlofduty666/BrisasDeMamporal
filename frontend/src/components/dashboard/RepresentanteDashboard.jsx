@@ -1,7 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { FaPlus, FaSearch, FaEye, FaFileInvoiceDollar, FaSave, FaTimes, FaMoneyBillWave } from 'react-icons/fa';
+import { 
+  FaPlus, 
+  FaSearch, 
+  FaEye, 
+  FaFileInvoiceDollar, 
+  FaSave, 
+  FaTimes, 
+  FaMoneyBillWave,
+  FaUser,
+  FaGraduationCap,
+  FaChartBar,
+  FaTasks,
+  FaChalkboardTeacher,
+  FaBookOpen,
+  FaClipboardList,
+  FaUsers,
+  FaCalendarAlt,
+  FaHome
+} from 'react-icons/fa';
 import EstudianteProgresoModal from '../estudiante/EstudianteProgresoModal';
 
 const RepresentanteDashboard = () => {
@@ -41,6 +59,12 @@ const RepresentanteDashboard = () => {
   // Estado para el modal de progreso
   const [showProgresoModal, setShowProgresoModal] = useState(false);
   const [estudianteSeleccionado, setEstudianteSeleccionado] = useState(null);
+  
+  // Estados para datos académicos
+  const [calificacionesEstudiantes, setCalificacionesEstudiantes] = useState({});
+  const [evaluacionesEstudiantes, setEvaluacionesEstudiantes] = useState({});
+  const [profesoresEstudiantes, setProfesoresEstudiantes] = useState({});
+  const [estadosInscripcion, setEstadosInscripcion] = useState({});
   
   // // Estado para el formulario de nuevo pago
   const [formPago, setFormPago] = useState({
@@ -86,6 +110,69 @@ const RepresentanteDashboard = () => {
     const total = monto + montoMora - descuento;
     setMontoTotal(total.toFixed(2));
   }, [formData.monto, formData.montoMora, formData.descuento]);
+
+  // Función para cargar datos académicos de los estudiantes
+  const cargarDatosAcademicos = async (estudiantes, token, annoEscolarID) => {
+    const calificaciones = {};
+    const evaluaciones = {};
+    const profesores = {};
+    const estados = {};
+
+    for (const estudiante of estudiantes) {
+      try {
+        // Obtener estado de inscripción
+        const inscripcionResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/inscripciones/estudiante/${estudiante.id}/actual`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        estados[estudiante.id] = inscripcionResponse.data;
+      } catch (err) {
+        console.log(`No se encontró inscripción para estudiante ${estudiante.id}`);
+        estados[estudiante.id] = null;
+      }
+
+      try {
+        // Obtener calificaciones
+        const califResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/calificaciones/estudiante/${estudiante.id}`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        calificaciones[estudiante.id] = califResponse.data.slice(0, 5); // Solo últimas 5
+      } catch (err) {
+        console.log(`Error al cargar calificaciones para estudiante ${estudiante.id}`);
+        calificaciones[estudiante.id] = [];
+      }
+
+      try {
+        // Obtener evaluaciones
+        const evalResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/evaluaciones/estudiante/${estudiante.id}`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        evaluaciones[estudiante.id] = evalResponse.data.slice(0, 3); // Solo últimas 3
+      } catch (err) {
+        console.log(`Error al cargar evaluaciones para estudiante ${estudiante.id}`);
+        evaluaciones[estudiante.id] = [];
+      }
+
+      try {
+        // Obtener profesores
+        const profResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/personas/estudiante/${estudiante.id}/profesores?annoEscolarID=${annoEscolarID}`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        profesores[estudiante.id] = profResponse.data.slice(0, 4); // Solo primeros 4
+      } catch (err) {
+        console.log(`Error al cargar profesores para estudiante ${estudiante.id}`);
+        profesores[estudiante.id] = [];
+      }
+    }
+
+    setCalificacionesEstudiantes(calificaciones);
+    setEvaluacionesEstudiantes(evaluaciones);
+    setProfesoresEstudiantes(profesores);
+    setEstadosInscripcion(estados);
+  };
 
   useEffect(() => {
     const fetchAnnoEscolar = async () => {
@@ -175,6 +262,9 @@ const RepresentanteDashboard = () => {
         );
         
         setEstudiantes(estudiantesConGrado);
+        
+        // Cargar datos académicos para cada estudiante
+        await cargarDatosAcademicos(estudiantesConGrado, token, annoEscolarID);
         
         // Obtener inscripciones del representante
         const inscripcionesResponse = await axios.get(
@@ -562,19 +652,33 @@ const handleVerProgreso = (estudiante) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      <header className="relative bg-slate-800 shadow-lg overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard del Representante</h1>
-            <div className="flex items-center">
-              <span className="text-gray-600 mr-4">{representante?.nombre} {representante?.apellido}</span>
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-white/20 backdrop-blur-md rounded-full">
+                <FaEye className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white drop-shadow-lg">Dashboard</h1>
+                <p className="text-white/80 text-sm mt-1">Gestiona la información de tus estudiantes</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              {representante && (
+                <div className="text-right bg-white/10 backdrop-blur-md rounded-lg p-4 border border-white/20">
+                  <p className="text-sm text-white/80">Bienvenido</p>
+                  <p className="text-lg font-semibold text-white">{representante.nombre} {representante.apellido}</p>
+                </div>
+              )}
               <button
                 onClick={() => {
                   localStorage.removeItem('token');
                   window.location.href = '/login';
                 }}
-                className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition-colors"
+                className="bg-red-500/80 hover:bg-red-600 text-white py-2 px-4 rounded-lg backdrop-blur-md border border-red-400/30 transition-all duration-300 hover:scale-105"
               >
                 Cerrar Sesión
               </button>
@@ -596,269 +700,400 @@ const handleVerProgreso = (estudiante) => {
           </div>
         )}
         
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           {/* Sección de Estudiantes */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium text-gray-900">Mis Estudiantes</h2>
+          <div className="lg:col-span-3 bg-white shadow-lg rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl">
+            <div className="bg-slate-700 px-6 py-4 rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-white/10 rounded-lg">
+                    <FaUsers className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Mis Estudiantes</h2>
+                    <p className="text-gray-200 text-sm">Gestiona tus estudiantes inscritos</p>
+                  </div>
+                </div>
                 <Link
                   to="/inscripcion/nuevo-estudiante"
-                  className="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition-colors"
+                  className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg border border-white/20 transition-all duration-300 hover:scale-105 flex items-center space-x-2"
                 >
-                  Inscribir Nuevo Estudiante
+                  <FaPlus className="h-4 w-4" />
+                  <span>Nuevo Estudiante</span>
                 </Link>
               </div>
+            </div>
+            <div className="px-6 py-6">
               
               {estudiantes.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-gray-500">No tiene estudiantes registrados.</p>
-                  <p className="text-gray-500 mt-2">Haga clic en "Inscribir Nuevo Estudiante" para comenzar.</p>
+                <div className="text-center py-12">
+                  <div className="p-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                    <FaPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg font-medium">No tienes estudiantes registrados</p>
+                    <p className="text-gray-500 mt-2">Haz clic en "Nuevo Estudiante" para comenzar</p>
+                  </div>
                 </div>
-                
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cédula</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {estudiantes.map((estudiante) => (
-                        <tr key={estudiante.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {estudiante.nombre} {estudiante.apellido}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  {estudiantes.map((estudiante, index) => {
+                    const estadoInscripcion = estadosInscripcion[estudiante.id];
+                    const calificaciones = calificacionesEstudiantes[estudiante.id] || [];
+                    const evaluaciones = evaluacionesEstudiantes[estudiante.id] || [];
+                    const profesores = profesoresEstudiantes[estudiante.id] || [];
+
+                    return (
+                      <div 
+                        key={estudiante.id} 
+                        className="group bg-white rounded-xl shadow-md hover:shadow-lg border border-gray-200 transition-all duration-300 hover:scale-[1.02] overflow-hidden"
+                        style={{
+                          animationDelay: `${index * 150}ms`,
+                          animation: 'fadeInUp 0.6s ease-out forwards'
+                        }}
+                      >
+                        {/* Header del estudiante */}
+                        <div className="bg-slate-600 p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="p-2 bg-white/10 rounded-lg">
+                                <FaUser className="h-6 w-6 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-bold text-white">
+                                  {estudiante.nombre} {estudiante.apellido}
+                                </h3>
+                                <p className="text-white/80 text-sm">C.I: {estudiante.cedula}</p>
+                              </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">{estudiante.cedula}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">
-                            {estudiante.grado ? (
-                              <>
-                                {estudiante.grado.nombre_grado || 'Grado sin nombre'} 
-                                
-                              </>
-                            ) : (
-                              'No asignado'
+                            {estadoInscripcion && (
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                estadoInscripcion.estado === 'aprobado' || estadoInscripcion.estado === 'inscrito' 
+                                  ? 'bg-green-500/80 text-white border border-green-400/50' :
+                                estadoInscripcion.estado === 'rechazado' || estadoInscripcion.estado === 'retirado' 
+                                  ? 'bg-red-500/80 text-white border border-red-400/50' :
+                                  'bg-yellow-500/80 text-white border border-yellow-400/50'
+                              }`}>
+                                {estadoInscripcion.estado?.toUpperCase() || 'PENDIENTE'}
+                              </span>
                             )}
+                          </div>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                          {/* Información Académica */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                              <div className="text-xs font-medium text-gray-700 mb-1 flex items-center">
+                                <FaGraduationCap className="h-3 w-3 mr-1" />
+                                Grado
+                              </div>
+                              <div className="text-sm font-bold text-gray-900">
+                                {estudiante.grado?.nombre_grado || 'No asignado'}
+                              </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <Link to={`/estudiante/${estudiante.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                              <div className="text-xs font-medium text-gray-700 mb-1 flex items-center">
+                                <FaUsers className="h-3 w-3 mr-1" />
+                                Sección
+                              </div>
+                              <div className="text-sm font-bold text-gray-900">
+                                {estadoInscripcion?.Secciones?.nombre_seccion || 'No asignada'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Resumen Académico */}
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="text-center bg-gray-100 rounded-lg p-3 border border-gray-200">
+                              <FaChartBar className="h-4 w-4 mx-auto mb-1 text-gray-600" />
+                              <div className="text-lg font-bold text-gray-700">{calificaciones.length}</div>
+                              <div className="text-xs text-gray-600">Calificaciones</div>
+                            </div>
+                            <div className="text-center bg-gray-100 rounded-lg p-3 border border-gray-200">
+                              <FaTasks className="h-4 w-4 mx-auto mb-1 text-gray-600" />
+                              <div className="text-lg font-bold text-gray-700">{evaluaciones.length}</div>
+                              <div className="text-xs text-gray-600">Evaluaciones</div>
+                            </div>
+                            <div className="text-center bg-gray-100 rounded-lg p-3 border border-gray-200">
+                              <FaChalkboardTeacher className="h-4 w-4 mx-auto mb-1 text-gray-600" />
+                              <div className="text-lg font-bold text-gray-700">{profesores.length}</div>
+                              <div className="text-xs text-gray-600">Profesores</div>
+                            </div>
+                          </div>
+
+                          {/* Últimas Calificaciones */}
+                          {calificaciones.length > 0 && (
+                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                              <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                <FaChartBar className="text-gray-600 mr-2 h-4 w-4" />
+                                Últimas Calificaciones
+                              </div>
+                              <div className="space-y-2">
+                                {calificaciones.slice(0, 3).map((calif, idx) => (
+                                  <div key={idx} className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-600 truncate flex-1 mr-2">
+                                      {calif.Evaluaciones?.nombreEvaluacion || 'Evaluación'}
+                                    </span>
+                                    <span className={`font-bold px-2 py-1 rounded ${
+                                      calif.calificacion >= 16 ? 'bg-green-100 text-green-700' :
+                                      calif.calificacion >= 10 ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-red-100 text-red-700'
+                                    }`}>
+                                      {calif.calificacion}/20
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Profesores */}
+                          {profesores.length > 0 && (
+                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                              <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                <FaChalkboardTeacher className="text-gray-600 mr-2 h-4 w-4" />
+                                Profesores Asignados
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {profesores.slice(0, 4).map((prof, idx) => (
+                                  <div key={idx} className="text-xs bg-white rounded p-2 border border-gray-100">
+                                    <div className="font-medium text-gray-800 truncate">
+                                      {prof.nombre} {prof.apellido}
+                                    </div>
+                                    <div className="text-gray-500 truncate">
+                                      {prof.materia?.asignatura || 'Materia'}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Botones de Acción */}
+                          <div className="flex space-x-3 pt-2">
+                            <Link 
+                              to={`/estudiante/${estudiante.id}`} 
+                              className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-3 px-4 rounded-lg text-center text-sm font-medium transition-all duration-300 hover:scale-105 shadow-md flex items-center justify-center"
+                            >
+                              <FaEye className="h-4 w-4 mr-2" />
                               Ver Detalles
                             </Link>
                             <button
                               onClick={() => handleVerProgreso(estudiante)}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 shadow-md flex items-center justify-center"
                             >
+                              <FaClipboardList className="h-4 w-4 mr-2" />
                               Ver Progreso
                             </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Sección de Inscripciones */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Inscripciones Recientes</h2>
-              
-              {inscripciones.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-gray-500">No tiene inscripciones registradas.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estudiante</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {inscripciones.map((inscripcion) => (
-                        <tr key={inscripcion.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {inscripcion.estudiante.nombre} {inscripcion.estudiante.apellido}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">
-                            {inscripcion.grado?.nombre_grado}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              inscripcion.estado === 'aprobado' ? 'bg-green-100 text-green-800' :
-                              inscripcion.estado === 'rechazado' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {inscripcion.estado.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <Link to={`/inscripcion/comprobante/${inscripcion.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
-                              Ver Comprobante
-                            </Link>
-                            {/* {!inscripcion.pagado && (
-                              <Link to={`/pagos/inscripcion/${inscripcion.id}`} className="text-green-600 hover:text-green-900">
-                                Pagar
-                              </Link>
-                            )} */}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+          {/* Sidebar con información compacta */}
+          <div className="lg:col-span-1 space-y-4">
+            {/* Cupos Disponibles Compactos */}
+            <div className="bg-white shadow-lg rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl">
+              <div className="bg-slate-700 px-3 py-2 rounded-t-xl">
+                <h3 className="text-sm font-bold text-white flex items-center">
+                  <FaClipboardList className="h-4 w-4 mr-1" />
+                  Cupos
+                </h3>
+              </div>
+              <div className="p-3">
+                {cuposResumen.length > 0 ? (
+                  <div className="space-y-2">
+                    {cuposResumen.slice(0, 3).map((cupo) => (
+                      <div key={cupo.gradoID} className="bg-gray-50 rounded-lg border border-gray-200 p-2">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-medium text-gray-900 truncate">{cupo.nombre_grado}</span>
+                          <span className="text-xs text-gray-500">{cupo.totalDisponibles}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div 
+                            className={`h-1.5 rounded-full transition-all duration-500 ${
+                              cupo.porcentajeOcupacion > 90 ? 'bg-red-500' :
+                              cupo.porcentajeOcupacion > 70 ? 'bg-yellow-500' :
+                              'bg-green-500'
+                            }`}
+                            style={{ width: `${cupo.porcentajeOcupacion}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-xs">Sin datos</p>
+                )}
+              </div>
             </div>
-          </div>
-          
-          {/* Sección de Pagos Recientes */}
-          <div className="bg-white overflow-hidden shadow rounded-lg mt-6">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium text-gray-900">Pagos Recientes</h2>
+
+            {/* Resumen de Pagos */}
+            <div className="bg-white shadow-lg rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl">
+              <div className="bg-slate-700 px-3 py-2 rounded-t-xl">
+                <h3 className="text-sm font-bold text-white flex items-center">
+                  <FaMoneyBillWave className="h-4 w-4 mr-1" />
+                  Pagos
+                </h3>
+              </div>
+              <div className="p-3 space-y-2">
+                <div className="flex justify-between items-center p-2 bg-green-50 rounded-lg border border-green-200">
+                  <span className="text-xs font-medium text-gray-700">Pagados</span>
+                  <span className="text-sm font-bold text-green-600">{pagosPagados.length}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <span className="text-xs font-medium text-gray-700">Pendientes</span>
+                  <span className="text-sm font-bold text-yellow-600">{pagosPendientes.length}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 bg-red-50 rounded-lg border border-red-200">
+                  <span className="text-xs font-medium text-gray-700">Anulados</span>
+                  <span className="text-sm font-bold text-red-600">{pagosAnulados.length}</span>
+                </div>
                 <button
                   onClick={handleOpenModal}
-                  className="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition-colors flex items-center"
+                  className="w-full bg-slate-600 hover:bg-slate-700 text-white py-2 px-3 rounded-lg text-xs font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center space-x-1"
                 >
-                  <FaMoneyBillWave className="mr-2" /> Registrar Pago
+                  <FaPlus className="h-3 w-3" />
+                  <span>Nuevo Pago</span>
                 </button>
               </div>
-              
-              {pagos.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-gray-500">No tiene pagos registrados.</p>
-                  <p className="text-gray-500 mt-2">Haga clic en "Registrar Pago" para comenzar.</p>
+            </div>
+          </div>
+        </div>
+
+
+        
+        {/* Secciones inferiores en grid */}
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Estadísticas Académicas Generales */}
+          <div className="bg-white shadow-lg rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl">
+            <div className="bg-slate-700 px-6 py-4 rounded-t-xl">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-white/10 rounded-lg">
+                  <FaChartBar className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Resumen Académico</h2>
+                  <p className="text-gray-200 text-sm">Estado general de tus estudiantes</p>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-6">
+              {estudiantes.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <FaUsers className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                    <div className="text-2xl font-bold text-gray-700">{estudiantes.length}</div>
+                    <div className="text-xs text-gray-600 mt-1">Estudiantes</div>
+                  </div>
+                  <div className="text-center bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <FaGraduationCap className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                    <div className="text-2xl font-bold text-gray-700">
+                      {Object.values(estadosInscripcion).filter(estado => estado?.estado === 'inscrito' || estado?.estado === 'aprobada').length}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Inscritos</div>
+                  </div>
+                  <div className="text-center bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <FaChartBar className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                    <div className="text-2xl font-bold text-gray-700">
+                      {Object.values(calificacionesEstudiantes).reduce((total, califs) => total + califs.length, 0)}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Calificaciones</div>
+                  </div>
+                  <div className="text-center bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <FaTasks className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                    <div className="text-2xl font-bold text-gray-700">
+                      {Object.values(evaluacionesEstudiantes).reduce((total, evals) => total + evals.length, 0)}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Evaluaciones</div>
+                  </div>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estudiante</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concepto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {pagos.slice(0, 5).map((pago) => (
-                        <tr key={pago.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {new Date(pago.fechaPago || pago.createdAt).toLocaleDateString()}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                            {pago.estudiante?.nombre || pago.estudiantes?.nombre || pago.estudianteInfo?.nombre || 'N/A'} {pago.estudiante?.apellido || pago.estudiantes?.apellido || pago.estudianteInfo?.apellido || ''}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">
-                              {pago.arancel?.nombre || pago.aranceles?.nombre || pago.concepto || 'No especificado'}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              ${parseFloat(pago.montoTotal || pago.monto).toFixed(2)}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              pago.estado === 'pagado' ? 'bg-green-100 text-green-800' :
-                              pago.estado === 'anulado' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {pago.estado.toUpperCase()}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  
-                  {pagos.length > 5 && (
-                    <div className="mt-4 text-center">
-                      <Link to="/pagos" className="text-indigo-600 hover:text-indigo-900">
-                        Ver todos los pagos
-                      </Link>
-                    </div>
-                  )}
+                <div className="text-center py-8">
+                  <div className="p-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                    <FaChartBar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg font-medium">Sin datos académicos</p>
+                    <p className="text-gray-500 mt-2">Registra estudiantes para ver estadísticas</p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
-          
-          {/* Sección de Cupos Disponibles */}
-          <div className="bg-white overflow-hidden shadow rounded-lg lg:col-span-2">
-            <div className="px-4 py-5 sm:p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Cupos Disponibles</h2>
-              
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grado</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacidad Total</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cupos Ocupados</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cupos Disponibles</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ocupación</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {cuposResumen.map((cupo) => (
-                      <tr key={cupo.gradoID}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{cupo.nombre_grado}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">{cupo.totalCapacidad}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">{cupo.totalOcupados}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">{cupo.totalDisponibles}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="w-full bg-gray-200 rounded-full h-2.5">
-                            <div 
-                              className={`h-2.5 rounded-full ${
-                                cupo.porcentajeOcupacion > 90 ? 'bg-red-600' :
-                                cupo.porcentajeOcupacion > 70 ? 'bg-yellow-600' :
-                                'bg-green-600'
-                              }`}
-                              style={{ width: `${cupo.porcentajeOcupacion}%` }}
-                            ></div>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">{cupo.porcentajeOcupacion}%</div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+
+          {/* Pagos Recientes Compactos */}
+          <div className="bg-white shadow-lg rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl">
+            <div className="bg-slate-700 px-6 py-4 rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-white/10 rounded-lg">
+                    <FaMoneyBillWave className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Pagos Recientes</h2>
+                    <p className="text-gray-200 text-sm">Últimos movimientos</p>
+                  </div>
+                </div>
+                <Link 
+                  to="/pagos" 
+                  className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg border border-white/20 transition-all duration-300 hover:scale-105 text-sm"
+                >
+                  Ver Todos
+                </Link>
               </div>
+            </div>
+            <div className="px-6 py-6">
+              {pagos.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="p-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                    <FaMoneyBillWave className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg font-medium">No tienes pagos registrados</p>
+                    <p className="text-gray-500 mt-2">Los pagos aparecerán aquí cuando se procesen</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {pagos.slice(0, 6).map((pago, index) => (
+                    <div 
+                      key={pago.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300"
+                      style={{
+                        animationDelay: `${index * 100}ms`,
+                        animation: 'fadeInUp 0.6s ease-out forwards'
+                      }}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <span className={`w-3 h-3 rounded-full ${
+                            pago.estado === 'pagado' ? 'bg-green-500' :
+                            pago.estado === 'anulado' ? 'bg-red-500' :
+                            'bg-yellow-500'
+                          }`}></span>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-semibold text-gray-900 truncate">
+                              {pago.estudiante?.nombre || pago.estudiantes?.nombre || 'N/A'} {pago.estudiante?.apellido || pago.estudiantes?.apellido || ''}
+                            </h4>
+                            <p className="text-xs text-gray-500 truncate">
+                              {pago.arancel?.nombre || pago.aranceles?.nombre || 'No especificado'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-gray-900">
+                          ${parseFloat(pago.montoTotal || pago.monto).toFixed(2)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(pago.fechaPago || pago.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1316,5 +1551,45 @@ const handleVerProgreso = (estudiante) => {
     </div>
   );
 };
+
+// Añadir las animaciones CSS
+const styleSheet = document.createElement("style");
+styleSheet.innerText = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+`;
+
+if (!document.head.querySelector('#dashboard-animations')) {
+  styleSheet.id = 'dashboard-animations';
+  document.head.appendChild(styleSheet);
+}
 
 export default RepresentanteDashboard;
