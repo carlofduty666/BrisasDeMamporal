@@ -11,6 +11,8 @@ const app = express();
 const directorios = [
   path.join(__dirname, 'uploads'),
   path.join(__dirname, 'uploads/documentos'),
+  path.join(__dirname, 'uploads/evaluaciones'),
+  path.join(__dirname, 'uploads/entregas'),
   path.join(__dirname, 'tmp')
 ];
 
@@ -42,6 +44,7 @@ const liquidacionRoutes = require('./routes/liquidacion.routes')
 const inscripcionRoutes = require('./routes/inscripcion.routes')
 const cuposRoutes = require('./routes/cupos.routes')
 const authRoutes = require('./routes/auth.routes');
+const archivosEvaluacionesRoutes = require('./routes/archivosevaluaciones.routes');
 
 // ruta de prueba multer
 const testRoutes = require('./routes/test.routes');
@@ -105,6 +108,7 @@ app.use('/', liquidacionRoutes);
 app.use('/', inscripcionRoutes)
 app.use('/', cuposRoutes);
 app.use('/', authRoutes);
+app.use('/', archivosEvaluacionesRoutes);
 
 
 // Sincronizar base de datos

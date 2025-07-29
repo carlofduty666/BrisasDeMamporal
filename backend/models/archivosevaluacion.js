@@ -15,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'evaluacionID',
         as: 'Evaluacion'
       });
+      ArchivosEvaluaciones.belongsTo(models.Personas, {
+        foreignKey: 'estudianteID',
+        as: 'Estudiante'
+      });
     }
   }
   ArchivosEvaluaciones.init({
@@ -23,6 +27,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       references: {
         model: 'Evaluaciones',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE'
+    },
+    estudianteID: {
+      type: DataTypes.INTEGER,
+      allowNull: true, // Puede ser null para archivos del profesor
+      references: {
+        model: 'Personas',
         key: 'id'
       },
       onUpdate: 'CASCADE',

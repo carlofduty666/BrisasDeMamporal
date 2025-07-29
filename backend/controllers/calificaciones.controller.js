@@ -96,6 +96,43 @@ const calificacionesController = {
       }
     },
     
+    // Obtener calificación específica de un estudiante para una evaluación
+    getCalificacionByEstudianteAndEvaluacion: async (req, res) => {
+      try {
+        const { estudianteID, evaluacionID } = req.params;
+        
+        const calificacion = await Calificaciones.findOne({
+          where: {
+            personaID: estudianteID,
+            evaluacionID: evaluacionID
+          },
+          include: [
+            { 
+              model: Evaluaciones, 
+              as: 'Evaluaciones',
+              include: [
+                { model: Materias, as: 'Materias' }
+              ]
+            },
+            { 
+              model: Personas, 
+              as: 'Personas',
+              attributes: ['id', 'nombre', 'apellido', 'cedula']
+            }
+          ]
+        });
+        
+        if (!calificacion) {
+          return res.status(404).json({ message: 'Calificación no encontrada' });
+        }
+        
+        res.json(calificacion);
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
+      }
+    },
+
     // Obtener calificaciones por estudiante
     getCalificacionesByEstudiante: async (req, res) => {
       try {

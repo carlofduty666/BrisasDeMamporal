@@ -7,6 +7,7 @@ router.get('/calificaciones', authMiddleware.verifyToken, calificacionesControll
 router.get('/calificaciones/:id', authMiddleware.verifyToken, calificacionesController.getCalificacionById);
 router.get('/calificaciones/evaluacion/:evaluacionID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByEvaluacion);
 router.get('/calificaciones/estudiante/:estudianteID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByEstudiante);
+router.get('/calificaciones/estudiante/:estudianteID/evaluacion/:evaluacionID', authMiddleware.verifyToken, calificacionesController.getCalificacionByEstudianteAndEvaluacion);
 router.get('/calificaciones/materia/:materiaID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByMateria);
 router.get('/calificaciones/grado/:gradoID/seccion/:seccionID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByGradoSeccion);
 router.get('/calificaciones/resumen/estudiante/:estudianteID', authMiddleware.verifyToken, calificacionesController.getResumenCalificacionesByEstudiante);
