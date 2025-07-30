@@ -1215,12 +1215,22 @@ getPromediosEstudiantes: async (req, res) => {
         {
           model: Evaluaciones,
           as: 'Evaluaciones',
-          attributes: ['id', 'nombreEvaluacion', 'materiaID', 'tipoEvaluacion'],
+          attributes: ['id', 'nombreEvaluacion', 'materiaID', 'tipoEvaluacion', 'lapso', 'porcentaje', 'fechaEvaluacion', 'gradoID', 'seccionID'],
           include: [
             {
               model: db.Materias,
               as: 'Materias',
-              attributes: ['asignatura']
+              attributes: ['id', 'asignatura']
+            },
+            {
+              model: db.Grados,
+              as: 'Grado',
+              attributes: ['id', 'nombre_grado']
+            },
+            {
+              model: db.Secciones,
+              as: 'Seccion',
+              attributes: ['id', 'nombre_seccion']
             }
           ]
         }
@@ -1234,6 +1244,19 @@ getPromediosEstudiantes: async (req, res) => {
       const estudianteID = calificacion.personaID;
       const estudiante = calificacion.Personas;
       
+      // Log temporal para depurar
+      if (estudianteID === calificaciones[0].personaID) {
+        console.log('DEBUG - Primera calificación:', {
+          estudianteID,
+          evaluacionID: calificacion.evaluacionID,
+          gradoID: calificacion.Evaluaciones?.gradoID,
+          grado: calificacion.Evaluaciones?.Grado,
+          seccionID: calificacion.Evaluaciones?.seccionID,
+          seccion: calificacion.Evaluaciones?.Seccion,
+          evaluacionCompleta: JSON.stringify(calificacion.Evaluaciones, null, 2)
+        });
+      }
+      
       if (!estudiantesMap[estudianteID]) {
         estudiantesMap[estudianteID] = {
           estudianteID,
@@ -1244,17 +1267,26 @@ getPromediosEstudiantes: async (req, res) => {
           totalCalificaciones: 0,
           sumaCalificaciones: 0,
           promedio: 0,
-          materias: {}
+          materias: {},
+          // Información de grado y sección (se toma de la primera evaluación)
+          gradoID: calificacion.Evaluaciones?.gradoID,
+          grado: calificacion.Evaluaciones?.Grado,
+          seccionID: calificacion.Evaluaciones?.seccionID,
+          seccion: calificacion.Evaluaciones?.Seccion
         };
       }
       
+      // Mantener la estructura completa con asociaciones
       estudiantesMap[estudianteID].calificaciones.push({
-        evaluacionID: calificacion.evaluacionID,
-        nombreEvaluacion: calificacion.Evaluaciones.nombreEvaluacion,
-        materia: calificacion.Evaluaciones.Materias.asignatura,
-        tipoEvaluacion: calificacion.Evaluaciones.tipoEvaluacion,
+        id: calificacion.id,
         calificacion: calificacion.calificacion,
-        observaciones: calificacion.observaciones
+        observaciones: calificacion.observaciones,
+        fechaRegistro: calificacion.fechaRegistro,
+        evaluacionID: calificacion.evaluacionID,
+        personaID: calificacion.personaID,
+        annoEscolarID: calificacion.annoEscolarID,
+        // Mantener las asociaciones anidadas para el frontend
+        Evaluaciones: calificacion.Evaluaciones
       });
       
       estudiantesMap[estudianteID].totalCalificaciones++;

@@ -7,6 +7,17 @@ const CalendarioAcademico = () => {
   const [annoEscolar, setAnnoEscolar] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showContent, setShowContent] = useState(false);
+  const [titleMoved, setTitleMoved] = useState(false);
+  const [visibleSections, setVisibleSections] = useState({});
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Imágenes para el fondo dinámico
+  const backgroundImages = [
+    "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
+    "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
+    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+  ];
   
   // Eventos del calendario (estos serían dinámicos en una implementación real)
   const eventos = [
@@ -104,239 +115,328 @@ const CalendarioAcademico = () => {
     };
 
     fetchAnnoEscolar();
+
+    // Animaciones
+    const titleTimer = setTimeout(() => {
+      setTitleMoved(true);
+    }, 1000);
+    
+    const contentTimer = setTimeout(() => {
+      setShowContent(true);
+    }, 2000);
+
+    // Aparición escalonada de secciones
+    const sectionTimers = [
+      setTimeout(() => setVisibleSections(prev => ({ ...prev, info: true })), 3000),
+      setTimeout(() => setVisibleSections(prev => ({ ...prev, calendario: true })), 3500),
+      setTimeout(() => setVisibleSections(prev => ({ ...prev, descargas: true })), 4000),
+      setTimeout(() => setVisibleSections(prev => ({ ...prev, enlaces: true })), 4500),
+    ];
+
+    return () => {
+      clearTimeout(titleTimer);
+      clearTimeout(contentTimer);
+      sectionTimers.forEach(timer => clearTimeout(timer));
+    };
   }, []);
 
+  // Cambio automático de imagen de fondo
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % backgroundImages.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [backgroundImages.length]);
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-cyan-50 relative overflow-hidden">
+      {/* Fondo dinámico */}
+      <div className="absolute inset-0 z-0">
+        {backgroundImages.map((image, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-all duration-2000 ease-in-out ${
+              index === currentImageIndex ? 'opacity-20 scale-100' : 'opacity-0 scale-105'
+            }`}
+          >
+            <img
+              src={image}
+              alt={`Background ${index + 1}`}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-green-900/30 via-slate-800/20 to-cyan-900/30"></div>
+          </div>
+        ))}
+      </div>
+
       <NavBar />
       
-      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16 mt-16">
-          <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
-            Calendario Académico
-          </h1>
-          {loading ? (
-            <p className="mt-5 text-xl text-gray-500">Cargando información...</p>
-          ) : error ? (
-            <p className="mt-5 text-xl text-red-500">{error}</p>
-          ) : (
-            <p className="mt-5 text-xl text-gray-500">
-              Año Escolar {annoEscolar?.periodo || '2023-2024'}
-            </p>
-          )}
+      {/* Hero Section */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className={`transition-all duration-1500 ease-out ${
+            titleMoved ? 'transform translate-y-0 opacity-100' : 'transform translate-y-10 opacity-0'
+          }`}>
+            <div className="inline-block px-6 py-3 bg-green-500/20 backdrop-blur-md rounded-full mb-6 border border-green-300/30">
+              <span className="text-green-700 text-sm font-semibold">
+                Planificación Académica
+              </span>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-green-600 via-cyan-600 to-green-700 bg-clip-text text-transparent">
+                Calendario
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-slate-800 via-green-700 to-slate-800 bg-clip-text text-transparent">
+                Académico
+              </span>
+            </h1>
+            
+            {loading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                <p className="text-xl text-slate-700">Cargando información...</p>
+              </div>
+            ) : error ? (
+              <p className="text-xl text-red-500 bg-red-50 p-4 rounded-lg backdrop-blur-sm">{error}</p>
+            ) : (
+              <p className={`max-w-3xl mx-auto text-xl text-slate-700 mb-8 transition-all duration-1000 ${
+                showContent ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-4'
+              }`}>
+                Año Escolar {annoEscolar?.periodo || '2023-2024'}
+              </p>
+            )}
+            
+            {showContent && (
+              <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up">
+                <Link 
+                  to="/register" 
+                  className="inline-block bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-4 rounded-full font-semibold hover:from-green-700 hover:to-green-800 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl"
+                >
+                  Inscribirse Ahora
+                </Link>
+                <Link 
+                  to="/nuestra-institucion" 
+                  className="inline-block border-2 border-green-600 text-green-700 px-8 py-4 rounded-full font-semibold hover:bg-green-600 hover:text-white transform hover:scale-105 transition-all duration-300 backdrop-blur-sm"
+                >
+                  Conocer Más
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* Contenido principal */}
+      <div className="relative z-10 max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
         
         {/* Información general */}
-        <div className="bg-white overflow-hidden shadow rounded-lg mb-12">
-          <div className="px-4 py-5 sm:p-6">
-            <h2 className="text-3xl font-bold text-green-700 mb-6">Información General</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-green-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-green-800 mb-4">Períodos Académicos</h3>
-                <ul className="space-y-3 text-gray-700">
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <strong>Primer Lapso:</strong> Septiembre - Diciembre
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <strong>Segundo Lapso:</strong> Enero - Marzo
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <strong>Tercer Lapso:</strong> Abril - Julio
-                    </div>
-                  </li>
-                </ul>
+        <div className={`transition-all duration-1000 transform ${
+          visibleSections.info ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        } mb-20`}>
+          <div className="bg-white/80 backdrop-blur-xl overflow-hidden shadow-2xl rounded-3xl border border-white/20 hover:shadow-3xl transition-all duration-500">
+            <div className="px-8 py-12">
+              <div className="text-center mb-12">
+                <div className="inline-block px-4 py-2 bg-green-100 rounded-full mb-4">
+                  <span className="text-green-700 text-sm font-semibold">Información Esencial</span>
+                </div>
+                <h2 className="text-4xl font-bold bg-gradient-to-r from-green-700 to-green-600 bg-clip-text text-transparent mb-4">
+                  Información General
+                </h2>
               </div>
-              
-              <div className="bg-green-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-green-800 mb-4">Horarios</h3>
-                <ul className="space-y-3 text-gray-700">
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <strong>Educación Inicial:</strong> 8:00 AM - 12:00 PM
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {[
+                  {
+                    title: 'Períodos Académicos',
+                    icon: '📚',
+                    items: [
+                      'Primer Lapso: Septiembre - Diciembre',
+                      'Segundo Lapso: Enero - Marzo',
+                      'Tercer Lapso: Abril - Julio'
+                    ],
+                    gradient: 'from-blue-500 to-green-500'
+                  },
+                  {
+                    title: 'Horarios',
+                    icon: '🕐',
+                    items: [
+                      'Educación Inicial: 8:00 AM - 12:00 PM',
+                      'Educación Primaria: 7:30 AM - 1:30 PM',
+                      'Educación Secundaria: 7:00 AM - 2:00 PM'
+                    ],
+                    gradient: 'from-green-500 to-cyan-500'
+                  },
+                  {
+                    title: 'Fechas Importantes',
+                    icon: '📅',
+                    items: [
+                      'Inicio de clases: 01/09/2023',
+                      'Vacaciones de Navidad: 16/12/2023 - 07/01/2024',
+                      'Fin de año escolar: 15/07/2024'
+                    ],
+                    gradient: 'from-cyan-500 to-blue-500'
+                  }
+                ].map((section, index) => (
+                  <div key={index} className="group hover:scale-105 transition-all duration-500">
+                    <div className="bg-gradient-to-br from-green-50/90 to-cyan-50/90 backdrop-blur-sm p-8 rounded-2xl border border-green-100/50 shadow-xl hover:shadow-2xl transition-all duration-500 h-full">
+                      <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-r ${section.gradient} text-white mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                        <span className="text-2xl">{section.icon}</span>
+                      </div>
+                      <h3 className="text-2xl font-bold text-green-800 mb-6">{section.title}</h3>
+                      <ul className="space-y-4">
+                        {section.items.map((item, idx) => (
+                          <li key={idx} className="flex items-start group/item hover:bg-white/50 p-3 rounded-lg transition-all duration-300">
+                            <div className="flex-shrink-0 w-2 h-2 rounded-full bg-gradient-to-r from-green-500 to-cyan-500 mt-2 mr-3 group-hover/item:scale-150 transition-transform duration-300"></div>
+                            <span className="text-slate-700 font-medium">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <strong>Educación Primaria:</strong> 7:30 AM - 1:30 PM
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                    <strong>Educación Secundaria:</strong> 7:00 AM - 2:00 PM
-                    </div>
-                  </li>
-                </ul>
-              </div>
-              
-              <div className="bg-green-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-green-800 mb-4">Fechas Importantes</h3>
-                <ul className="space-y-3 text-gray-700">
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <strong>Inicio de clases:</strong> 01/09/2023
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <strong>Vacaciones de Navidad:</strong> 16/12/2023 - 07/01/2024
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <strong>Fin de año escolar:</strong> 15/07/2024
-                    </div>
-                  </li>
-                </ul>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
         
         {/* Calendario por meses */}
-        <div className="bg-white overflow-hidden shadow rounded-lg mb-12">
-          <div className="px-4 py-5 sm:p-6">
-            <h2 className="text-3xl font-bold text-green-700 mb-6">Calendario Mensual</h2>
-            
-            <div className="space-y-12">
-              {eventos.map((mes, index) => (
-                <div key={index} className="border-b border-gray-200 pb-8 last:border-b-0 last:pb-0">
-                  <h3 className="text-2xl font-semibold text-green-600 mb-6">{mes.mes}</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Fecha
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Evento
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Descripción
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {mes.eventos.map((evento, idx) => (
-                          <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {evento.fecha}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {evento.titulo}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">
-                              {evento.descripcion}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+        <div className={`transition-all duration-1000 transform ${
+          visibleSections.calendario ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        } mb-20`}>
+          <div className="bg-white/80 backdrop-blur-xl overflow-hidden shadow-2xl rounded-3xl border border-white/20 hover:shadow-3xl transition-all duration-500">
+            <div className="px-8 py-12">
+              <div className="text-center mb-12">
+                <div className="inline-block px-4 py-2 bg-green-100 rounded-full mb-4">
+                  <span className="text-green-700 text-sm font-semibold">Eventos del Año</span>
                 </div>
-              ))}
+                <h2 className="text-4xl font-bold bg-gradient-to-r from-green-700 to-green-600 bg-clip-text text-transparent mb-4">
+                  Calendario Mensual
+                </h2>
+              </div>
+              
+              <div className="space-y-12">
+                {eventos.map((mes, index) => (
+                  <div key={index} className="group hover:scale-[1.02] transition-all duration-500">
+                    <div className="bg-gradient-to-br from-green-50/90 to-cyan-50/90 backdrop-blur-sm rounded-2xl border border-green-100/50 shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
+                      <div className="bg-gradient-to-r from-green-600 to-cyan-600 px-8 py-6">
+                        <h3 className="text-2xl font-bold text-white flex items-center">
+                          <span className="text-3xl mr-3">📅</span>
+                          {mes.mes}
+                        </h3>
+                      </div>
+                      <div className="p-8">
+                        <div className="space-y-6">
+                          {mes.eventos.map((evento, idx) => (
+                            <div key={idx} className="group/evento hover:bg-white/60 p-6 rounded-xl transition-all duration-300 border border-green-100/30">
+                              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                <div className="flex-shrink-0">
+                                  <div className="bg-gradient-to-r from-green-600 to-cyan-600 text-white px-4 py-2 rounded-full text-sm font-bold min-w-[120px] text-center group-hover/evento:scale-105 transition-transform duration-300">
+                                    {evento.fecha}
+                                  </div>
+                                </div>
+                                <div className="flex-grow">
+                                  <h4 className="text-lg font-bold text-green-800 mb-2 group-hover/evento:text-green-900 transition-colors duration-300">
+                                    {evento.titulo}
+                                  </h4>
+                                  <p className="text-slate-700 leading-relaxed">
+                                    {evento.descripcion}
+                                  </p>
+                                </div>
+                                <div className="flex-shrink-0">
+                                  <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-500 to-cyan-500 group-hover/evento:scale-150 transition-transform duration-300"></div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
         
         {/* Descargas */}
-        <div className="bg-green-50 overflow-hidden shadow rounded-lg mb-12">
-          <div className="px-4 py-5 sm:p-6">
-            <h2 className="text-3xl font-bold text-green-700 mb-6">Documentos Descargables</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                <svg className="h-12 w-12 text-green-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Calendario Completo</h3>
-                <p className="text-gray-600 mb-4">Descarga el calendario académico completo en formato PDF.</p>
-                <a href="#" className="text-green-600 hover:text-green-800 font-medium flex items-center">
-                  Descargar PDF
-                  <svg className="ml-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </a>
+        <div className={`transition-all duration-1000 transform ${
+          visibleSections.descargas ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        } mb-20`}>
+          <div className="bg-gradient-to-br from-green-50/90 to-cyan-50/90 backdrop-blur-xl overflow-hidden shadow-2xl rounded-3xl border border-green-100/50 hover:shadow-3xl transition-all duration-500">
+            <div className="px-8 py-12">
+              <div className="text-center mb-12">
+                <div className="inline-block px-4 py-2 bg-green-100 rounded-full mb-4">
+                  <span className="text-green-700 text-sm font-semibold">Recursos Disponibles</span>
+                </div>
+                <h2 className="text-4xl font-bold bg-gradient-to-r from-green-700 to-green-600 bg-clip-text text-transparent mb-4">
+                  Documentos Descargables
+                </h2>
               </div>
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                <svg className="h-12 w-12 text-green-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Horarios por Grado</h3>
-                <p className="text-gray-600 mb-4">Descarga los horarios específicos para cada grado y sección.</p>
-                <a href="#" className="text-green-600 hover:text-green-800 font-medium flex items-center">
-                  Descargar PDF
-                  <svg className="ml-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </a>
-              </div>
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                <svg className="h-12 w-12 text-green-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Planificación Anual</h3>
-                <p className="text-gray-600 mb-4">Descarga la planificación anual de actividades académicas y extracurriculares.</p>
-                <a href="#" className="text-green-600 hover:text-green-800 font-medium flex items-center">
-                  Descargar PDF
-                  <svg className="ml-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </a>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {[
+                  {
+                    title: 'Calendario Completo',
+                    description: 'Descarga el calendario académico completo en formato PDF.',
+                    icon: '📄',
+                    gradient: 'from-blue-500 to-green-500'
+                  },
+                  {
+                    title: 'Horarios por Grado',
+                    description: 'Descarga los horarios específicos para cada grado y sección.',
+                    icon: '📊',
+                    gradient: 'from-green-500 to-cyan-500'
+                  },
+                  {
+                    title: 'Planificación Anual',
+                    description: 'Descarga la planificación anual de actividades académicas y extracurriculares.',
+                    icon: '📋',
+                    gradient: 'from-cyan-500 to-blue-500'
+                  }
+                ].map((doc, index) => (
+                  <div key={index} className="group hover:scale-105 transition-all duration-500">
+                    <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl border border-green-100/50 shadow-xl hover:shadow-2xl transition-all duration-500 h-full">
+                      <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-r ${doc.gradient} text-white mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                        <span className="text-2xl">{doc.icon}</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-green-800 mb-4">{doc.title}</h3>
+                      <p className="text-slate-700 mb-6 leading-relaxed">{doc.description}</p>
+                      <a 
+                        href="#" 
+                        className="inline-flex items-center text-green-700 hover:text-green-800 font-semibold group-hover:translate-x-1 transition-all duration-300"
+                      >
+                        Descargar PDF
+                        <svg className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
         
         {/* Enlaces rápidos */}
-        <div className="text-center">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Enlaces rápidos</h3>
+        <div className={`transition-all duration-1000 transform ${
+          visibleSections.enlaces ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        } text-center mb-12`}>
+          <h3 className="text-2xl font-bold text-slate-800 mb-8">Enlaces Rápidos</h3>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/nuestra-institucion" className="inline-flex items-center px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-              Nuestra Institución
-            </Link>
-            <Link to="/register" className="inline-flex items-center px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-              Proceso de Inscripción
-            </Link>
-            <Link to="/login" className="inline-flex items-center px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-              Inicio de sesión
-            </Link>
-            {/* <Link to="/registro-profesor" className="inline-flex items-center px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-              Acceso a Profesores
-            </Link> */}
+            {[
+              { to: '/nuestra-institucion', text: 'Nuestra Institución', icon: '🏫' },
+              { to: '/register', text: 'Proceso de Inscripción', icon: '📝' },
+              { to: '/login', text: 'Inicio de sesión', icon: '🔐' },
+            ].map((link, index) => (
+              <Link 
+                key={index}
+                to={link.to} 
+                className="inline-flex items-center px-6 py-3 bg-white/80 backdrop-blur-sm border border-green-200 rounded-full shadow-lg text-green-700 font-semibold hover:bg-green-600 hover:text-white hover:scale-105 transition-all duration-300"
+              >
+                <span className="mr-2">{link.icon}</span>
+                {link.text}
+              </Link>
+            ))}
           </div>
         </div>
       </div>

@@ -22,7 +22,9 @@ import {
   FaDownload,
   FaUpload,
   FaComment,
-  FaPaperclip
+  FaPaperclip,
+  FaSearch,
+  FaFilter
 } from 'react-icons/fa';
 
 const ProfesorDashboard = () => {
@@ -120,6 +122,15 @@ const ProfesorDashboard = () => {
   const [filtroGradoEvaluaciones, setFiltroGradoEvaluaciones] = useState('');
   const [filtroMateriaEvaluaciones, setFiltroMateriaEvaluaciones] = useState('');
   const [filtroSeccionEvaluaciones, setFiltroSeccionEvaluaciones] = useState('');
+  
+  // Estados para filtros del modal de promedios
+  const [filtroGradoPromedios, setFiltroGradoPromedios] = useState('');
+  const [filtroSeccionPromedios, setFiltroSeccionPromedios] = useState('');
+  const [filtroMateriaPromedios, setFiltroMateriaPromedios] = useState('');
+  const [busquedaPromedios, setBusquedaPromedios] = useState('');
+  const [seccionesPromedios, setSeccionesPromedios] = useState([]);
+  const [promediosCompletos, setPromediosCompletos] = useState([]);
+  const [promediosFiltrados, setPromediosFiltrados] = useState([]);
   
   // Estados para formularios
   const [evaluacionForm, setEvaluacionForm] = useState({
@@ -752,26 +763,164 @@ const ProfesorDashboard = () => {
 
   // Mostrar modal de promedios
   const handleVerPromedios = async () => {
+    // Validar que tengamos los datos necesarios
+    if (!profesor || !annoEscolar) {
+      setError('Datos del profesor o año escolar no disponibles');
+      return;
+    }
+
     setLoadingModal(true);
     setShowPromediosModal(true);
+    
+    // Resetear filtros
+    setFiltroGradoPromedios('');
+    setFiltroSeccionPromedios('');
+    setFiltroMateriaPromedios('');
+    setBusquedaPromedios('');
     
     try {
       const token = localStorage.getItem('token');
       const config = { headers: { 'Authorization': `Bearer ${token}` } };
       
-      // Cargar todos los promedios de estudiantes
+      // Cargar grados del profesor para los filtros
+      const gradosResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/grados/profesor/${profesor.id}?annoEscolarID=${annoEscolar.id}`,
+        config
+      );
+      setGradosModal(gradosResponse.data);
+      
+      // Cargar materias del profesor para los filtros
+      const materiasResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/materias/profesor/${profesor.id}?annoEscolarID=${annoEscolar.id}`,
+        config
+      );
+      setMateriasModal(materiasResponse.data);
+      
+      // Cargar promedios de estudiantes (usando la ruta que funciona)
       const promediosResponse = await axios.get(
         `${import.meta.env.VITE_API_URL}/promedios/estudiantes/${profesor.id}?annoEscolarID=${annoEscolar.id}`,
         config
       );
-      setPromediosEstudiantes(promediosResponse.data);
+      
+      const datosCompletos = promediosResponse.data;
+      
+      // Log temporal para verificar que llegue la información de grado/sección
+      if (datosCompletos.length > 0) {
+        console.log('Ejemplo de estudiante con grado/sección:', {
+          nombre: datosCompletos[0].nombre,
+          gradoID: datosCompletos[0].gradoID,
+          grado: datosCompletos[0].grado,
+          seccionID: datosCompletos[0].seccionID,
+          seccion: datosCompletos[0].seccion
+        });
+      }
+      
+      setPromediosCompletos(datosCompletos);
+      setPromediosFiltrados(datosCompletos); // Mostrar todos por defecto
+      setPromediosEstudiantes(datosCompletos.slice(0, 10)); // Para la vista principal
       
     } catch (err) {
       console.error('Error al cargar promedios:', err);
-      setError('Error al cargar promedios');
+      setError(`Error al cargar promedios: ${err.message}`);
     }
     
     setLoadingModal(false);
+  };
+
+  // Filtros del modal de promedios
+  const handleFiltroGradoPromedios = async (gradoID) => {
+    setFiltroGradoPromedios(gradoID);
+    setFiltroSeccionPromedios('');
+    
+    if (gradoID) {
+      try {
+        const token = localStorage.getItem('token');
+        const config = { headers: { 'Authorization': `Bearer ${token}` } };
+        
+        // Cargar secciones del grado seleccionado
+        const seccionesResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/secciones/grado/${gradoID}`,
+          config
+        );
+        setSeccionesPromedios(seccionesResponse.data);
+        
+      } catch (err) {
+        console.error('Error al cargar secciones:', err);
+      }
+    } else {
+      setSeccionesPromedios([]);
+    }
+    
+    aplicarFiltrosPromedios(gradoID, filtroSeccionPromedios, filtroMateriaPromedios, busquedaPromedios);
+  };
+
+  const handleFiltroSeccionPromedios = (seccionID) => {
+    setFiltroSeccionPromedios(seccionID);
+    aplicarFiltrosPromedios(filtroGradoPromedios, seccionID, filtroMateriaPromedios, busquedaPromedios);
+  };
+
+  const handleFiltroMateriaPromedios = (materiaID) => {
+    setFiltroMateriaPromedios(materiaID);
+    aplicarFiltrosPromedios(filtroGradoPromedios, filtroSeccionPromedios, materiaID, busquedaPromedios);
+  };
+
+  const handleBusquedaPromedios = (texto) => {
+    setBusquedaPromedios(texto);
+    aplicarFiltrosPromedios(filtroGradoPromedios, filtroSeccionPromedios, filtroMateriaPromedios, texto);
+  };
+
+  const aplicarFiltrosPromedios = (gradoID, seccionID, materiaID, busqueda) => {
+    let datosFiltrados = [...promediosCompletos];
+    
+    console.log('Aplicando filtros:', { gradoID, seccionID, materiaID, busqueda });
+    console.log('Total estudiantes iniciales:', datosFiltrados.length);
+    
+    // Filtrar por grado
+    if (gradoID) {
+      const antesGrado = datosFiltrados.length;
+      datosFiltrados = datosFiltrados.filter(estudiante => 
+        estudiante.gradoID === parseInt(gradoID)
+      );
+      console.log(`Filtro por grado ${gradoID}: ${antesGrado} → ${datosFiltrados.length}`);
+    }
+    
+    // Filtrar por sección
+    if (seccionID) {
+      const antesSeccion = datosFiltrados.length;
+      datosFiltrados = datosFiltrados.filter(estudiante => 
+        estudiante.seccionID === parseInt(seccionID)
+      );
+      console.log(`Filtro por sección ${seccionID}: ${antesSeccion} → ${datosFiltrados.length}`);
+    }
+    
+    // Filtrar por materia (usar el nombre de materia)
+    if (materiaID) {
+      // Buscar la materia por ID en materiasModal para obtener el nombre
+      const materiaSeleccionada = materiasModal.find(m => m.id === parseInt(materiaID));
+      const nombreMateria = materiaSeleccionada?.asignatura;
+      
+      if (nombreMateria) {
+        datosFiltrados = datosFiltrados.filter(estudiante => {
+          // Verificar si el estudiante tiene la materia en su objeto materias
+          return estudiante.materias && estudiante.materias[nombreMateria];
+        });
+      }
+    }
+    
+    // Filtrar por búsqueda (nombre, apellido, cédula)
+    if (busqueda && busqueda.trim()) {
+      const antesBusqueda = datosFiltrados.length;
+      const busquedaLower = busqueda.toLowerCase().trim();
+      datosFiltrados = datosFiltrados.filter(estudiante => 
+        estudiante.nombre.toLowerCase().includes(busquedaLower) ||
+        estudiante.apellido.toLowerCase().includes(busquedaLower) ||
+        estudiante.cedula.toString().includes(busquedaLower)
+      );
+      console.log(`Filtro por búsqueda "${busqueda}": ${antesBusqueda} → ${datosFiltrados.length}`);
+    }
+    
+    console.log('Resultado final de filtros:', datosFiltrados.length, 'estudiantes');
+    setPromediosFiltrados(datosFiltrados);
   };
 
   // FUNCIONES PARA CREAR/EDITAR EVALUACIÓN
@@ -1398,7 +1547,7 @@ const ProfesorDashboard = () => {
                 <FaBook className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Promedio General</p>
+                <p className="text-sm font-medium text-gray-600">Calificaciones</p>
                 <p className="text-2xl font-bold text-gray-900 transition-all duration-200 ease-in-out">{estadisticas.estadisticasGenerales.promedioGeneral}</p>
               </div>
             </div>
@@ -1406,7 +1555,7 @@ const ProfesorDashboard = () => {
               onClick={handleVerPromedios}
               className="mt-4 w-full text-sm text-purple-600 hover:text-purple-800 font-medium transition-all duration-200 ease-in-out hover:bg-purple-50 py-2 rounded"
             >
-              Ver promedios detallados
+              Ver calificaciones detalladas
             </button>
           </div>
 
@@ -2396,19 +2545,112 @@ const ProfesorDashboard = () => {
         </div>
       )}
 
-      {/* Modal de Promedios de Estudiantes */}
+      {/* Modal de Promedios y Calificaciones de Estudiantes */}
       {showPromediosModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-lg max-w-6xl w-full max-h-screen overflow-y-auto animate-scaleIn transition-all duration-300 ease-in-out">
+          <div className="bg-white rounded-lg max-w-7xl w-full max-h-screen overflow-y-auto animate-scaleIn transition-all duration-300 ease-in-out">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-900">Promedios de Estudiantes</h2>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Calificaciones y Promedios de Estudiantes</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Visualiza todas las calificaciones y promedios de tus estudiantes
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowPromediosModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <FaTimes className="h-5 w-5" />
                 </button>
+              </div>
+            </div>
+            
+            {/* Filtros y Búsqueda */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                {/* Búsqueda */}
+                <div className="lg:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <FaSearch className="inline h-3 w-3 mr-1" />
+                    Buscar Estudiante
+                  </label>
+                  <input
+                    type="text"
+                    value={busquedaPromedios}
+                    onChange={(e) => handleBusquedaPromedios(e.target.value)}
+                    placeholder="Nombre, apellido o cédula..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 ease-in-out hover:border-slate-400"
+                  />
+                </div>
+                
+                {/* Filtro por Grado */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <FaFilter className="inline h-3 w-3 mr-1" />
+                    Grado
+                  </label>
+                  <select
+                    value={filtroGradoPromedios}
+                    onChange={(e) => handleFiltroGradoPromedios(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 ease-in-out hover:border-slate-400"
+                  >
+                    <option value="">Todos los grados</option>
+                    {gradosModal.map((grado) => (
+                      <option key={grado.id} value={grado.id}>
+                        {grado.nombre_grado}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Filtro por Sección */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sección
+                  </label>
+                  <select
+                    value={filtroSeccionPromedios}
+                    onChange={(e) => handleFiltroSeccionPromedios(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 ease-in-out hover:border-slate-400"
+                    disabled={!filtroGradoPromedios}
+                  >
+                    <option value="">Todas las secciones</option>
+                    {seccionesPromedios.map((seccion) => (
+                      <option key={seccion.id} value={seccion.id}>
+                        {seccion.nombre_seccion || seccion.nombreSeccion}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Filtro por Materia */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Materia
+                  </label>
+                  <select
+                    value={filtroMateriaPromedios}
+                    onChange={(e) => handleFiltroMateriaPromedios(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 ease-in-out hover:border-slate-400"
+                  >
+                    <option value="">Todas las materias</option>
+                    {materiasModal.map((materia) => (
+                      <option key={materia.id} value={materia.id}>
+                        {materia.asignatura}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Información de resultados */}
+                <div className="flex items-end">
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">{promediosFiltrados.length}</span> estudiante{promediosFiltrados.length !== 1 ? 's' : ''} encontrado{promediosFiltrados.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -2417,69 +2659,213 @@ const ProfesorDashboard = () => {
                 <div className="flex justify-center py-8">
                   <FaSpinner className="animate-spin h-8 w-8 text-slate-600" />
                 </div>
-              ) : promediosEstudiantes.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No hay datos de estudiantes disponibles</p>
+              ) : promediosFiltrados.length === 0 ? (
+                <div className="text-center py-8">
+                  <FaUsers className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No se encontraron estudiantes con los filtros aplicados</p>
+                </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Estudiante
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Cédula
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total Calificaciones
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Promedio General
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Materias
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {promediosEstudiantes.map((estudiante) => (
-                        <tr key={estudiante.estudianteID}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {estudiante.nombre} {estudiante.apellido}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {estudiante.cedula}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {estudiante.totalCalificaciones}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <span className={`font-bold ${
-                              estudiante.promedio >= 14 ? 'text-green-600' :
-                              estudiante.promedio >= 10 ? 'text-yellow-600' : 'text-red-600'
-                            }`}>
-                              {estudiante.promedio}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            <div className="space-y-1">
-                              {Object.entries(estudiante.materias || {}).map(([materia, stats]) => (
-                                <div key={materia} className="flex justify-between">
-                                  <span className="text-xs">{materia}:</span>
-                                  <span className={`text-xs font-medium ${
-                                    stats.promedio >= 14 ? 'text-green-600' :
-                                    stats.promedio >= 10 ? 'text-yellow-600' : 'text-red-600'
-                                  }`}>
-                                    {stats.promedio}
-                                  </span>
-                                </div>
-                              ))}
+                <div className="space-y-6">
+                  {promediosFiltrados.map((estudiante, index) => (
+                    <div 
+                      key={estudiante.estudianteID}
+                      className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 animate-fadeIn"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      {/* Encabezado del estudiante */}
+                      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+                                <FaUsers className="h-5 w-5 text-slate-600" />
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            <div className="ml-4">
+                              <div className="text-lg font-semibold text-gray-900">
+                                {estudiante.nombre} {estudiante.apellido}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                C.I: {estudiante.cedula}
+                                {estudiante.grado && ` • ${estudiante.grado.nombre_grado || estudiante.grado}`}
+                                {estudiante.seccion && ` - ${estudiante.seccion.nombre_seccion || estudiante.seccion}`}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Promedio General - conservando el emoji */}
+                          <div className="text-right">
+                            <div className="flex items-center">
+                              <span className="text-sm text-gray-500 mr-2">Promedio General:</span>
+                              <span className={`text-xl font-bold ${
+                                estudiante.promedio >= 14 ? 'text-green-600' :
+                                estudiante.promedio >= 10 ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {parseFloat(estudiante.promedio || 0).toFixed(2)}
+                              </span>
+                              <span className="ml-2 text-lg">
+                                {(estudiante.promedio || 0) >= 14 ? '😊' : 
+                                 (estudiante.promedio || 0) >= 10 ? '😐' : '😟'}
+                              </span>
+                            </div>
+                            {estudiante.evaluacionesPendientes > 0 && (
+                              <div className="mt-1 text-sm text-orange-600">
+                                <FaClipboardList className="inline h-3 w-3 mr-1" />
+                                {estudiante.evaluacionesPendientes} por calificar
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contenido organizado por lapsos */}
+                      <div className="p-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                          {/* Lapso 1, 2, 3 */}
+                          {[1, 2, 3].map(lapso => {
+                            const calificacionesLapso = estudiante.calificaciones?.filter(cal => 
+                              cal.Evaluaciones?.lapso === lapso.toString()
+                            ) || [];
+                            
+                            // Agrupar por materia dentro del lapso
+                            const materiasPorLapso = {};
+                            calificacionesLapso.forEach(cal => {
+                              const materia = cal.Evaluaciones?.Materias?.asignatura;
+                              if (materia) {
+                                if (!materiasPorLapso[materia]) {
+                                  materiasPorLapso[materia] = [];
+                                }
+                                materiasPorLapso[materia].push(cal);
+                              }
+                            });
+                            
+                            return (
+                              <div key={lapso} className="bg-gray-50 rounded-lg p-4">
+                                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                  <span className="bg-slate-600 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs mr-2">
+                                    {lapso}
+                                  </span>
+                                  Lapso {lapso}
+                                </h4>
+                                
+                                {Object.keys(materiasPorLapso).length > 0 ? (
+                                  <div className="space-y-3">
+                                    {Object.entries(materiasPorLapso).map(([materia, calificaciones]) => {
+                                      const promedioMateria = calificaciones.reduce((sum, cal) => sum + cal.calificacion, 0) / calificaciones.length;
+                                      
+                                      return (
+                                        <div key={materia} className="bg-white rounded p-3 border border-gray-200">
+                                          <div className="font-medium text-sm text-gray-800 mb-2 flex justify-between items-center">
+                                            <span>{materia}</span>
+                                            <span className={`text-sm font-bold ${
+                                              promedioMateria >= 14 ? 'text-green-600' :
+                                              promedioMateria >= 10 ? 'text-yellow-600' : 'text-red-600'
+                                            }`}>
+                                              {promedioMateria.toFixed(2)}
+                                            </span>
+                                          </div>
+                                          
+                                          <div className="space-y-2">
+                                            {calificaciones.map((cal, idx) => (
+                                              <div key={idx} className="border-l-2 border-gray-100 pl-2">
+                                                <div className="flex justify-between items-center text-xs">
+                                                  <span className="text-gray-600 truncate flex-1 mr-2">
+                                                    {cal.Evaluaciones?.nombreEvaluacion}
+                                                    {cal.Evaluaciones?.tipoEvaluacion && (
+                                                      <span className="text-gray-400 ml-1">
+                                                        ({cal.Evaluaciones.tipoEvaluacion})
+                                                      </span>
+                                                    )}
+                                                  </span>
+                                                  <span className={`font-medium px-2 py-1 rounded ${
+                                                    cal.calificacion >= 14 ? 'bg-green-100 text-green-700' :
+                                                    cal.calificacion >= 10 ? 'bg-yellow-100 text-yellow-700' : 
+                                                    'bg-red-100 text-red-700'
+                                                  }`}>
+                                                    {parseFloat(cal.calificacion).toFixed(1)}
+                                                  </span>
+                                                </div>
+                                                {cal.observaciones && (
+                                                  <div className="text-xs text-gray-600 italic mt-1 pl-1">
+                                                    "{cal.observaciones}"
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-gray-400 italic">
+                                    Sin evaluaciones en este lapso
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* Resumen general */}
+                        <div className="mt-6 bg-slate-100 rounded-lg p-4">
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                            <FaChartBar className="h-4 w-4 mr-2 text-slate-600" />
+                            Resumen General
+                          </h4>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Promedios por materia */}
+                            <div className="bg-white rounded p-3 border border-gray-200">
+                              <h5 className="font-medium text-sm text-gray-800 mb-2">Promedios por Materia</h5>
+                              {estudiante.materias && Object.keys(estudiante.materias).length > 0 ? (
+                                <div className="space-y-2">
+                                  {Object.entries(estudiante.materias).map(([nombreMateria, materiaData]) => (
+                                    <div key={nombreMateria} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-600">{nombreMateria}</span>
+                                      <span className={`font-bold ${
+                                        materiaData.promedio >= 14 ? 'text-green-600' :
+                                        materiaData.promedio >= 10 ? 'text-yellow-600' : 'text-red-600'
+                                      }`}>
+                                        {parseFloat(materiaData.promedio || 0).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-gray-400 italic">Sin datos</div>
+                              )}
+                            </div>
+                            
+                            {/* Total de evaluaciones */}
+                            <div className="bg-white rounded p-3 border border-gray-200">
+                              <h5 className="font-medium text-sm text-gray-800 mb-2">Total de Evaluaciones</h5>
+                              <div className="text-2xl font-bold text-slate-600">
+                                {estudiante.calificaciones?.length || 0}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                calificaciones registradas
+                              </div>
+                            </div>
+                            
+                            {/* Promedio general */}
+                            <div className="bg-white rounded p-3 border border-gray-200">
+                              <h5 className="font-medium text-sm text-gray-800 mb-2">Promedio General</h5>
+                              <div className={`text-2xl font-bold ${
+                                estudiante.promedio >= 14 ? 'text-green-600' :
+                                estudiante.promedio >= 10 ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {parseFloat(estudiante.promedio || 0).toFixed(2)}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                de {estudiante.totalCalificaciones} evaluaciones
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -2722,8 +3108,6 @@ const CalificacionRow = ({ estudiante, onGuardar, onEliminar }) => {
           </div>
         </div>
       </div>
-
-
     </div>
   );
 };
