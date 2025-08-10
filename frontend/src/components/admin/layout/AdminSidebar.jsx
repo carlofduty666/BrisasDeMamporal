@@ -222,9 +222,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
  
   return (
     <div 
-      className={`h-full text-white flex flex-col ${isOpen ? 'w-64' : 'w-20'} ${sidebarBgColor} backdrop-blur-xl border-r border-white/10 shadow-2xl`}
+      className={`h-full text-white flex flex-col ${isOpen ? 'w-64' : 'w-20'} ${sidebarBgColor} backdrop-blur-xl border-r border-white/10 shadow-xl`}
       style={{
-        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.3s ease, background-color 0.3s ease',
         background: `linear-gradient(135deg, ${currentColors.main.replace('bg-gradient-to-br from-', '').replace(' to-', ', ')})`
       }}
     >
@@ -267,21 +267,21 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <NavLink
               to="/admin/dashboard"
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
-                    ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
-                    : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
+                    ? 'bg-white/20 border border-white/30'
+                    : 'hover:bg-white/10'
                 }`
               }
               title='Inicio'
             >
               {({ isActive }) => (
                 <>
-                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
                     <FaHome className="w-4 h-4" />
                   </div>
                   {isOpen && (
-                    <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="ml-3 font-medium transition-colors duration-200">
                       Inicio
                     </span>
                   )}
@@ -295,21 +295,21 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <NavLink
               to="/admin/estudiantes"
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
-                    ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
-                    : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
+                    ? 'bg-white/20 border border-white/30'
+                    : 'hover:bg-white/10'
                 }`
               }
               title='Estudiantes'
             >
               {({ isActive }) => (
                 <>
-                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
                     <FaUserGraduate className="w-4 h-4" />
                   </div>
                   {isOpen && (
-                    <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="ml-3 font-medium transition-colors duration-200">
                       Estudiantes
                     </span>
                   )}
@@ -323,21 +323,21 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <NavLink
               to="/admin/profesores"
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
-                    ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
-                    : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
+                    ? 'bg-white/20 border border-white/30'
+                    : 'hover:bg-white/10'
                 }`
               }
               title='Profesores'
             >
               {({ isActive }) => (
                 <>
-                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
                     <FaChalkboardTeacher className="w-4 h-4" />
                   </div>
                   {isOpen && (
-                    <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="ml-3 font-medium transition-colors duration-200">
                       Profesores
                     </span>
                   )}
@@ -351,21 +351,21 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <NavLink
               to="/admin/representantes"
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
-                    ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
-                    : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
+                    ? 'bg-white/20 border border-white/30'
+                    : 'hover:bg-white/10'
                 }`
               }
               title='Representantes'
             >
               {({ isActive }) => (
                 <>
-                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
                     <FaUsers className="w-4 h-4" />
                   </div>
                   {isOpen && (
-                    <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="ml-3 font-medium transition-colors duration-200">
                       Representantes
                     </span>
                   )}
@@ -379,21 +379,21 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <NavLink
               to="/admin/empleados"
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
-                    ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
-                    : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
+                    ? 'bg-white/20 border border-white/30'
+                    : 'hover:bg-white/10'
                 }`
               }
               title='Empleados'
             >
               {({ isActive }) => (
                 <>
-                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
                     <FaUserTie className="w-4 h-4" />
                   </div>
                   {isOpen && (
-                    <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="ml-3 font-medium transition-colors duration-200">
                       Empleados
                     </span>
                   )}
@@ -407,21 +407,21 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <NavLink
               to="/admin/pagos"
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
-                    ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
-                    : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
+                    ? 'bg-white/20 border border-white/30'
+                    : 'hover:bg-white/10'
                 }`
               }
               title='Pagos'
             >
               {({ isActive }) => (
                 <>
-                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
                     <FaMoneyBillWave className="w-4 h-4" />
                   </div>
                   {isOpen && (
-                    <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="ml-3 font-medium transition-colors duration-200">
                       Pagos
                     </span>
                   )}
@@ -435,21 +435,21 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <NavLink
               to="/admin/inscripciones"
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
-                    ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
-                    : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
+                    ? 'bg-white/20 border border-white/30'
+                    : 'hover:bg-white/10'
                 }`
               }
               title='Inscripciones'
             >
               {({ isActive }) => (
                 <>
-                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
                     <FaClipboardList className="w-4 h-4" />
                   </div>
                   {isOpen && (
-                    <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="ml-3 font-medium transition-colors duration-200">
                       Inscripciones
                     </span>
                   )}
@@ -474,7 +474,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
                     <FaBook className="w-4 h-4" />
                   </div>
                   {isOpen && (
-                    <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="ml-3 font-medium transition-colors duration-200">
                       Académico
                     </span>
                   )}
@@ -575,21 +575,21 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <NavLink
               to="/admin/cupos"
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
-                    ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
-                    : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
+                    ? 'bg-white/20 border border-white/30'
+                    : 'hover:bg-white/10'
                 }`
               }
               title='Cupos'
             >
               {({ isActive }) => (
                 <>
-                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
                     <FaSchool className="w-4 h-4" />
                   </div>
                   {isOpen && (
-                    <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="ml-3 font-medium transition-colors duration-200">
                       Gestión de Cupos
                     </span>
                   )}
@@ -614,11 +614,11 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
               >
                 {({ isActive }) => (
                   <>
-                    <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                    <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
                       <FaCog className="w-4 h-4" />
                     </div>
                     {isOpen && (
-                      <span className="ml-3 font-medium group-hover:translate-x-1 transition-transform duration-300">
+                      <span className="ml-3 font-medium transition-colors duration-200">
                         Configuración
                       </span>
                     )}

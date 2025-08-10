@@ -20,24 +20,6 @@ import TestUpload from './components/test/TestUpload';
 
 // Componentes de administrador
 import AdminRoutes from './routes/AdminRoutes';
-// import AdminDashboard from './components/admin/AdminDashboard';
-// import CuposManager from './components/admin/academico/CuposManager';
-// import GradosList from './components/admin/academico/GradosList';
-// import EditarGrado from './components/admin/academico/EditarGrado';
-// import MateriasList from './components/admin/academico/MateriasList';
-// import SeccionesList from './components/admin/academico/SeccionesList';
-// import InscripcionesList from './components/admin/inscripciones/InscripcionesList'
-// import InscripcionDetail from './components/admin/inscripciones/InscripcionDetail'
-// import EstudiantesList from './components/admin/estudiantes/EstudiantesList';
-// import EstudianteDetail from './components/admin/estudiantes/EstudianteDetail';
-// import RepresentanteList from './components/admin/representantes/RepresentanteList';
-// import RepresentanteDetail from './components/admin/representantes/RepresentanteDetail';
-// import RepresentanteForm from './components/admin/representantes/RepresentanteForm';
-// import ProfesoresList from './components/admin/profesores/ProfesoresList';
-// import ProfesorDetail from './components/admin/profesores/ProfesorDetail';
-// import ProfesorForm from './components/admin/profesores/ProfesorForm';
-// import ArancelesManager from './components/admin/pagos/ArancelesManager';
-// import PagosList from './components/admin/pagos/PagosList';
 
 // Componentes de profesor
 import ProfesorDashboard from './components/dashboard/ProfesorDashboard'

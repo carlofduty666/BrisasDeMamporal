@@ -51,42 +51,33 @@ const colorCard = (color) => {
 };
 
 
-const StatCard = ({ title, value, icon, color, link, delay = 0 }) => {
+const StatCard = ({ title, value, icon, color, link }) => {
   const styles = colorCard(color);
   
   return (
     <Link 
       to={link} 
-      className="block group transition-all duration-500 hover:scale-105 hover:shadow-2xl"
-      style={{ animationDelay: `${delay}ms` }}
+      className="block group transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
     >
-      <div className={`${styles.card}/80 backdrop-blur-xl p-6 rounded-2xl shadow-lg h-full border border-white/20 relative overflow-hidden group-hover:shadow-2xl transition-all duration-500`}>
-        {/* Fondo con gradiente */}
-        <div className={`absolute inset-0 bg-gradient-to-br from-white/50 to-${color}-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+      <div className={`${styles.card} p-6 rounded-2xl shadow-md h-full border border-white/20 transition-all duration-200 group-hover:shadow-lg`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className={`p-3 rounded-xl ${styles.circle}`}>
+            {React.cloneElement(icon, { className: `h-6 w-6 ${styles.icon}` })}
+          </div>
+          <div className="text-right">
+            <p className={`text-sm font-medium ${styles.title} mb-1`}>{title}</p>
+            <p className={`text-2xl font-bold ${styles.value}`}>
+              {typeof value === 'number' ? value.toLocaleString() : value}
+            </p>
+          </div>
+        </div>
         
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
-            <div className={`p-4 rounded-2xl ${styles.circle}/70 backdrop-blur-md group-hover:scale-110 transition-transform duration-300 border border-white/30`}>
-              {React.cloneElement(icon, { className: `h-7 w-7 ${styles.icon}` })}
-            </div>
-            <div className="text-right">
-              <p className={`text-sm font-medium ${styles.title} mb-1`}>{title}</p>
-              <p className={`text-3xl font-bold ${styles.value} group-hover:scale-110 transition-transform duration-300`}>
-                {typeof value === 'number' ? value.toLocaleString() : value}
-              </p>
-            </div>
-          </div>
-          
-          {/* Indicador de progreso visual */}
-          <div className="w-full bg-white/30 rounded-full h-1 overflow-hidden">
-            <div 
-              className={`h-full bg-gradient-to-r from-${color}-500 to-${color}-600 rounded-full transition-all duration-1000 group-hover:w-full`}
-              style={{ width: '70%' }}
-            ></div>
-          </div>
-          
-          {/* Efecto de brillo */}
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-white/20 to-transparent rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        {/* Barra de progreso simplificada */}
+        <div className="w-full bg-gray-200/50 rounded-full h-1">
+          <div 
+            className={`h-full bg-gradient-to-r from-${color}-400 to-${color}-500 rounded-full`}
+            style={{ width: '75%' }}
+          ></div>
         </div>
       </div>
     </Link>
@@ -169,7 +160,7 @@ const CuposChart = ({ cupos }) => (
           return (
             <div 
               key={index} 
-              className="group p-4 rounded-xl hover:bg-white/50 hover:backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
+              className="group p-4 rounded-xl hover:bg-white/50 hover:backdrop-blur-md transition-all duration-300 hover:shadow-md"
               style={{ animationDelay: `${index * 150}ms` }}
             >
               <div className="flex justify-between items-center mb-3">
@@ -234,45 +225,40 @@ const CuposChart = ({ cupos }) => (
 );
 
 const PagosRecientes = ({ pagos }) => (
-  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20 relative overflow-hidden">
-    {/* Fondo decorativo */}
-    <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-pink-500/10 to-transparent rounded-full blur-2xl"></div>
-    
-    <div className="relative z-10">
-      <div className="flex flex-row justify-between items-center mb-6">
-        <div className="flex items-center">
-          <div className="p-2 rounded-xl bg-pink-100/70 backdrop-blur-md mr-3">
-            <FaMoneyBillWave className="w-5 h-5 text-pink-600" />
-          </div>
-          <h2 className="text-xl font-bold bg-gradient-to-r from-pink-700 to-pink-600 bg-clip-text text-transparent">
-            Pagos Recientes
-          </h2>
+  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20">
+    <div className="flex flex-row justify-between items-center mb-6">
+      <div className="flex items-center">
+        <div className="p-2 rounded-xl bg-slate-100 mr-3">
+          <FaMoneyBillWave className="w-5 h-5 text-slate-600" />
         </div>
-        <Link
-          to={`/admin/pagos`}
-          className="group bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white px-4 py-2.5 rounded-xl flex items-center transition-all duration-300 hover:scale-105 hover:shadow-lg backdrop-blur-md"
-          title="Gestionar pagos"
-        >
-          <span className="font-medium">Gestionar pagos</span>
-          <MdChecklist className="ml-2 group-hover:scale-110 transition-transform duration-300" />
-        </Link>
+        <h2 className="text-xl font-bold text-slate-700">
+          Pagos Recientes
+        </h2>
       </div>
+      <Link
+        to={`/admin/pagos`}
+        className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2.5 rounded-xl flex items-center transition-colors duration-200"
+        title="Gestionar pagos"
+      >
+        <span className="font-medium">Gestionar pagos</span>
+        <MdChecklist className="ml-2" />
+      </Link>
+    </div>
       
-      <div className="space-y-3">
+    <div className="space-y-3">
         {pagos.map((pago, index) => (
           <div 
             key={index} 
-            className="group p-4 rounded-xl bg-white/50 backdrop-blur-md border border-white/30 hover:bg-white/70 hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
-            style={{ animationDelay: `${index * 100}ms` }}
+            className="p-4 rounded-xl bg-white/60 border border-slate-200/50 hover:bg-white/80 transition-colors duration-200"
           >
             <div className="flex items-center justify-between">
               {/* Información del estudiante */}
               <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-10 h-10 bg-slate-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
                   {pago.estudiantes?.nombre?.charAt(0) || 'E'}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800 group-hover:text-pink-700 transition-colors duration-300">
+                  <p className="text-sm font-semibold text-gray-800">
                     {pago.estudiantes?.nombre} {pago.estudiantes?.apellido}
                   </p>
                   <p className="text-xs text-gray-500">
@@ -286,12 +272,12 @@ const PagosRecientes = ({ pagos }) => (
                 <p className="text-lg font-bold text-gray-800">
                   ${Number(pago.monto).toLocaleString()}
                 </p>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                   pago.estado === 'pagado' 
-                    ? 'bg-green-100/80 text-green-700 border border-green-200' : 
+                    ? 'bg-green-100 text-green-700' : 
                   pago.estado === 'pendiente' 
-                    ? 'bg-yellow-100/80 text-yellow-700 border border-yellow-200' : 
-                    'bg-red-100/80 text-red-700 border border-red-200'
+                    ? 'bg-yellow-100 text-yellow-700' : 
+                    'bg-red-100 text-red-700'
                 }`}>
                   <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
                     pago.estado === 'pagado' ? 'bg-green-500' :
@@ -315,7 +301,7 @@ const PagosRecientes = ({ pagos }) => (
         </div>
       )}
     </div>
-  </div>
+
 );
 
 const AdminDashboard = () => {
@@ -569,32 +555,76 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 rounded-3xl p-8 text-white">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20"></div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">
-                Bienvenido al Panel de Administración
-              </h1>
-              <p className="text-slate-300 text-lg">
-                Gestiona tu institución educativa de manera eficiente y moderna
-              </p>
+    <div className="space-y-8">
+      {/* Hero Section y Widget de Accesos Rápidos */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Hero Section */}
+        <div className="lg:col-span-2">
+          <div className="relative overflow-hidden bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 rounded-3xl p-8 text-white h-full">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20"></div>
+            <div className="relative z-10 h-full flex flex-col justify-center">
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">
+                  Bienvenido al Panel de Administración
+                </h1>
+                <p className="text-slate-300 text-base lg:text-lg">
+                  Gestiona tu institución educativa de manera eficiente y moderna
+                </p>
+              </div>
             </div>
-            <div className="hidden lg:block">
-              <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-2xl"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-500/20 to-transparent rounded-full blur-2xl"></div>
+          </div>
+        </div>
+
+        {/* Widget de Accesos Rápidos */}
+        <div className="lg:col-span-1">
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20 h-full">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <div className="p-2 rounded-xl bg-slate-100 mr-3">
+                <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
+              Accesos Rápidos
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <Link
+                to="/inscripcion/nuevo-estudiante"
+                className="group p-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/50 transition-all duration-200 hover:shadow-sm"
+              >
+                <FaClipboardList className="w-5 h-5 text-blue-600 mb-2" />
+                <p className="text-xs font-medium text-blue-700">Nueva Inscripción</p>
+              </Link>
+              
+              <Link
+                to="/admin/cupos"
+                className="group p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/50 transition-all duration-200 hover:shadow-sm"
+              >
+                <FaSchool className="w-5 h-5 text-emerald-600 mb-2" />
+                <p className="text-xs font-medium text-emerald-700">Gestionar Cupos</p>
+              </Link>
+              
+              <Link
+                to="/admin/pagos"
+                className="group p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/50 transition-all duration-200 hover:shadow-sm"
+              >
+                <FaMoneyBillWave className="w-5 h-5 text-slate-600 mb-2" />
+                <p className="text-xs font-medium text-slate-700">Registro Pago</p>
+              </Link>
+              
+              <Link
+                to="/admin/estudiantes"
+                className="group p-3 rounded-xl bg-violet-50 hover:bg-violet-100 border border-violet-200/50 transition-all duration-200 hover:shadow-sm"
+              >
+                <FaUserGraduate className="w-5 h-5 text-violet-600 mb-2" />
+                <p className="text-xs font-medium text-violet-700">Ver Estudiantes</p>
+              </Link>
             </div>
           </div>
         </div>
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-2xl"></div>
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-blue-500/20 to-transparent rounded-full blur-2xl"></div>
       </div>
       
       {/* Tarjetas de estadísticas */}
@@ -605,7 +635,6 @@ const AdminDashboard = () => {
           icon={<FaUserGraduate />} 
           color="blue" 
           link="/admin/estudiantes"
-          delay={0}
         />
         <StatCard 
           title="Profesores" 
@@ -613,7 +642,6 @@ const AdminDashboard = () => {
           icon={<FaChalkboardTeacher />} 
           color="purple" 
           link="/admin/profesores"
-          delay={100}
         />
         <StatCard 
           title="Representantes" 
@@ -621,7 +649,6 @@ const AdminDashboard = () => {
           icon={<FaUsers />} 
           color="yellow" 
           link="/admin/representantes"
-          delay={200}
         />
         <StatCard 
           title="Pagos del Mes" 
@@ -629,83 +656,24 @@ const AdminDashboard = () => {
           icon={<FaMoneyBillWave />} 
           color="green" 
           link="/admin/pagos"
-          delay={300}
         />
       </div>
       
       {/* Contenido principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Columna izquierda - Información principal */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-6">
           {/* Pagos recientes */}
-          <div className="animate-slide-up" style={{ animationDelay: '400ms' }}>
-            <PagosRecientes pagos={pagos} />
-          </div>
+          <PagosRecientes pagos={pagos} />
           
           {/* Cupos disponibles */}
-          <div className="animate-slide-up" style={{ animationDelay: '500ms' }}>
-            <CuposChart cupos={cupos} />
-          </div>
+          <CuposChart cupos={cupos} />
         </div>
         
-        {/* Columna derecha - Actividad y widgets */}
-        <div className="space-y-8">
+        {/* Columna derecha - Actividad */}
+        <div>
           {/* Actividad reciente */}
-          <div className="animate-slide-up" style={{ animationDelay: '600ms' }}>
-            <RecentActivity activities={activities} />
-          </div>
-          
-          {/* Widget de accesos rápidos */}
-          <div className="animate-slide-up" style={{ animationDelay: '700ms' }}>
-            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-indigo-500/10 to-transparent rounded-full blur-2xl"></div>
-              
-              <div className="relative z-10">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                  <div className="p-2 rounded-xl bg-indigo-100/70 backdrop-blur-md mr-3">
-                    <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  Accesos Rápidos
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <Link
-                    to="/admin/inscripciones"
-                    className="group p-3 rounded-xl bg-blue-50/50 hover:bg-blue-100/70 border border-blue-200/30 transition-all duration-300 hover:scale-105 hover:shadow-md"
-                  >
-                    <FaClipboardList className="w-6 h-6 text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-300" />
-                    <p className="text-sm font-medium text-blue-700">Nueva Inscripción</p>
-                  </Link>
-                  
-                  <Link
-                    to="/admin/cupos"
-                    className="group p-3 rounded-xl bg-emerald-50/50 hover:bg-emerald-100/70 border border-emerald-200/30 transition-all duration-300 hover:scale-105 hover:shadow-md"
-                  >
-                    <FaSchool className="w-6 h-6 text-emerald-600 mb-2 group-hover:scale-110 transition-transform duration-300" />
-                    <p className="text-sm font-medium text-emerald-700">Gestionar Cupos</p>
-                  </Link>
-                  
-                  <Link
-                    to="/admin/pagos"
-                    className="group p-3 rounded-xl bg-pink-50/50 hover:bg-pink-100/70 border border-pink-200/30 transition-all duration-300 hover:scale-105 hover:shadow-md"
-                  >
-                    <FaMoneyBillWave className="w-6 h-6 text-pink-600 mb-2 group-hover:scale-110 transition-transform duration-300" />
-                    <p className="text-sm font-medium text-pink-700">Registro Pago</p>
-                  </Link>
-                  
-                  <Link
-                    to="/admin/estudiantes"
-                    className="group p-3 rounded-xl bg-violet-50/50 hover:bg-violet-100/70 border border-violet-200/30 transition-all duration-300 hover:scale-105 hover:shadow-md"
-                  >
-                    <FaUserGraduate className="w-6 h-6 text-violet-600 mb-2 group-hover:scale-110 transition-transform duration-300" />
-                    <p className="text-sm font-medium text-violet-700">Ver Estudiantes</p>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
+          <RecentActivity activities={activities} />
         </div>
       </div>
     </div>
