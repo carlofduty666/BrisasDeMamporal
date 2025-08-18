@@ -21,6 +21,7 @@ import {
   FaHome
 } from 'react-icons/fa';
 import EstudianteProgresoModal from '../estudiante/EstudianteProgresoModal';
+import ClasesActuales from '../ClasesActuales';
 
 const RepresentanteDashboard = () => {
   const [representante, setRepresentante] = useState(null);
@@ -699,6 +700,11 @@ const handleVerProgreso = (estudiante) => {
             {success}
           </div>
         )}
+        
+        {/* Componente de Clases Actuales */}
+        <div className="mb-6">
+          <ClasesActuales />
+        </div>
         
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           {/* Sección de Estudiantes */}

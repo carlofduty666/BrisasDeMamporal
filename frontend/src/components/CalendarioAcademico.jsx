@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import NavBar from './NavBar';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const CalendarioAcademico = () => {
   const [annoEscolar, setAnnoEscolar] = useState(null);
@@ -11,6 +12,11 @@ const CalendarioAcademico = () => {
   const [titleMoved, setTitleMoved] = useState(false);
   const [visibleSections, setVisibleSections] = useState({});
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showHorarioModal, setShowHorarioModal] = useState(false);
+  const [grados, setGrados] = useState([]);
+  const [secciones, setSecciones] = useState([]);
+  const [selectedGrado, setSelectedGrado] = useState('');
+  const [selectedSeccion, setSelectedSeccion] = useState('');
 
   // Imágenes para el fondo dinámico
   const backgroundImages = [
@@ -291,6 +297,7 @@ const CalendarioAcademico = () => {
     };
 
     fetchAnnoEscolar();
+    fetchGrados();
 
     // Animaciones
     const titleTimer = setTimeout(() => {
@@ -315,6 +322,65 @@ const CalendarioAcademico = () => {
       sectionTimers.forEach(timer => clearTimeout(timer));
     };
   }, []);
+
+  // Cargar grados
+  const fetchGrados = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/grados`);
+      setGrados(response.data);
+    } catch (error) {
+      console.error('Error al cargar grados:', error);
+    }
+  };
+
+  // Cargar secciones cuando se selecciona un grado
+  const handleGradoChange = async (gradoId) => {
+    setSelectedGrado(gradoId);
+    setSelectedSeccion('');
+    if (gradoId) {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/secciones/grado/${gradoId}`);
+        setSecciones(response.data);
+      } catch (error) {
+        console.error('Error al cargar secciones:', error);
+        setSecciones([]);
+      }
+    } else {
+      setSecciones([]);
+    }
+  };
+
+  // Descargar horario PDF
+  const descargarHorarioPDF = async () => {
+    if (!selectedGrado || !selectedSeccion) {
+      toast.error('Por favor selecciona un grado y una sección');
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/pdf/horario/${selectedGrado}/${selectedSeccion}`, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `horario_${selectedGrado}_${selectedSeccion}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Horario descargado exitosamente');
+      setShowHorarioModal(false);
+      setSelectedGrado('');
+      setSelectedSeccion('');
+    } catch (error) {
+      console.error('Error al descargar horario:', error);
+      toast.error('Error al descargar el horario');
+    }
+  };
 
   // Cambio automático de imagen de fondo
   useEffect(() => {
@@ -600,7 +666,8 @@ const CalendarioAcademico = () => {
                     title: 'Horarios por Grado',
                     description: 'Descarga los horarios específicos para cada grado y sección.',
                     icon: '📊',
-                    gradient: 'from-green-500 to-cyan-500'
+                    gradient: 'from-green-500 to-cyan-500',
+                    action: () => setShowHorarioModal(true)
                   },
                   {
                     title: 'Planificación Anual',
@@ -616,15 +683,15 @@ const CalendarioAcademico = () => {
                       </div>
                       <h3 className="text-xl font-bold text-green-800 mb-4">{doc.title}</h3>
                       <p className="text-slate-700 mb-6 leading-relaxed">{doc.description}</p>
-                      <a 
-                        href="#" 
+                      <button 
+                        onClick={doc.action || (() => {})}
                         className="inline-flex items-center text-green-700 hover:text-green-800 font-semibold group-hover:translate-x-1 transition-all duration-300"
                       >
-                        Descargar PDF
+                        {doc.title === 'Horarios por Grado' ? 'Seleccionar Grado' : 'Descargar PDF'}
                         <svg className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                      </a>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -795,6 +862,92 @@ const CalendarioAcademico = () => {
           </div>
         </div>
       </footer>
+
+      {/* Modal para seleccionar grado y sección */}
+      {showHorarioModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-800">Seleccionar Horario</h3>
+                <button
+                  onClick={() => {
+                    setShowHorarioModal(false);
+                    setSelectedGrado('');
+                    setSelectedSeccion('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Selector de Grado */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Selecciona el Grado
+                  </label>
+                  <select
+                    value={selectedGrado}
+                    onChange={(e) => handleGradoChange(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="">-- Selecciona un grado --</option>
+                    {grados.map((grado) => (
+                      <option key={grado.id} value={grado.id}>
+                        {grado.nombre_grado}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Selector de Sección */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Selecciona la Sección
+                  </label>
+                  <select
+                    value={selectedSeccion}
+                    onChange={(e) => setSelectedSeccion(e.target.value)}
+                    disabled={!selectedGrado}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">-- Selecciona una sección --</option>
+                    {secciones.map((seccion) => (
+                      <option key={seccion.id} value={seccion.id}>
+                        {seccion.nombre_seccion}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowHorarioModal(false);
+                    setSelectedGrado('');
+                    setSelectedSeccion('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={descargarHorarioPDF}
+                  disabled={!selectedGrado || !selectedSeccion}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  Descargar PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

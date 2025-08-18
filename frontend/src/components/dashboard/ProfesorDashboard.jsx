@@ -26,6 +26,7 @@ import {
   FaSearch,
   FaFilter
 } from 'react-icons/fa';
+import ClasesActuales from '../ClasesActuales';
 
 const ProfesorDashboard = () => {
   const navigate = useNavigate();
@@ -1503,6 +1504,9 @@ const ProfesorDashboard = () => {
       )}
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 space-y-6 animate-fadeIn">
+        {/* Componente de Clases Actuales */}
+        <ClasesActuales />
+        
         {/* Tarjetas de resumen */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1 animate-scaleIn">

@@ -11,6 +11,7 @@ import GradosList from '../components/admin/academico/GradosList';
 import EditarGrado from '../components/admin/academico/EditarGrado';
 import MateriasList from '../components/admin/academico/MateriasList';
 import SeccionesList from '../components/admin/academico/SeccionesList';
+import HorariosManagement from '../components/admin/HorariosManagement';
 import InscripcionesList from '../components/admin/inscripciones/InscripcionesList'
 import InscripcionDetail from '../components/admin/inscripciones/InscripcionDetail'
 import EstudiantesList from '../components/admin/estudiantes/EstudiantesList';
@@ -38,7 +39,15 @@ const AdminLayoutWrapper = () => {
     }, []);
     
     return (
-      <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 overflow-hidden">
+      <div className="flex h-screen bg-gray-50 overflow-hidden relative">
+        {/* Mobile Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
         {/* Sidebar */}
         <AdminSidebar 
           isOpen={sidebarOpen} 
@@ -47,18 +56,14 @@ const AdminLayoutWrapper = () => {
         />
         
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden relative">
-          {/* Elementos decorativos de fondo */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-blue-200/20 via-purple-200/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-gradient-to-tr from-indigo-200/15 to-transparent rounded-full blur-2xl pointer-events-none"></div>
-          
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
           <AdminHeader 
             user={user} 
             toggleSidebar={() => setSidebarOpen(!sidebarOpen)} 
           />
           
-          {/* Page Content - Contenido específico con glassmorphism */}
-          <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 relative z-10">
+          {/* Page Content */}
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
             <div className="max-w-7xl mx-auto">
               <Outlet /> {/* Renderiza el componente hijo actual */}
             </div>
@@ -85,6 +90,7 @@ const AdminRoutes = () => {
           <Route path="academico/grados/:id/editar" element={<EditarGrado />} />
           <Route path="academico/materias" element={<MateriasList />} />
           <Route path="academico/secciones" element={<SeccionesList />} />
+          <Route path="academico/horarios" element={<HorariosManagement />} />
           
           {/* Inscripciones */}
           <Route path="inscripciones" element={<InscripcionesList />} />

@@ -39,6 +39,11 @@ module.exports = (sequelize, DataTypes) => {
         otherKey: 'personaID',
         as: 'personas'
       });
+
+      Grados.hasMany(models.Horarios, {
+        foreignKey: 'grado_id',
+        as: 'horarios'
+      });
     }
     static async getAllGrados() {
       return await Grados.findAll();

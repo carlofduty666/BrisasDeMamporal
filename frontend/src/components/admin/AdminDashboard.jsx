@@ -4,6 +4,7 @@ import { FaUserGraduate, FaClipboardList, FaSchool, FaEye, FaChalkboardTeacher, 
 import { MdChecklist } from "react-icons/md";
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import ClasesActuales from '../ClasesActuales';
 
 const colorCard = (color) => {
   switch (color) {
@@ -85,134 +86,268 @@ const StatCard = ({ title, value, icon, color, link }) => {
 };
 
 const RecentActivity = ({ activities }) => (
-  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20 relative overflow-hidden">
-    {/* Fondo decorativo */}
-    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-500/10 to-transparent rounded-full blur-2xl"></div>
+  <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200 h-full flex flex-col">
+    <div className="flex items-center mb-6">
+      <div className="p-2 rounded-lg bg-blue-100 mr-3">
+        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold text-blue-700">
+        Actividad Reciente
+      </h2>
+    </div>
     
-    <div className="relative z-10">
-      <div className="flex items-center mb-6">
-        <div className="p-2 rounded-xl bg-blue-100/70 backdrop-blur-md mr-3">
-          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <h2 className="text-xl font-bold bg-gradient-to-r from-blue-700 to-blue-600 bg-clip-text text-transparent">
-          Actividad Reciente
-        </h2>
-      </div>
-      
-      <div className="space-y-4">
-        {activities.map((activity, index) => (
-          <div 
-            key={index} 
-            className="group flex items-start p-3 rounded-xl hover:bg-white/50 hover:backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            <div className={`rounded-xl p-2.5 ${activity.color} text-white mt-1 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-              {activity.icon}
-            </div>
-            <div className="ml-4 flex-1">
-              <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">
-                {activity.title}
-              </p>
-              <p className="text-xs text-gray-500 mt-1 flex items-center">
-                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {activity.time}
-              </p>
-            </div>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
+    <div className="flex-1 overflow-y-auto space-y-3 max-h-80">
+      {activities.map((activity, index) => (
+        <div 
+          key={index} 
+          className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors duration-150"
+        >
+          <div className={`rounded-lg p-2 ${activity.color} text-white`}>
+            {activity.icon}
           </div>
-        ))}
-      </div>
+          <div className="ml-3 flex-1">
+            <p className="text-sm font-medium text-gray-900">
+              {activity.title}
+            </p>
+            <p className="text-xs text-gray-500 mt-1 flex items-center">
+              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {activity.time}
+            </p>
+          </div>
+        </div>
+      ))}
     </div>
   </div>
 );
 
 const CuposChart = ({ cupos }) => (
-  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20 relative overflow-hidden">
-    {/* Fondo decorativo */}
-    <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full blur-2xl"></div>
+  <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200 h-full flex flex-col">
+    <div className="flex items-center mb-6">
+      <div className="p-2 rounded-lg bg-emerald-100 mr-3">
+        <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold text-emerald-700">
+        Cupos Disponibles
+      </h2>
+    </div>
     
-    <div className="relative z-10">
-      <div className="flex items-center mb-6">
-        <div className="p-2 rounded-xl bg-emerald-100/70 backdrop-blur-md mr-3">
-          <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
+    <div className="flex-1 overflow-y-auto space-y-4 max-h-80">
+      {cupos.map((item, index) => {
+        const percentage = (item.ocupados / item.total) * 100;
+        const isNearFull = percentage > 85;
+        const isFull = percentage === 100;
+        
+        return (
+          <div 
+            key={index} 
+            className="p-3 rounded-lg hover:bg-gray-50 transition-colors duration-150"
+          >
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex items-center">
+                <span className="text-sm font-semibold text-gray-900">
+                  {item.grado}
+                </span>
+                {isFull && (
+                  <span className="ml-2 px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-full">
+                    Completo
+                  </span>
+                )}
+                {isNearFull && !isFull && (
+                  <span className="ml-2 px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">
+                    Casi lleno
+                  </span>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-sm font-semibold text-gray-900">{item.ocupados}</span>
+                <span className="text-sm text-gray-500">/{item.total}</span>
+              </div>
+            </div>
+            
+            {/* Barra de progreso simple */}
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className={`h-full rounded-full ${
+                  isFull ? 'bg-red-500' :
+                  isNearFull ? 'bg-yellow-500' :
+                  'bg-emerald-500'
+                }`}
+                style={{ width: `${percentage}%` }}
+              ></div>
+            </div>
+            
+            {/* Porcentaje */}
+            <div className="flex justify-end mt-1">
+              <span className={`text-xs font-medium ${
+                isFull ? 'text-red-600' :
+                isNearFull ? 'text-yellow-600' :
+                'text-emerald-600'
+              }`}>
+                {percentage.toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const HorariosEnVivo = () => {
+  const [horariosActuales, setHorariosActuales] = useState([]);
+  const [horaActual, setHoraActual] = useState(new Date());
+
+  useEffect(() => {
+    // Actualizar la hora cada minuto
+    const interval = setInterval(() => {
+      setHoraActual(new Date());
+    }, 60000);
+
+    // Simular datos de horarios (esto vendrá de la API)
+    const horariosSimulados = [
+      {
+        id: 1,
+        grado: "3er Grado",
+        seccion: "A",
+        materia: "Matemáticas",
+        profesor: "Prof. María García",
+        horaInicio: "08:00",
+        horaFin: "08:45",
+        aula: "Aula 3A",
+        estado: "en-curso"
+      },
+      {
+        id: 2,
+        grado: "5to Grado", 
+        seccion: "B",
+        materia: "Ciencias Naturales",
+        profesor: "Prof. Carlos Rodríguez",
+        horaInicio: "08:00",
+        horaFin: "09:30",
+        aula: "Lab. Ciencias",
+        estado: "en-curso"
+      },
+      {
+        id: 3,
+        grado: "1er Grado",
+        seccion: "A",
+        materia: "Lenguaje",
+        profesor: "Prof. Ana López",
+        horaInicio: "08:30",
+        horaFin: "09:15",
+        aula: "Aula 1A",
+        estado: "por-comenzar"
+      }
+    ];
+
+    setHorariosActuales(horariosSimulados);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatearHora = (fecha) => {
+    return fecha.toLocaleTimeString('es-ES', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
+  };
+
+  const obtenerEstadoClase = (horaInicio, horaFin) => {
+    const ahora = formatearHora(horaActual);
+    const inicio = horaInicio.replace(':', '');
+    const fin = horaFin.replace(':', '');
+    const actual = ahora.replace(':', '');
+    
+    if (actual >= inicio && actual <= fin) return 'en-curso';
+    if (actual < inicio) return 'por-comenzar';
+    return 'finalizada';
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <div className="p-2 rounded-lg bg-green-100 mr-3">
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-green-700">Clases en Vivo</h2>
+            <p className="text-xs text-gray-500">
+              Ahora: {formatearHora(horaActual)} • {horariosActuales.filter(h => obtenerEstadoClase(h.horaInicio, h.horaFin) === 'en-curso').length} clases activas
+            </p>
+          </div>
         </div>
-        <h2 className="text-xl font-bold bg-gradient-to-r from-emerald-700 to-emerald-600 bg-clip-text text-transparent">
-          Cupos Disponibles
-        </h2>
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span className="text-xs text-green-600 font-medium">En Tiempo Real</span>
+        </div>
       </div>
       
-      <div className="space-y-6">
-        {cupos.map((item, index) => {
-          const percentage = (item.ocupados / item.total) * 100;
-          const isNearFull = percentage > 85;
-          const isFull = percentage === 100;
-          
+      <div className="space-y-3 max-h-64 overflow-y-auto">
+        {horariosActuales.map((horario) => {
+          const estado = obtenerEstadoClase(horario.horaInicio, horario.horaFin);
           return (
             <div 
-              key={index} 
-              className="group p-4 rounded-xl hover:bg-white/50 hover:backdrop-blur-md transition-all duration-300 hover:shadow-md"
-              style={{ animationDelay: `${index * 150}ms` }}
+              key={horario.id} 
+              className="p-4 rounded-lg border-l-4 hover:bg-gray-50 transition-colors duration-150"
+              style={{
+                borderLeftColor: 
+                  estado === 'en-curso' ? '#10B981' :
+                  estado === 'por-comenzar' ? '#F59E0B' : '#6B7280'
+              }}
             >
-              <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center">
-                  <span className="text-sm font-bold text-gray-800 group-hover:text-emerald-700 transition-colors duration-300">
-                    {item.grado}
-                  </span>
-                  {isFull && (
-                    <span className="ml-2 px-2 py-1 text-xs font-semibold bg-red-100 text-red-600 rounded-full">
-                      Completo
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-gray-900">
+                      {horario.grado} - Sección {horario.seccion}
                     </span>
-                  )}
-                  {isNearFull && !isFull && (
-                    <span className="ml-2 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-600 rounded-full">
-                      Casi lleno
-                    </span>
-                  )}
+                    <span className="text-xs text-gray-500">{horario.aula}</span>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-gray-700">{item.ocupados}</span>
-                  <span className="text-sm text-gray-500">/{item.total}</span>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    estado === 'en-curso' 
+                      ? 'bg-green-100 text-green-700' :
+                    estado === 'por-comenzar' 
+                      ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-gray-100 text-gray-700'
+                  }`}>
+                    {estado === 'en-curso' && '🔴 En Curso'}
+                    {estado === 'por-comenzar' && '🟡 Por Comenzar'}
+                    {estado === 'finalizada' && '⚫ Finalizada'}
+                  </span>
                 </div>
               </div>
               
-              {/* Barra de progreso moderna */}
-              <div className="relative">
-                <div className="w-full bg-gray-200/70 rounded-full h-3 overflow-hidden backdrop-blur-sm">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden ${
-                      isFull ? 'bg-gradient-to-r from-red-500 to-red-600' :
-                      isNearFull ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-                      'bg-gradient-to-r from-emerald-500 to-emerald-600'
-                    }`}
-                    style={{ 
-                      width: `${percentage}%`,
-                      transform: 'translateX(-100%)',
-                      animation: `slideIn 1s ease-out ${index * 200}ms forwards`
-                    }}
-                  >
-                    {/* Efecto de brillo */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 w-6 animate-pulse"></div>
-                  </div>
+              <div className="grid grid-cols-2 gap-4 text-xs text-gray-600 mt-3">
+                <div>
+                  <span className="font-medium">Materia:</span> {horario.materia}
                 </div>
-                
-                {/* Porcentaje */}
-                <div className="flex justify-end mt-1">
-                  <span className={`text-xs font-semibold ${
-                    isFull ? 'text-red-600' :
-                    isNearFull ? 'text-yellow-600' :
-                    'text-emerald-600'
+                <div>
+                  <span className="font-medium">Profesor:</span> {horario.profesor}
+                </div>
+                <div>
+                  <span className="font-medium">Horario:</span> {horario.horaInicio} - {horario.horaFin}
+                </div>
+                <div>
+                  <span className="font-medium">Estado:</span>
+                  <span className={`ml-1 ${
+                    estado === 'en-curso' ? 'text-green-600 font-semibold' :
+                    estado === 'por-comenzar' ? 'text-yellow-600' : 'text-gray-500'
                   }`}>
-                    {percentage.toFixed(1)}%
+                    {estado === 'en-curso' && 'Clase activa'}
+                    {estado === 'por-comenzar' && `Inicia en ${horario.horaInicio}`}
+                    {estado === 'finalizada' && 'Clase terminada'}
                   </span>
                 </div>
               </div>
@@ -220,15 +355,26 @@ const CuposChart = ({ cupos }) => (
           );
         })}
       </div>
+      
+      {horariosActuales.length === 0 && (
+        <div className="text-center py-8">
+          <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-gray-500">No hay clases programadas en este momento</p>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 const PagosRecientes = ({ pagos }) => (
-  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20">
-    <div className="flex flex-row justify-between items-center mb-6">
+  <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200 h-full flex flex-col">
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
       <div className="flex items-center">
-        <div className="p-2 rounded-xl bg-slate-100 mr-3">
+        <div className="p-2 rounded-lg bg-slate-100 mr-3">
           <FaMoneyBillWave className="w-5 h-5 text-slate-600" />
         </div>
         <h2 className="text-xl font-bold text-slate-700">
@@ -237,71 +383,65 @@ const PagosRecientes = ({ pagos }) => (
       </div>
       <Link
         to={`/admin/pagos`}
-        className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2.5 rounded-xl flex items-center transition-colors duration-200"
+        className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors duration-150 text-sm font-medium min-w-fit"
         title="Gestionar pagos"
       >
-        <span className="font-medium">Gestionar pagos</span>
-        <MdChecklist className="ml-2" />
+        <span className="hidden sm:inline">Gestionar pagos</span>
+        <span className="sm:hidden">Pagos</span>
       </Link>
     </div>
-      
-    <div className="space-y-3">
-        {pagos.map((pago, index) => (
-          <div 
-            key={index} 
-            className="p-4 rounded-xl bg-white/60 border border-slate-200/50 hover:bg-white/80 transition-colors duration-200"
-          >
-            <div className="flex items-center justify-between">
-              {/* Información del estudiante */}
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-slate-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                  {pago.estudiantes?.nombre?.charAt(0) || 'E'}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {pago.estudiantes?.nombre} {pago.estudiantes?.apellido}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {pago.aranceles?.nombre || 'Pago'}
-                  </p>
-                </div>
+    
+    <div className="flex-1 overflow-y-auto space-y-3 max-h-80">
+      {pagos.map((pago, index) => (
+        <div 
+          key={index} 
+          className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-150"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            {/* Información del estudiante */}
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
+              <div className="w-10 h-10 bg-slate-500 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                {pago.estudiantes?.nombre?.charAt(0) || 'E'}
               </div>
-              
-              {/* Monto y estado */}
-              <div className="text-right">
-                <p className="text-lg font-bold text-gray-800">
-                  ${Number(pago.monto).toLocaleString()}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {pago.estudiantes?.nombre} {pago.estudiantes?.apellido}
                 </p>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                  pago.estado === 'pagado' 
-                    ? 'bg-green-100 text-green-700' : 
-                  pago.estado === 'pendiente' 
-                    ? 'bg-yellow-100 text-yellow-700' : 
-                    'bg-red-100 text-red-700'
-                }`}>
-                  <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                    pago.estado === 'pagado' ? 'bg-green-500' :
-                    pago.estado === 'pendiente' ? 'bg-yellow-500' :
-                    'bg-red-500'
-                  }`}></div>
-                  {pago.estado.charAt(0).toUpperCase() + pago.estado.slice(1)}
-                </span>
+                <p className="text-xs text-gray-500 truncate">
+                  {pago.aranceles?.nombre || 'Pago'}
+                </p>
               </div>
             </div>
+            
+            {/* Monto y estado */}
+            <div className="flex flex-col sm:text-right gap-1 flex-shrink-0">
+              <p className="text-sm font-semibold text-gray-900">
+                ${Number(pago.monto).toLocaleString()}
+              </p>
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                pago.estado === 'pagado' 
+                  ? 'bg-green-100 text-green-700' : 
+                pago.estado === 'pendiente' 
+                  ? 'bg-yellow-100 text-yellow-700' : 
+                  'bg-red-100 text-red-700'
+              }`}>
+                {pago.estado.charAt(0).toUpperCase() + pago.estado.slice(1)}
+              </span>
+            </div>
           </div>
-        ))}
-      </div>
-      
-      {pagos.length === 0 && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-            <FaMoneyBillWave className="w-8 h-8 text-gray-400" />
-          </div>
-          <p className="text-gray-500">No hay pagos recientes</p>
         </div>
-      )}
+      ))}
     </div>
-
+    
+    {pagos.length === 0 && (
+      <div className="text-center py-8">
+        <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+          <FaMoneyBillWave className="w-6 h-6 text-gray-400" />
+        </div>
+        <p className="text-gray-500">No hay pagos recientes</p>
+      </div>
+    )}
+  </div>
 );
 
 const AdminDashboard = () => {
@@ -555,71 +695,67 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 lg:space-y-8 animate-fadeIn">
       {/* Hero Section y Widget de Accesos Rápidos */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
         {/* Hero Section */}
-        <div className="lg:col-span-2">
-          <div className="relative overflow-hidden bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 rounded-3xl p-8 text-white h-full">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20"></div>
-            <div className="relative z-10 h-full flex flex-col justify-center">
+        <div className="lg:col-span-2 order-1">
+          <div className="bg-slate-800 rounded-xl lg:rounded-2xl p-6 lg:p-8 text-white h-full">
+            <div className="h-full flex flex-col justify-center">
               <div>
-                <h1 className="text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-white">
                   Bienvenido al Panel de Administración
                 </h1>
-                <p className="text-slate-300 text-base lg:text-lg">
+                <p className="text-slate-300 text-sm sm:text-base lg:text-lg">
                   Gestiona tu institución educativa de manera eficiente y moderna
                 </p>
               </div>
             </div>
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-2xl"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-500/20 to-transparent rounded-full blur-2xl"></div>
           </div>
         </div>
 
         {/* Widget de Accesos Rápidos */}
-        <div className="lg:col-span-1">
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20 h-full">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-              <div className="p-2 rounded-xl bg-slate-100 mr-3">
-                <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="lg:col-span-1 order-2 lg:order-2">
+          <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm p-4 lg:p-6 border border-gray-200 h-full">
+            <h3 className="text-base lg:text-lg font-bold text-gray-800 mb-3 lg:mb-4 flex items-center">
+              <div className="p-2 rounded-lg bg-slate-100 mr-2 lg:mr-3">
+                <svg className="w-3 h-3 lg:w-4 lg:h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              Accesos Rápidos
+              <span className="text-sm lg:text-base">Accesos Rápidos</span>
             </h3>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2 lg:gap-3">
               <Link
                 to="/inscripcion/nuevo-estudiante"
-                className="group p-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/50 transition-all duration-200 hover:shadow-sm"
+                className="p-2 lg:p-3 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors duration-150 text-center"
               >
-                <FaClipboardList className="w-5 h-5 text-blue-600 mb-2" />
+                <FaClipboardList className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600 mb-1 lg:mb-2 mx-auto" />
                 <p className="text-xs font-medium text-blue-700">Nueva Inscripción</p>
               </Link>
               
               <Link
                 to="/admin/cupos"
-                className="group p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/50 transition-all duration-200 hover:shadow-sm"
+                className="p-2 lg:p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors duration-150 text-center"
               >
-                <FaSchool className="w-5 h-5 text-emerald-600 mb-2" />
+                <FaSchool className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-600 mb-1 lg:mb-2 mx-auto" />
                 <p className="text-xs font-medium text-emerald-700">Gestionar Cupos</p>
               </Link>
               
               <Link
                 to="/admin/pagos"
-                className="group p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/50 transition-all duration-200 hover:shadow-sm"
+                className="p-2 lg:p-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors duration-150 text-center"
               >
-                <FaMoneyBillWave className="w-5 h-5 text-slate-600 mb-2" />
+                <FaMoneyBillWave className="w-4 h-4 lg:w-5 lg:h-5 text-slate-600 mb-1 lg:mb-2 mx-auto" />
                 <p className="text-xs font-medium text-slate-700">Registro Pago</p>
               </Link>
               
               <Link
                 to="/admin/estudiantes"
-                className="group p-3 rounded-xl bg-violet-50 hover:bg-violet-100 border border-violet-200/50 transition-all duration-200 hover:shadow-sm"
+                className="p-2 lg:p-3 rounded-lg bg-violet-50 hover:bg-violet-100 border border-violet-200 transition-colors duration-150 text-center"
               >
-                <FaUserGraduate className="w-5 h-5 text-violet-600 mb-2" />
+                <FaUserGraduate className="w-4 h-4 lg:w-5 lg:h-5 text-violet-600 mb-1 lg:mb-2 mx-auto" />
                 <p className="text-xs font-medium text-violet-700">Ver Estudiantes</p>
               </Link>
             </div>
@@ -628,7 +764,7 @@ const AdminDashboard = () => {
       </div>
       
       {/* Tarjetas de estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
         <StatCard 
           title="Estudiantes" 
           value={stats.estudiantes} 
@@ -659,22 +795,30 @@ const AdminDashboard = () => {
         />
       </div>
       
-      {/* Contenido principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Columna izquierda - Información principal */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Pagos recientes */}
+      {/* Componente de Clases Actuales */}
+      <ClasesActuales />
+      
+      {/* Contenido principal - Primera fila */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 auto-rows-fr">
+        {/* Pagos recientes */}
+        <div className="w-full">
           <PagosRecientes pagos={pagos} />
-          
-          {/* Cupos disponibles */}
-          <CuposChart cupos={cupos} />
         </div>
         
-        {/* Columna derecha - Actividad */}
-        <div>
-          {/* Actividad reciente */}
+        {/* Actividad reciente */}
+        <div className="w-full">
           <RecentActivity activities={activities} />
         </div>
+        
+        {/* Cupos disponibles */}
+        <div className="w-full">
+          <CuposChart cupos={cupos} />
+        </div>
+      </div>
+
+      {/* Segunda fila - Horarios en Vivo */}
+      <div className="grid grid-cols-1">
+        <HorariosEnVivo />
       </div>
     </div>
   );

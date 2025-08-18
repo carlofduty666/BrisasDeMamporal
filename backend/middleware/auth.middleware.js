@@ -59,3 +59,36 @@ exports.isEstudiante = (req, res, next) => { // exports es para que se pueda usa
   next();
 };
 
+// Middleware para autorizar múltiples roles
+exports.authorizeRoles = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.userType) {
+      return res.status(401).json({ message: 'Usuario no autenticado' });
+    }
+
+    // Mapear roles del frontend a roles del backend
+    const roleMapping = {
+      'admin': 'adminWeb',
+      'owner': 'owner',
+      'adminWeb': 'adminWeb',
+      'profesor': 'profesor',
+      'estudiante': 'estudiante',
+      'representante': 'representante'
+    };
+
+    const userRole = req.userType;
+    const hasPermission = allowedRoles.some(role => {
+      const mappedRole = roleMapping[role] || role;
+      return userRole === mappedRole;
+    });
+
+    if (!hasPermission) {
+      return res.status(403).json({ 
+        message: 'Acceso denegado. No tienes permisos para acceder a este recurso' 
+      });
+    }
+
+    next();
+  };
+};
+

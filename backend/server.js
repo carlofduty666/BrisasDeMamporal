@@ -45,6 +45,8 @@ const inscripcionRoutes = require('./routes/inscripcion.routes')
 const cuposRoutes = require('./routes/cupos.routes')
 const authRoutes = require('./routes/auth.routes');
 const archivosEvaluacionesRoutes = require('./routes/archivosevaluaciones.routes');
+const horariosRoutes = require('./routes/horarios.routes');
+const pdfRoutes = require('./routes/pdf.routes');
 
 // ruta de prueba multer
 const testRoutes = require('./routes/test.routes');
@@ -109,6 +111,17 @@ app.use('/', inscripcionRoutes)
 app.use('/', cuposRoutes);
 app.use('/', authRoutes);
 app.use('/', archivosEvaluacionesRoutes);
+// Ruta de prueba directa
+app.get('/test-horarios', (req, res) => {
+  res.json({
+    message: 'Servidor funcionando correctamente',
+    timestamp: new Date().toISOString(),
+    routes: 'Rutas de horarios disponibles'
+  });
+});
+
+app.use('/horarios', horariosRoutes);
+app.use('/pdf', pdfRoutes);
 
 
 // Sincronizar base de datos

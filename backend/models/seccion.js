@@ -25,6 +25,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'seccionID',
         as: 'evaluaciones'
       });
+
+      Secciones.hasMany(models.Horarios, {
+        foreignKey: 'seccion_id',
+        as: 'horarios'
+      });
     }
     static async getSeccionesByGrado(gradoID) {
       return await this.findAll({

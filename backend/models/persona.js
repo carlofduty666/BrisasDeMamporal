@@ -58,6 +58,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'estudianteID',
         as: 'inscripciones'
       });
+
+      Personas.hasMany(models.Horarios, {
+        foreignKey: 'profesor_id',
+        as: 'horariosImpartidos'
+      });
     }
 
     static async getAllPersonas(filter = null) {

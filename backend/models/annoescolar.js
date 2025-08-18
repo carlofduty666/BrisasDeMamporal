@@ -36,6 +36,11 @@ module.exports = (sequelize, DataTypes) => {
         as: 'evaluaciones'
       });
 
+      AnnoEscolar.hasMany(models.Horarios, {
+        foreignKey: 'anno_escolar_id',
+        as: 'horarios'
+      });
+
     }
 
   static async getAllAnnoEscolares() {

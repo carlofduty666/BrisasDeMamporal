@@ -4,7 +4,7 @@ import {
   FaUserGraduate, FaChalkboardTeacher, FaUsers, FaUserTie,
   FaMoneyBillWave, FaClipboardList, FaBook, FaSchool,
   FaCog, FaHome, FaSignOutAlt, FaChevronDown, FaChevronUp,
-  FaGraduationCap, FaChalkboard
+  FaGraduationCap, FaChalkboard, FaClock
 } from 'react-icons/fa';
 import { logout } from '../../../services/auth.service';
 
@@ -106,6 +106,24 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           accent: 'purple',
           gradient: 'from-purple-700 to-purple-800'
         };
+      case '/admin/academico/horarios': 
+        return { 
+          main: 'bg-gradient-to-br from-rose-800 to-rose-900', 
+          active: 'bg-rose-700/90 backdrop-blur-md', 
+          hover: 'hover:bg-rose-700/60 hover:backdrop-blur-md', 
+          text: 'text-rose-600',
+          accent: 'rose',
+          gradient: 'from-rose-700 to-rose-800'
+        };
+      case '/admin/academico/horarios': 
+        return { 
+          main: 'bg-gradient-to-br from-rose-800 to-rose-900', 
+          active: 'bg-rose-700/90 backdrop-blur-md', 
+          hover: 'hover:bg-rose-700/60 hover:backdrop-blur-md', 
+          text: 'text-rose-600',
+          accent: 'rose',
+          gradient: 'from-rose-700 to-rose-800'
+        };
       case '/admin/cupos': 
         return { 
           main: 'bg-gradient-to-br from-red-800 to-red-900', 
@@ -168,6 +186,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
     } else if (path.includes('/admin/academico/secciones')) {
       newActiveSection = '/admin/academico/secciones';
       setShowAcademicoSubmenu(true);
+    } else if (path.includes('/admin/academico/horarios')) {
+      newActiveSection = '/admin/academico/horarios';
+      setShowAcademicoSubmenu(true);
     } else if (path.includes('/admin/academico')) {
       newActiveSection = '/admin/academico';
       setShowAcademicoSubmenu(true);
@@ -206,6 +227,14 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
     logout();
     window.location.href = '/login';
   };
+
+  // Función para cerrar el sidebar en móviles cuando se hace clic en un enlace
+  const handleLinkClick = () => {
+    // Solo cerrar en pantallas móviles (menos de lg)
+    if (window.innerWidth < 1024 && isOpen) {
+      toggleSidebar();
+    }
+  };
  
   const isOwner = userRole === 'owner' || userRole === 'adminWeb';
   
@@ -214,60 +243,71 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
   
   // Aplicar el color de fondo directamente como una clase CSS
   const sidebarBgColor = currentColors.main;
-  
-  // // Para depuración
-  // console.log('Active Section:', activeSection);
-  // console.log('Current Colors:', currentColors);
-  // console.log('Sidebar BG Color:', sidebarBgColor);
+
  
   return (
     <div 
-      className={`h-full text-white flex flex-col ${isOpen ? 'w-64' : 'w-20'} ${sidebarBgColor} backdrop-blur-xl border-r border-white/10 shadow-xl`}
+      className={`h-full text-white flex flex-col ${isOpen ? 'w-64' : 'w-20 lg:w-24'} ${sidebarBgColor} border-r border-white/10 shadow-xl transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} fixed lg:relative z-40 lg:z-auto`}
       style={{
-        transition: 'width 0.3s ease, background-color 0.3s ease',
         background: `linear-gradient(135deg, ${currentColors.main.replace('bg-gradient-to-br from-', '').replace(' to-', ', ')})`
       }}
     >
       {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-white/20 backdrop-blur-md">
+      <div className={`flex items-center ${isOpen ? 'justify-between px-4' : 'justify-center px-2'} h-16 border-b border-white/20 backdrop-blur-md transition-all duration-300`}>
         {isOpen ? (
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
-              Panel Admin
-            </h1>
-            <span className="text-xs text-white/60 font-medium">Brisas de Mamporal</span>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center w-full">
-            <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center">
-              <FaSchool className="w-4 h-4 text-white" />
+          <div className="flex items-center space-x-3">
+            <img 
+              src="/img/1.colegioLogo.png" 
+              alt="U.E.P Brisas de Mamporal" 
+              className="w-10 h-10 rounded-lg object-cover bg-white/10 p-1"
+            />
+            <div className="flex flex-col">
+              <h1 className="text-sm font-bold text-white leading-tight">
+                U.E.P Brisas
+              </h1>
+              <span className="text-xs text-white/70 font-medium">de Mamporal</span>
             </div>
           </div>
+        ) : (
+          <div className="flex items-center justify-center">
+            <img 
+              src="/img/1.colegioLogo.png" 
+              alt="U.E.P Brisas de Mamporal" 
+              className="w-8 h-8 rounded-lg object-cover bg-white/10 p-1"
+            />
+          </div>
         )}
-        <button 
-          onClick={toggleSidebar} 
-          className="text-white/80 hover:text-white focus:outline-none transition-all duration-300 hover:scale-110 p-2 rounded-lg hover:bg-white/10 backdrop-blur-md"
-        >
-          {isOpen ? (
+        {isOpen && (
+          <button 
+            onClick={toggleSidebar} 
+            className="text-white/80 hover:text-white focus:outline-none transition-all duration-300 hover:scale-110 p-2 rounded-lg hover:bg-white/10 backdrop-blur-md"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          </button>
+        )}
+        {!isOpen && (
+          <button 
+            onClick={toggleSidebar} 
+            className="absolute top-4 -right-4 bg-white/20 backdrop-blur-md text-white/80 hover:text-white focus:outline-none transition-all duration-300 hover:scale-110 p-1.5 rounded-full hover:bg-white/30 border border-white/30"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
             </svg>
-          )}
-        </button>
+          </button>
+        )}
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-6 px-3">
+      <nav className={`flex-1 overflow-y-auto py-6 ${isOpen ? 'px-3' : 'px-2'} transition-all duration-300`}>
         <ul className="space-y-3">
           <li>
             <NavLink
               to="/admin/dashboard"
+              onClick={handleLinkClick}
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
+                `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
                     ? 'bg-white/20 border border-white/30'
                     : 'hover:bg-white/10'
@@ -294,8 +334,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/estudiantes"
+              onClick={handleLinkClick}
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
+                `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
                     ? 'bg-white/20 border border-white/30'
                     : 'hover:bg-white/10'
@@ -322,8 +363,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/profesores"
+              onClick={handleLinkClick}
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
+                `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
                     ? 'bg-white/20 border border-white/30'
                     : 'hover:bg-white/10'
@@ -350,8 +392,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/representantes"
+              onClick={handleLinkClick}
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
+                `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
                     ? 'bg-white/20 border border-white/30'
                     : 'hover:bg-white/10'
@@ -378,8 +421,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/empleados"
+              onClick={handleLinkClick}
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
+                `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
                     ? 'bg-white/20 border border-white/30'
                     : 'hover:bg-white/10'
@@ -406,8 +450,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/pagos"
+              onClick={handleLinkClick}
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
+                `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
                     ? 'bg-white/20 border border-white/30'
                     : 'hover:bg-white/10'
@@ -434,8 +479,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/inscripciones"
+              onClick={handleLinkClick}
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
+                `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
                     ? 'bg-white/20 border border-white/30'
                     : 'hover:bg-white/10'
@@ -494,6 +540,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
                   <li>
                     <NavLink
                       to="/admin/academico/grados"
+                      onClick={handleLinkClick}
                       className={({ isActive }) => 
                         `group flex items-center p-2.5 rounded-lg transition-all duration-300 text-white/90 relative overflow-hidden ${
                           isActive
@@ -519,6 +566,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
                   <li>
                     <NavLink
                       to="/admin/academico/materias"
+                      onClick={handleLinkClick}
                       className={({ isActive }) => 
                         `group flex items-center p-2.5 rounded-lg transition-all duration-300 text-white/90 relative overflow-hidden ${
                           isActive
@@ -544,6 +592,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
                   <li>
                     <NavLink
                       to="/admin/academico/secciones"
+                      onClick={handleLinkClick}
                       className={({ isActive }) => 
                         `group flex items-center p-2.5 rounded-lg transition-all duration-300 text-white/90 relative overflow-hidden ${
                           isActive
@@ -566,6 +615,32 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
                       )}
                     </NavLink>
                   </li>
+                  <li>
+                    <NavLink
+                      to="/admin/academico/horarios"
+                      onClick={handleLinkClick}
+                      className={({ isActive }) => 
+                        `group flex items-center p-2.5 rounded-lg transition-all duration-300 text-white/90 relative overflow-hidden ${
+                          isActive
+                            ? 'bg-white/15 backdrop-blur-md shadow-md border border-white/20 text-white'
+                            : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:text-white'
+                        }`
+                      }
+                      title='Horarios'
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <div className={`p-1.5 rounded-md ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
+                            <FaClock className="w-3 h-3" />
+                          </div>
+                          <span className="ml-3 text-sm font-medium group-hover:translate-x-1 transition-transform duration-300">
+                            Horarios
+                          </span>
+                          {isActive && <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-lg"></div>}
+                        </>
+                      )}
+                    </NavLink>
+                  </li>
                 </ul>
               )}
             </div>
@@ -574,8 +649,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/cupos"
+              onClick={handleLinkClick}
               className={({ isActive }) => 
-                `group flex items-center p-3 rounded-xl transition-colors duration-200 text-white relative ${
+                `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
                   isActive
                     ? 'bg-white/20 border border-white/30'
                     : 'hover:bg-white/10'
@@ -603,8 +679,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <li>
               <NavLink
                 to="/admin/configuracion"
+                onClick={handleLinkClick}
                 className={({ isActive }) => 
-                  `group flex items-center p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                  `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
                     isActive
                       ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
                       : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
