@@ -19,7 +19,7 @@ const directorios = [
 directorios.forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
-    console.log(`Directorio creado: ${dir}`);
+    // console.log(`Directorio creado: ${dir}`);
   }
 });
 
@@ -40,6 +40,7 @@ const pagoEmpleadosRoutes = require('./routes/pagoEmpleado.routes');
 const pagoEstudiantesRoutes = require('./routes/pagoEstudiantes.routes');
 const configuracionNominaRoutes = require('./routes/configuracionNomina.routes')
 const configuracionBeneficioRoutes = require('./routes/configuracionBeneficio.routes')
+const configuracionRoutes = require('./routes/configuracion.routes')
 const liquidacionRoutes = require('./routes/liquidacion.routes')
 const inscripcionRoutes = require('./routes/inscripcion.routes')
 const cuposRoutes = require('./routes/cupos.routes')
@@ -106,6 +107,7 @@ app.use('/', pagoEmpleadosRoutes);
 app.use('/', pagoEstudiantesRoutes)
 app.use('/', configuracionNominaRoutes);
 app.use('/', configuracionBeneficioRoutes)
+app.use('/', configuracionRoutes);
 app.use('/', liquidacionRoutes);
 app.use('/', inscripcionRoutes)
 app.use('/', cuposRoutes);

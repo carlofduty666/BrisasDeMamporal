@@ -1338,6 +1338,144 @@ getPromediosEstudiantes: async (req, res) => {
     console.error('Error al obtener promedios de estudiantes:', error);
     res.status(500).json({ message: error.message });
   }
+},
+// Obtener calificaciones por profesor
+getCalificacionesByProfesor: async (req, res) => {
+  try {
+    const { profesorID } = req.params;
+    const { annoEscolarID } = req.query;
+
+    if (!profesorID) {
+      return res.status(400).json({ message: 'Se requiere el ID del profesor' });
+    }
+
+    // Construir filtros para evaluaciones
+    const filtrosEvaluacion = { profesorID };
+    if (annoEscolarID) {
+      filtrosEvaluacion.annoEscolarID = annoEscolarID;
+    }
+
+    // Obtener evaluaciones del profesor
+    const evaluaciones = await Evaluaciones.findAll({
+      where: filtrosEvaluacion,
+      include: [
+        {
+          model: db.Materias,
+          as: 'Materias',
+          attributes: ['id', 'asignatura']
+        },
+        {
+          model: db.Grados,
+          as: 'Grado',
+          attributes: ['id', 'nombre_grado']
+        }
+      ]
+    });
+
+    if (evaluaciones.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    // Obtener IDs de evaluaciones
+    const evaluacionesIds = evaluaciones.map(e => e.id);
+
+    // Obtener calificaciones de todas las evaluaciones del profesor
+    const calificaciones = await Calificaciones.findAll({
+      where: {
+        evaluacionID: evaluacionesIds
+      },
+      include: [
+        {
+          model: Evaluaciones,
+          as: 'Evaluaciones',
+          attributes: ['id', 'nombreEvaluacion', 'materiaID', 'tipoEvaluacion', 'lapso', 'fechaEvaluacion', 'gradoID'],
+          include: [
+            {
+              model: db.Materias,
+              as: 'Materias',
+              attributes: ['id', 'asignatura']
+            },
+            {
+              model: db.Grados,
+              as: 'Grado',
+              attributes: ['id', 'nombre_grado']
+            }
+          ]
+        },
+        {
+          model: Personas,
+          as: 'Personas',
+          attributes: ['id', 'nombre', 'apellido', 'cedula']
+        }
+      ],
+      order: [
+        [{ model: Evaluaciones, as: 'Evaluaciones' }, 'fechaEvaluacion', 'DESC'],
+        [{ model: Personas, as: 'Personas' }, 'apellido', 'ASC'],
+        [{ model: Personas, as: 'Personas' }, 'nombre', 'ASC']
+      ]
+    });
+
+    res.status(200).json(calificaciones);
+
+  } catch (error) {
+    console.error('Error al obtener calificaciones del profesor:', error);
+    res.status(500).json({ message: error.message });
+  }
+},
+
+// Obtener historial de una calificación específica
+getHistorialCalificacion: async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: 'Se requiere el ID de la calificación' });
+    }
+
+    // Obtener la calificación actual
+    const calificacion = await Calificaciones.findByPk(id, {
+      include: [
+        {
+          model: Evaluaciones,
+          as: 'Evaluaciones',
+          include: [
+            {
+              model: db.Materias,
+              as: 'Materias',
+              attributes: ['id', 'asignatura']
+            }
+          ]
+        },
+        {
+          model: Personas,
+          as: 'Personas',
+          attributes: ['id', 'nombre', 'apellido', 'cedula']
+        }
+      ]
+    });
+
+    if (!calificacion) {
+      return res.status(404).json({ message: 'Calificación no encontrada' });
+    }
+
+    // Por ahora, devolvemos solo la calificación actual
+    // En el futuro se puede implementar un sistema de auditoría para el historial real
+    const historial = [
+      {
+        id: calificacion.id,
+        nota: calificacion.calificacion,
+        observaciones: calificacion.observaciones,
+        fechaModificacion: calificacion.updatedAt,
+        accion: 'Calificación actual'
+      }
+    ];
+
+    res.status(200).json(historial);
+
+  } catch (error) {
+    console.error('Error al obtener historial de calificación:', error);
+    res.status(500).json({ message: error.message });
+  }
 }
 };
 
@@ -1425,5 +1563,7 @@ async function actualizarNotaLapso(estudianteID, materiaID, gradoID, seccionID, 
       throw error;
     }
 };
+
+
   
 module.exports = calificacionesController;

@@ -88,12 +88,12 @@ const EstudianteDetail = () => {
         };
         
         // Obtener datos del estudiante
-        console.log('Obteniendo datos del estudiante ID:', id);
+        // console.log('Obteniendo datos del estudiante ID:', id);
         const estudianteResponse = await axios.get(
           `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${id}`,
           config
         );
-        console.log('Datos del estudiante:', estudianteResponse.data);
+        // console.log('Datos del estudiante:', estudianteResponse.data);
         setEstudiante(estudianteResponse.data);
 
         // Obtener representante
@@ -119,7 +119,7 @@ const EstudianteDetail = () => {
           );
           annoEscolarData = annoEscolarResponse.data;
           setAnnoEscolar(annoEscolarData);
-          console.log('Año escolar obtenido:', annoEscolarData);
+          // console.log('Año escolar obtenido:', annoEscolarData);
         } catch (annoError) {
           console.error('Error al obtener año escolar:', annoError);
           setAnnoEscolar(null);
@@ -128,17 +128,17 @@ const EstudianteDetail = () => {
         // Obtener grado del estudiante (necesita annoEscolarID)
         if (annoEscolarData && annoEscolarData.id) {
           try {
-            console.log('Obteniendo grado para estudiante ID:', id, 'con año escolar:', annoEscolarData.id);
+            // console.log('Obteniendo grado para estudiante ID:', id, 'con año escolar:', annoEscolarData.id);
             const gradoResponse = await axios.get(
               `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/estudiante/${id}?annoEscolarID=${annoEscolarData.id}`,
               config
             );
-            console.log('Respuesta de grado:', gradoResponse.data);
+            // console.log('Respuesta de grado:', gradoResponse.data);
             if (gradoResponse.data && gradoResponse.data.length > 0) {
               gradoData = gradoResponse.data[0];
               setGrado(gradoData);
             } else {
-              console.log('No se encontró grado para el estudiante');
+              // console.log('No se encontró grado para el estudiante');
               setGrado(null);
             }
           } catch (gradoError) {
@@ -148,16 +148,16 @@ const EstudianteDetail = () => {
 
           // Obtener sección del estudiante (necesita annoEscolarID)
           try {
-            console.log('Obteniendo sección para estudiante ID:', id, 'con año escolar:', annoEscolarData.id);
+            // console.log('Obteniendo sección para estudiante ID:', id, 'con año escolar:', annoEscolarData.id);
             const seccionResponse = await axios.get(
               `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/estudiante/${id}?annoEscolarID=${annoEscolarData.id}`,
               config
             );
-            console.log('Respuesta de sección:', seccionResponse.data);
+            // console.log('Respuesta de sección:', seccionResponse.data);
             if (seccionResponse.data && seccionResponse.data.length > 0) {
               setSeccion(seccionResponse.data[0]);
             } else {
-              console.log('No se encontró sección para el estudiante');
+              // console.log('No se encontró sección para el estudiante');
               setSeccion(null);
             }
           } catch (seccionError) {
@@ -168,12 +168,12 @@ const EstudianteDetail = () => {
           // Obtener materias del estudiante (solo si tiene grado)
           if (gradoData && gradoData.id) {
             try {
-              console.log('Obteniendo materias para grado ID:', gradoData.id, 'con año escolar:', annoEscolarData.id);
+              // console.log('Obteniendo materias para grado ID:', gradoData.id, 'con año escolar:', annoEscolarData.id);
               const materiasResponse = await axios.get(
                 `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${gradoData.id}/materias?annoEscolarID=${annoEscolarData.id}`,
                 config
               );
-              console.log('Respuesta de materias:', materiasResponse.data);
+              // console.log('Respuesta de materias:', materiasResponse.data);
               setMaterias(materiasResponse.data || []);
             } catch (materiasError) {
               console.error('Error al obtener materias:', materiasError.response?.data || materiasError.message);
@@ -181,7 +181,7 @@ const EstudianteDetail = () => {
             }
           }
         } else {
-          console.log('No se puede obtener grado, sección y materias sin año escolar activo');
+          // console.log('No se puede obtener grado, sección y materias sin año escolar activo');
           setGrado(null);
           setSeccion(null);
           setMaterias([]);
@@ -193,9 +193,9 @@ const EstudianteDetail = () => {
             ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/evaluaciones/estudiante/${id}?annoEscolarID=${annoEscolarData.id}`
             : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/evaluaciones/estudiante/${id}`;
           
-          console.log('Obteniendo evaluaciones para estudiante ID:', id, annoEscolarData ? `con año escolar: ${annoEscolarData.id}` : 'sin año escolar');
+          // console.log('Obteniendo evaluaciones para estudiante ID:', id, annoEscolarData ? `con año escolar: ${annoEscolarData.id}` : 'sin año escolar');
           const evaluacionesResponse = await axios.get(evaluacionesUrl, config);
-          console.log('Respuesta de evaluaciones:', evaluacionesResponse.data);
+          // console.log('Respuesta de evaluaciones:', evaluacionesResponse.data);
           setEvaluaciones(evaluacionesResponse.data || []);
         } catch (evaluacionesError) {
           console.error('Error al obtener evaluaciones:', evaluacionesError.response?.data || evaluacionesError.message);
@@ -208,9 +208,9 @@ const EstudianteDetail = () => {
             ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/calificaciones/estudiante/${id}?annoEscolarID=${annoEscolarData.id}`
             : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/calificaciones/estudiante/${id}`;
           
-          console.log('Obteniendo calificaciones para estudiante ID:', id, annoEscolarData ? `con año escolar: ${annoEscolarData.id}` : 'sin año escolar');
+          // console.log('Obteniendo calificaciones para estudiante ID:', id, annoEscolarData ? `con año escolar: ${annoEscolarData.id}` : 'sin año escolar');
           const calificacionesResponse = await axios.get(calificacionesUrl, config);
-          console.log('Respuesta de calificaciones:', calificacionesResponse.data);
+          // console.log('Respuesta de calificaciones:', calificacionesResponse.data);
           setCalificaciones(calificacionesResponse.data || []);
         } catch (calificacionesError) {
           console.error('Error al obtener calificaciones:', calificacionesError.response?.data || calificacionesError.message);
@@ -219,12 +219,12 @@ const EstudianteDetail = () => {
 
         // Obtener documentos del estudiante
         try {
-          console.log('Obteniendo documentos para estudiante ID:', id);
+          // console.log('Obteniendo documentos para estudiante ID:', id);
           const documentosResponse = await axios.get(
             `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/persona/${id}`,
             config
           );
-          console.log('Respuesta de documentos:', documentosResponse.data);
+          // console.log('Respuesta de documentos:', documentosResponse.data);
           setDocumentos(documentosResponse.data || []);
         } catch (documentosError) {
           console.error('Error al obtener documentos:', documentosError.response?.data || documentosError.message);
@@ -233,12 +233,12 @@ const EstudianteDetail = () => {
 
         // Obtener documentos requeridos para estudiantes
         try {
-          console.log('Obteniendo documentos requeridos para estudiante');
+          // console.log('Obteniendo documentos requeridos para estudiante');
           const documentosRequeridosResponse = await axios.get(
             `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/verificar/${id}/estudiante`,
             config
           );
-          console.log('Respuesta de documentos requeridos:', documentosRequeridosResponse.data);
+          // console.log('Respuesta de documentos requeridos:', documentosRequeridosResponse.data);
           setDocumentosRequeridos(documentosRequeridosResponse.data.documentosRequeridos || []);
         } catch (documentosRequeridosError) {
           console.error('Error al obtener documentos requeridos:', documentosRequeridosError.response?.data || documentosRequeridosError.message);
@@ -247,12 +247,12 @@ const EstudianteDetail = () => {
 
         // Obtener pagos del estudiante
         try {
-          console.log('Obteniendo pagos para estudiante ID:', id);
+          // console.log('Obteniendo pagos para estudiante ID:', id);
           const pagosResponse = await axios.get(
             `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/pagos/estudiante/${id}`,
             config
           );
-          console.log('Respuesta de pagos:', pagosResponse.data);
+          // console.log('Respuesta de pagos:', pagosResponse.data);
           setPagos(pagosResponse.data || []);
         } catch (pagosError) {
           console.error('Error al obtener pagos:', pagosError.response?.data || pagosError.message);
@@ -559,7 +559,7 @@ const EstudianteDetail = () => {
 
   // Función para abrir el modal de pago
   const handleOpenPagoModal = () => {
-    console.log('Abriendo modal de pago...');
+    // console.log('Abriendo modal de pago...');
     
     // Inicializar el formulario con el estudiante actual
     setFormPago({
@@ -607,10 +607,10 @@ const EstudianteDetail = () => {
       setAranceles(arancelesResponse.data || []);
       setMetodosPago(metodosPagoResponse.data || []);
       
-      console.log('Datos cargados:', {
-        aranceles: arancelesResponse.data?.length || 0,
-        metodosPago: metodosPagoResponse.data?.length || 0
-      });
+      // console.log('Datos cargados:', {
+      //   aranceles: arancelesResponse.data?.length || 0,
+      //   metodosPago: metodosPagoResponse.data?.length || 0
+      // });
       
       setLoadingPago(false);
     } catch (err) {

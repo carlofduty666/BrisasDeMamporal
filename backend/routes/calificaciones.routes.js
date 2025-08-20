@@ -11,6 +11,8 @@ router.get('/calificaciones/estudiante/:estudianteID/evaluacion/:evaluacionID', 
 router.get('/calificaciones/materia/:materiaID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByMateria);
 router.get('/calificaciones/grado/:gradoID/seccion/:seccionID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByGradoSeccion);
 router.get('/calificaciones/resumen/estudiante/:estudianteID', authMiddleware.verifyToken, calificacionesController.getResumenCalificacionesByEstudiante);
+router.get('/calificaciones/profesor/:profesorID', authMiddleware.verifyToken, calificacionesController.getCalificacionesByProfesor);
+router.get('/calificaciones/:id/historial', authMiddleware.verifyToken, calificacionesController.getHistorialCalificacion);
 router.get('/estadisticas/profesor/:profesorID', authMiddleware.verifyToken, calificacionesController.getEstadisticasProfesor);
 router.get('/promedios/estudiantes/:profesorID', authMiddleware.verifyToken, calificacionesController.getPromediosEstudiantes);
 
