@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaSearch, FaEye, FaTrash, FaPlus, FaFilter, FaDownload } from 'react-icons/fa';
-import AdminLayout from '../layout/AdminLayout';
+import { FaSearch, FaEye, FaTrash, FaPlus, FaFilter, FaDownload, FaUserGraduate, FaChartLine, FaUsers } from 'react-icons/fa';
 import axios from 'axios';
 import { formatearNombreGrado } from '../../../utils/formatters';
 
@@ -273,253 +272,353 @@ const EstudiantesList = () => {
   
   if (loading) {
     return (
-       
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+              <div className="absolute inset-0 rounded-full bg-blue-500/10 animate-pulse"></div>
+            </div>
+            <p className="mt-4 text-blue-600 font-medium">Cargando estudiantes...</p>
+          </div>
         </div>
-       
     );
   }
   
   return (
-     
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-800">Estudiantes</h1>
-          <div className="flex space-x-2">
-            <Link
-              to="/inscripcion/nuevo-estudiante"
-              className="bg-indigo-600 text-white px-4 py-2 rounded-md flex items-center"
-            >
-              <FaPlus className="mr-2" /> Nuevo Estudiante
-            </Link>
-            <button
-              onClick={exportToCSV}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <FaDownload className="mr-2" /> Exportar CSV
-            </button>
+      <div>
+        {/* Header Hero Section */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-blue-800 to-blue-900 shadow-2xl rounded-2xl mb-8">
+          <div className="absolute inset-0 bg-black/20"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 to-transparent"></div>
+
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-400/20 rounded-full blur-xl"></div>
+        <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-blue-300/10 rounded-full blur-2xl"></div>
+        
+        <div className="relative px-6 py-12">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-3 bg-blue-500/20 rounded-xl backdrop-blur-sm border border-blue-400/30">
+                  <FaUserGraduate className="w-8 h-8 text-blue-200" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-white mb-2">
+                    Gestión de Estudiantes
+                  </h1>
+                  <p className="text-blue-200 text-lg">
+                    Administra y supervisa el registro académico estudiantil
+                  </p>
+                </div>
+              </div>
+              
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-200 text-sm font-medium">Total Estudiantes</p>
+                      <p className="text-2xl font-bold text-white">{filteredEstudiantes.length}</p>
+                    </div>
+                    <FaUsers className="w-8 h-8 text-blue-300" />
+                  </div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-200 text-sm font-medium">Grados Activos</p>
+                      <p className="text-2xl font-bold text-white">{grados.length}</p>
+                    </div>
+                    <FaChartLine className="w-8 h-8 text-blue-300" />
+                  </div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-200 text-sm font-medium">Año Escolar</p>
+                      <p className="text-2xl font-bold text-white">{annoEscolar?.periodo || 'N/A'}</p>
+                    </div>
+                    <FaUserGraduate className="w-8 h-8 text-blue-300" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="mt-8 lg:mt-0 lg:ml-8">
+              <div className="flex flex-col sm:flex-row lg:flex-col space-y-3 sm:space-y-0 sm:space-x-3 lg:space-x-0 lg:space-y-3">
+                <Link
+                  to="/inscripcion/nuevo-estudiante"
+                  className="group relative overflow-hidden bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <FaPlus className="mr-2 relative z-10" />
+                  <span className="relative z-10">Nuevo Estudiante</span>
+                </Link>
+                
+                <button
+                  onClick={exportToCSV}
+                  className="group relative overflow-hidden bg-white/10 backdrop-blur-md text-white px-6 py-3 rounded-xl font-semibold border border-white/20 hover:bg-white/20 transform hover:scale-105 transition-all duration-300 flex items-center justify-center"
+                >
+                  <FaDownload className="mr-2" />
+                  Exportar CSV
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-        
+      </div>
+
+      {/* Main Content */}
+      <div className="space-y-6">
         {/* Mensaje de error */}
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
-            <div className="flex">
+          <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-6 mb-6 shadow-lg">
+            <div className="flex items-center">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-red-800">Error</h3>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
               </div>
             </div>
           </div>
         )}
         
         {/* Búsqueda y filtros */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-            <form onSubmit={handleSearch} className="flex">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o cédula"
-                  className="w-full md:w-80 pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <div className="absolute left-3 top-2.5 text-gray-400">
-                  <FaSearch />
+        <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-6 mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+            {/* Barra de búsqueda */}
+            <div className="flex-1 max-w-2xl">
+              <form onSubmit={handleSearch} className="relative">
+                <div className="relative group">
+                  <input
+                    type="text"
+                    placeholder="Buscar estudiantes por nombre, apellido o cédula..."
+                    className="w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-700 placeholder-gray-500"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-400 group-focus-within:text-blue-600 transition-colors duration-300">
+                    <FaSearch className="w-5 h-5" />
+                  </div>
                 </div>
-              </div>
-              <button
-                type="submit"
-                className="ml-2 bg-indigo-600 text-white px-4 py-2 rounded-lg"
-              >
-                Buscar
-              </button>
-            </form>
+              </form>
+            </div>
             
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <FaFilter className="mr-2" /> Filtros
-            </button>
+            {/* Botón de filtros */}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`group relative overflow-hidden px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center ${
+                  showFilters 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'bg-white/80 text-blue-600 border border-blue-200 hover:bg-blue-50'
+                }`}
+              >
+                <FaFilter className="mr-2" />
+                Filtros
+                {showFilters && (
+                  <div className="absolute inset-0 bg-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                )}
+              </button>
+            </div>
           </div>
           
+          {/* Panel de filtros expandible */}
           {showFilters && (
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="grado" className="block text-sm font-medium text-gray-700 mb-1">
-                  Filtrar por Grado:
-                </label>
-                <select
-                  id="grado"
-                  className="rounded-lg border px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  value={selectedGrado}
-                  onChange={(e) => setSelectedGrado(e.target.value)}
-                >
-                  <option value="">Todos los grados</option>
-                  {grados.map((grado) => (
-                    <option key={grado.id} value={grado.id}>
-                      {grado.nombre_grado}
-                    </option>
-                  ))}
-                </select>
+            <div className="mt-6 pt-6 border-t border-blue-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label htmlFor="grado" className="block text-sm font-semibold text-blue-800">
+                      Filtrar por Grado
+                    </label>
+                    <select
+                      id="grado"
+                      className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-700"
+                      value={selectedGrado}
+                      onChange={(e) => setSelectedGrado(e.target.value)}
+                    >
+                      <option value="">Todos los grados</option>
+                      {grados.map((grado) => (
+                        <option key={grado.id} value={grado.id}>
+                          {grado.nombre_grado}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="seccion" className="block text-sm font-semibold text-blue-800">
+                      Filtrar por Sección
+                    </label>
+                    <select
+                      id="seccion"
+                      className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-700"
+                      value={selectedSeccion}
+                      onChange={(e) => setSelectedSeccion(e.target.value)}
+                    >
+                      <option value="">Todas las secciones</option>
+                      {secciones
+                        .filter(seccion => !selectedGrado || seccion.gradoID === parseInt(selectedGrado))
+                        .map((seccion) => (
+                          <option key={seccion.id} value={seccion.id}>
+                            {seccion.nombre_seccion}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
               </div>
-              
-              <div>
-                <label htmlFor="seccion" className="block text-sm font-medium text-gray-700 mb-1">
-                  Filtrar por Sección:
-                </label>
-                <select
-                  id="seccion"
-                  className="rounded-lg border px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  value={selectedSeccion}
-                  onChange={(e) => setSelectedSeccion(e.target.value)}
-                >
-                  <option value="">Todas las secciones</option>
-                  {secciones
-                    .filter(seccion => !selectedGrado || seccion.gradoID === parseInt(selectedGrado))
-                    .map((seccion) => (
-                      <option key={seccion.id} value={seccion.id}>
-                        {seccion.nombre_seccion}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            </div>
-          )}
+            )}
         </div>
         
-        {/* Tabla de Estudiantes */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nombre
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cédula
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Grado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sección
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Representante
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {currentItems.length > 0 ? (
-                  currentItems.map((estudiante) => (
-                    <tr key={estudiante.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {estudiante.nombre} {estudiante.apellido}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{estudiante.cedula}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{formatearNombreGrado(estudiante.grado?.nombre_grado) || 'No asignado'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{estudiante.seccion?.nombre_seccion || 'No asignada'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                        {estudiante.representante?.nombre && estudiante.representante?.apellido 
-                          ? `${estudiante.representante.nombre} ${estudiante.representante.apellido}`
-                          : 'No asignado'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
+        {/* Tabla de estudiantes */}
+        <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+          {currentItems.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="bg-gradient-to-r from-blue-600 to-blue-700">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                      Estudiante
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                      Cédula
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                      Grado
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                      Sección
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                      Representante
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-blue-100">
+                  {currentItems.map((estudiante, index) => (
+                    <tr 
+                        key={estudiante.id} 
+                        className={`transition-all duration-300 hover:bg-blue-50/50 ${
+                          index % 2 === 0 ? 'bg-white/50' : 'bg-blue-50/30'
+                        }`}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm mr-4">
+                              {estudiante.nombre?.charAt(0)}{estudiante.apellido?.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">
+                                {estudiante.nombre} {estudiante.apellido}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                ID: {estudiante.id}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-gray-700">
+                            {estudiante.cedula || 'No registrada'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {formatearNombreGrado(estudiante.grado?.nombre_grado) || 'No asignado'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            {estudiante.seccion?.nombre_seccion || 'No asignada'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700">
+                            {estudiante.representante?.nombre && estudiante.representante?.apellido 
+                              ? `${estudiante.representante.nombre} ${estudiante.representante.apellido}`
+                              : 'No asignado'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
                           <Link
                             to={`/admin/estudiantes/${estudiante.id}`}
-                            className="bg-indigo-600 text-white px-4 py-2 rounded-md flex items-center"
-                            title="Ver detalles"
+                            className="group relative inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                            title="Ver detalles del estudiante"
                           >
-                            <FaEye className="mr-2" /> Ver detalles
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
+                            <FaEye className="mr-2 relative z-10" />
+                            <span className="relative z-10">Ver Detalles</span>
                           </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No se encontraron estudiantes con los criterios de búsqueda.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FaUserGraduate className="w-12 h-12 text-blue-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">No se encontraron estudiantes</h3>
+                <p className="text-gray-500 mb-6">
+                  No hay estudiantes que coincidan con los criterios de búsqueda actuales.
+                </p>
+                <Link
+                  to="/inscripcion/nuevo-estudiante"
+                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                >
+                  <FaPlus className="mr-2" />
+                  Agregar Primer Estudiante
+                </Link>
+              </div>
+            )}
           </div>
           
           {/* Paginación */}
           {filteredEstudiantes.length > 0 && (
-            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
-                    currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Anterior
-                </button>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
-                    currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Siguiente
-                </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
-                    <span className="font-medium">
+            <div className="mt-8 bg-white/70 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 px-6 py-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                {/* Información de resultados */}
+                <div className="flex items-center space-x-2">
+                  <div className="text-sm text-gray-600">
+                    Mostrando <span className="font-semibold text-blue-600">{indexOfFirstItem + 1}</span> a{' '}
+                    <span className="font-semibold text-blue-600">
                       {Math.min(indexOfLastItem, filteredEstudiantes.length)}
                     </span>{' '}
-                    de <span className="font-medium">{filteredEstudiantes.length}</span> resultados
-                  </p>
+                    de <span className="font-semibold text-blue-600">{filteredEstudiantes.length}</span> estudiantes
+                  </div>
                 </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                        currentPage === 1 ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="sr-only">Anterior</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                    
+                
+                {/* Controles de paginación */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+                      currentPage === 1 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'
+                    }`}
+                  >
+                    Anterior
+                  </button>
+                  
+                  <div className="flex items-center space-x-1">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      // Mostrar máximo 5 páginas, centradas en la página actual
                       let pageNum;
                       if (totalPages <= 5) {
                         pageNum = i + 1;
@@ -534,37 +633,35 @@ const EstudiantesList = () => {
                         <button
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          className={`w-10 h-10 rounded-xl font-semibold transition-all duration-300 ${
                             currentPage === pageNum
-                              ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105'
+                              : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'
                           }`}
                         >
                           {pageNum}
                         </button>
                       );
                     })}
-                    
-                    <button
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                        currentPage === totalPages ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="sr-only">Siguiente</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </nav>
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+                      currentPage === totalPages 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'
+                    }`}
+                  >
+                    Siguiente
+                  </button>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
-     
   );
 };
 

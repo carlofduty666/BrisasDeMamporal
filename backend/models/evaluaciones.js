@@ -47,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     tipoEvaluacion: {
-      type: DataTypes.STRING,
+      type: DataTypes.ENUM('examen', 'quiz', 'tarea', 'proyecto', 'participacion'),
       allowNull: false
     },
     porcentaje: {

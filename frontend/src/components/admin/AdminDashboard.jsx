@@ -5,6 +5,7 @@ import { MdChecklist } from "react-icons/md";
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import ClasesActuales from '../ClasesActuales';
+import { formatearNombreGrado } from '../../utils/formatters'
 
 const colorCard = (color) => {
   switch (color) {
@@ -497,7 +498,7 @@ const AdminDashboard = () => {
         
         // Transformar los datos de cupos para el componente
         const cuposFormateados = cuposResponse.data.resumenCupos.map(cupo => ({
-          grado: cupo.nombre_grado,
+          grado: formatearNombreGrado(cupo.nombre_grado),
           total: cupo.totalCapacidad,
           ocupados: cupo.totalOcupados
         }));

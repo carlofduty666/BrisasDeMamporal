@@ -247,53 +247,58 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
  
   return (
     <div 
-      className={`h-full text-white flex flex-col ${isOpen ? 'w-64' : 'w-20 lg:w-24'} ${sidebarBgColor} border-r border-white/10 shadow-xl transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} fixed lg:relative z-40 lg:z-auto`}
+      className={`h-full text-white flex flex-col ${isOpen ? 'w-64' : 'w-20 lg:w-28'} ${sidebarBgColor} border-r border-white/10 shadow-xl transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} fixed lg:relative z-40 lg:z-auto`}
       style={{
         background: `linear-gradient(135deg, ${currentColors.main.replace('bg-gradient-to-br from-', '').replace(' to-', ', ')})`
       }}
     >
       {/* Logo */}
       <div className={`flex items-center ${isOpen ? 'justify-between px-4' : 'justify-center px-2'} h-16 border-b border-white/20 backdrop-blur-md transition-all duration-300`}>
-        {isOpen ? (
-          <div className="flex items-center space-x-3">
-            <img 
-              src="/img/1.colegioLogo.png" 
-              alt="U.E.P Brisas de Mamporal" 
-              className="w-10 h-10 rounded-lg object-cover bg-white/10 p-1"
-            />
+        {/* Logo Section */}
+        <div className={`flex items-center ${isOpen ? 'space-x-3' : 'flex-col space-y-1'}`}>
+          <img 
+            src="/img/1.colegioLogo.png" 
+            alt="U.E.P Brisas de Mamporal" 
+            className={`rounded-lg object-cover bg-white/10 p-1 ${isOpen ? 'w-10 h-10' : 'w-6 h-6'}`}
+          />
+          {isOpen && (
             <div className="flex flex-col">
               <h1 className="text-sm font-bold text-white leading-tight">
                 U.E.P Brisas
               </h1>
               <span className="text-xs text-white/70 font-medium">de Mamporal</span>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center">
-            <img 
-              src="/img/1.colegioLogo.png" 
-              alt="U.E.P Brisas de Mamporal" 
-              className="w-8 h-8 rounded-lg object-cover bg-white/10 p-1"
-            />
-          </div>
-        )}
+          )}
+          {!isOpen && (
+            <button 
+              onClick={toggleSidebar} 
+              className="text-white/80 hover:text-white focus:outline-none transition-all duration-300 hover:scale-110 p-1 rounded-md hover:bg-white/10 backdrop-blur-md"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth="2" 
+                  d="M9 5l7 7-7 7" 
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+        
+        {/* Toggle Button when open */}
         {isOpen && (
           <button 
             onClick={toggleSidebar} 
             className="text-white/80 hover:text-white focus:outline-none transition-all duration-300 hover:scale-110 p-2 rounded-lg hover:bg-white/10 backdrop-blur-md"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-        )}
-        {!isOpen && (
-          <button 
-            onClick={toggleSidebar} 
-            className="absolute top-4 -right-4 bg-white/20 backdrop-blur-md text-white/80 hover:text-white focus:outline-none transition-all duration-300 hover:scale-110 p-1.5 rounded-full hover:bg-white/30 border border-white/30"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth="2" 
+                d="M15 19l-7-7 7-7" 
+              />
             </svg>
           </button>
         )}
@@ -508,8 +513,15 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <div>
               <button
-                onClick={() => setShowAcademicoSubmenu(!showAcademicoSubmenu)}
-                className={`group flex items-center justify-between w-full p-3 rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                onClick={() => {
+                  // Si el sidebar está cerrado, abrirlo primero
+                  if (!isOpen) {
+                    toggleSidebar();
+                  }
+                  // Luego alternar el submenu
+                  setShowAcademicoSubmenu(!showAcademicoSubmenu);
+                }}
+                className={`group flex items-center ${isOpen ? 'justify-between p-3' : 'justify-center p-2'} w-full rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
                   activeSection.includes('/admin/academico')
                     ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
                     : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'

@@ -230,6 +230,105 @@ const documentosController = {
     }
   },
 
+  // Vista previa de documento
+  previewDocumento: async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const documento = await Documentos.findByPk(id);
+      
+      if (!documento) {
+        return res.status(404).json({ message: 'Documento no encontrado' });
+      }
+      
+      const rutaArchivo = path.join(__dirname, '..', documento.urlDocumento);
+      
+      if (!fs.existsSync(rutaArchivo)) {
+        return res.status(404).json({ message: 'El archivo físico no existe' });
+      }
+      
+      // Configurar headers para vista previa
+      res.setHeader('Content-Type', documento.tipo_archivo || 'application/octet-stream');
+      res.setHeader('Content-Disposition', 'inline; filename="' + documento.nombre_archivo + '"');
+      
+      // Enviar el archivo
+      res.sendFile(path.resolve(rutaArchivo));
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  // Descargar todos los documentos de una persona como ZIP
+  downloadAllDocumentos: async (req, res) => {
+    try {
+      const { personaID } = req.params;
+      const archiver = require('archiver');
+      
+      // Verificar que la persona existe
+      const persona = await Personas.findByPk(personaID);
+      if (!persona) {
+        return res.status(404).json({ message: 'Persona no encontrada' });
+      }
+      
+      // Obtener todos los documentos de la persona
+      const documentos = await Documentos.findAll({
+        where: { personaID },
+        include: [
+          {
+            model: Personas,
+            as: 'persona',
+            attributes: ['id', 'nombre', 'apellido', 'cedula']
+          }
+        ]
+      });
+      
+      if (documentos.length === 0) {
+        return res.status(404).json({ message: 'No hay documentos para descargar' });
+      }
+      
+      // Configurar headers para descarga de ZIP
+      const nombreArchivo = `documentos_${persona.nombre}_${persona.apellido}_${persona.cedula}.zip`;
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+      
+      // Crear archivo ZIP
+      const archive = archiver('zip', {
+        zlib: { level: 9 } // Nivel de compresión
+      });
+      
+      // Manejar errores del archiver
+      archive.on('error', (err) => {
+        console.error('Error al crear ZIP:', err);
+        res.status(500).json({ message: 'Error al crear archivo ZIP' });
+      });
+      
+      // Pipe del archive a la respuesta
+      archive.pipe(res);
+      
+      // Agregar cada documento al ZIP
+      for (const documento of documentos) {
+        const rutaArchivo = path.join(__dirname, '..', documento.urlDocumento);
+        
+        if (fs.existsSync(rutaArchivo)) {
+          // Crear nombre de archivo único en caso de duplicados
+          const extension = path.extname(documento.nombre_archivo);
+          const nombreBase = path.basename(documento.nombre_archivo, extension);
+          const nombreEnZip = `${documento.tipoDocumento}_${nombreBase}${extension}`;
+          
+          archive.file(rutaArchivo, { name: nombreEnZip });
+        }
+      }
+      
+      // Finalizar el archivo ZIP
+      archive.finalize();
+      
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+  },
+
 // Verificar documentos requeridos
 verificarDocumentosRequeridos: async (req, res) => {
   try {

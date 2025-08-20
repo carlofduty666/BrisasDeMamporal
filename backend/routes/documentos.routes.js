@@ -9,6 +9,8 @@ router.get('/documentos', authMiddleware.verifyToken, documentosController.getAl
 router.get('/documentos/persona/:personaID', authMiddleware.verifyToken, documentosController.getDocumentosByPersona);
 router.get('/documentos/:id', authMiddleware.verifyToken, documentosController.getDocumentoById);
 router.get('/documentos/:id/download', documentosController.downloadDocumento);
+router.get('/documentos/:id/preview', documentosController.previewDocumento);
+router.get('/documentos/persona/:personaID/download-all', authMiddleware.verifyToken, documentosController.downloadAllDocumentos);
 router.get('/documentos/verificar/:personaID/:tipoPersona', documentosController.verificarDocumentosRequeridos);
 
 // Ruta para subir un documento

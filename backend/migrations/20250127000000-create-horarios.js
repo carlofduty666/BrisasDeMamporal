@@ -92,9 +92,9 @@ module.exports = {
     });
 
     // Índices para optimizar consultas
-    await queryInterface.addIndex('horarios', ['grado_id', 'seccion_id']);
-    await queryInterface.addIndex('horarios', ['profesor_id', 'dia_semana', 'hora_inicio']);
-    await queryInterface.addIndex('horarios', ['anno_escolar_id']);
+    // await queryInterface.addIndex('horarios', ['grado_id', 'seccion_id']);
+    // await queryInterface.addIndex('horarios', ['profesor_id', 'dia_semana', 'hora_inicio']);
+    // await queryInterface.addIndex('horarios', ['anno_escolar_id']);
   },
 
   down: async (queryInterface, Sequelize) => {
