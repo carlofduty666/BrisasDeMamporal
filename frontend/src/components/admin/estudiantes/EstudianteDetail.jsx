@@ -1713,117 +1713,164 @@ const EstudianteDetail = () => {
                 </div>
               </div>
 
-              {/* Estado de documentos requeridos */}
+              {/* Contenedor único de documentos: requeridos + estado + acciones */}
               <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-orange-600 to-orange-700 p-6 text-white">
-                  <h3 className="text-xl font-bold">Estado de Documentos Requeridos</h3>
+                  <h3 className="text-xl font-bold">Documentos del Estudiante</h3>
                   <p className="text-orange-100 mt-1">
-                    {documentosRequeridos.filter(doc => doc.subido).length} de {documentosRequeridos.length} documentos completados
+                    {documentosRequeridos.filter(doc => doc.subido || documentos.some(d => d.tipoDocumento == doc.id || d.tipoDocumento === doc.nombre)).length}
+                    {' '}de{' '} {documentosRequeridos.length} documentos requeridos completados
                   </p>
                 </div>
                 
                 <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {documentosRequeridos.map(docRequerido => {
-                      const documentoSubido = documentos.find(doc => doc.tipoDocumento === docRequerido.id);
-                      return (
-                        <div key={docRequerido.id} className={`p-4 rounded-xl border-2 ${
-                          docRequerido.subido 
-                            ? 'bg-green-50 border-green-200' 
-                            : docRequerido.obligatorio 
-                              ? 'bg-red-50 border-red-200' 
-                              : 'bg-gray-50 border-gray-200'
-                        }`}>
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold text-gray-800">{docRequerido.nombre}</h4>
-                            {docRequerido.subido ? (
-                              <FaCheck className="w-5 h-5 text-green-600" />
-                            ) : (
-                              <FaTimes className="w-5 h-5 text-red-600" />
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mb-3">
-                            {docRequerido.obligatorio ? 'Obligatorio' : 'Opcional'}
-                          </p>
-                          {documentoSubido && (
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleVistaPrevia(documentoSubido)}
-                                className="flex-1 bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-sm hover:bg-blue-200 transition-colors"
-                              >
-                                <FaEye className="inline mr-1" /> Vista Previa
-                              </button>
-                              <button
-                                onClick={() => handleDescargarDocumento(documentoSubido.id)}
-                                className="flex-1 bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm hover:bg-green-200 transition-colors"
-                              >
-                                <FaFileDownload className="inline mr-1" /> Descargar
-                              </button>
-                              <button
-                                onClick={() => handleEliminarDocumento(documentoSubido.id)}
-                                className="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-sm hover:bg-red-200 transition-colors"
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Lista de todos los documentos */}
-              {documentos.length > 0 && (
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-gray-600 to-gray-700 p-6 text-white">
-                    <h3 className="text-xl font-bold">Todos los Documentos</h3>
-                    <p className="text-gray-100 mt-1">{documentos.length} documentos subidos</p>
-                  </div>
-                  
-                  <div className="p-6">
+                  {documentosRequeridos.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 mb-4">
+                        <FaFileDownload className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Cargando documentos...</h3>
+                      <p className="text-gray-500">Obteniendo información de documentos requeridos.</p>
+                    </div>
+                  ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {documentos.map(documento => (
-                        <div key={documento.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <h4 className="font-semibold text-gray-800">{documento.descripcion}</h4>
-                              <p className="text-sm text-gray-600">{documento.nombre_archivo}</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {documento.tamano ? `${(documento.tamano / 1024 / 1024).toFixed(2)} MB` : 'Tamaño desconocido'}
-                              </p>
+                      {documentosRequeridos.map(docRequerido => {
+                        const documentoSubido = documentos.find(doc => (doc.tipoDocumento == docRequerido.id) || (doc.tipoDocumento === docRequerido.nombre));
+                        const estaSubido = !!documentoSubido || !!docRequerido.subido;
+                        return (
+                          <div key={docRequerido.id} className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                            estaSubido 
+                              ? 'bg-green-50 border-green-200 hover:shadow-md' 
+                              : docRequerido.obligatorio 
+                                ? 'bg-red-50 border-red-200 hover:shadow-md' 
+                                : 'bg-gray-50 border-gray-200 hover:shadow-md'
+                          }`}>
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-2">
+                                <div className={`p-2 rounded-lg ${estaSubido ? 'bg-green-100' : 'bg-gray-100'}`}>
+                                  <FaFileDownload className={`w-4 h-4 ${estaSubido ? 'text-green-600' : 'text-gray-400'}`} />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 text-sm">{docRequerido.nombre}</h4>
+                                  <p className="text-xs text-gray-500">{docRequerido.obligatorio ? 'Obligatorio' : 'Opcional'}</p>
+                                </div>
+                              </div>
+                              {estaSubido ? (
+                                <FaCheck className="w-5 h-5 text-green-600" />
+                              ) : (
+                                <FaTimes className="w-5 h-5 text-red-600" />
+                              )}
                             </div>
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              {documento.tipo_archivo?.split('/')[1]?.toUpperCase() || 'DOC'}
-                            </span>
+
+                            {/* Info si está subido */}
+                            {documentoSubido && (
+                              <div className="mb-3 p-2 bg-white rounded-lg border">
+                                <p className="text-xs text-gray-600 mb-1">
+                                  <strong>Archivo:</strong> {documentoSubido.nombre_archivo || 'Sin nombre'}
+                                </p>
+                                {documentoSubido.descripcion && (
+                                  <p className="text-xs text-gray-600 mb-1">
+                                    <strong>Descripción:</strong> {documentoSubido.descripcion}
+                                  </p>
+                                )}
+                                <p className="text-xs text-gray-500">Subido: {formatearFecha(documentoSubido.createdAt)}</p>
+                              </div>
+                            )}
+
+                            {/* Acciones */}
+                            <div className="flex space-x-2">
+                              {estaSubido ? (
+                                <>
+                                  <button
+                                    onClick={() => handleVistaPrevia(documentoSubido)}
+                                    className="flex-1 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs hover:bg-blue-200 transition-colors flex items-center justify-center"
+                                  >
+                                    <FaEye className="mr-1" /> Vista Previa
+                                  </button>
+                                  <button
+                                    onClick={() => handleDescargarDocumento(documentoSubido.id)}
+                                    className="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded-lg text-xs hover:bg-green-200 transition-colors flex items-center justify-center"
+                                  >
+                                    <FaFileDownload className="mr-1" /> Descargar
+                                  </button>
+                                  <button
+                                    onClick={() => handleEliminarDocumento(documentoSubido.id)}
+                                    className="bg-red-100 text-red-700 px-3 py-2 rounded-lg text-xs hover:bg-red-200 transition-colors"
+                                  >
+                                    <FaTrash />
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setDocumentoSeleccionado(docRequerido);
+                                    setShowModal(true);
+                                  }}
+                                  className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-xs hover:bg-blue-700 transition-colors flex items-center justify-center"
+                                >
+                                  <FaUpload className="mr-1" /> Subir Documento
+                                </button>
+                              )}
+                            </div>
                           </div>
+                        );
+                      })}
+
+                      {/* Documentos adicionales no requeridos
+                      {documentos.filter(doc => !documentosRequeridos.some(req => (doc.tipoDocumento == req.id) || (doc.tipoDocumento === req.nombre))).map(documento => (
+                        <div key={documento.id} className="p-4 rounded-xl border-2 bg-blue-50 border-blue-200 hover:shadow-md transition-all duration-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-2">
+                              <div className="p-2 rounded-lg bg-blue-100">
+                                <FaFileDownload className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-800 text-sm">{documento.tipoDocumento}</h4>
+                                <p className="text-xs text-gray-500">Documento adicional</p>
+                              </div>
+                            </div>
+                            <FaCheck className="w-5 h-5 text-blue-600" />
+                          </div>
+
+                          <div className="mb-3 p-2 bg-white rounded-lg border">
+                            <p className="text-xs text-gray-600 mb-1">
+                              <strong>Archivo:</strong> {documento.nombre_archivo || 'Sin nombre'}
+                            </p>
+                            {documento.descripcion && (
+                              <p className="text-xs text-gray-600 mb-1">
+                                <strong>Descripción:</strong> {documento.descripcion}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-500">Subido: {formatearFecha(documento.createdAt)}</p>
+                          </div>
+
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleVistaPrevia(documento)}
-                              className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
+                              className="flex-1 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs hover:bg-blue-200 transition-colors flex items-center justify-center"
                             >
                               <FaEye className="mr-1" /> Vista Previa
                             </button>
                             <button
                               onClick={() => handleDescargarDocumento(documento.id)}
-                              className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors flex items-center justify-center"
+                              className="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded-lg text-xs hover:bg-green-200 transition-colors flex items-center justify-center"
                             >
                               <FaFileDownload className="mr-1" /> Descargar
                             </button>
                             <button
                               onClick={() => handleEliminarDocumento(documento.id)}
-                              className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors"
+                              className="bg-red-100 text-red-700 px-3 py-2 rounded-lg text-xs hover:bg-red-200 transition-colors"
                             >
                               <FaTrash />
                             </button>
                           </div>
                         </div>
-                      ))}
+                      ))} */}
                     </div>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           )}
           

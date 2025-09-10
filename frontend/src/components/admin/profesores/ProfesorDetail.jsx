@@ -551,9 +551,11 @@ useEffect(() => {
       setError('');
 
       const formData = new FormData();
-      formData.append('documento', archivoSeleccionado); // Cambiar 'archivo' por 'documento'
-      formData.append('tipoDocumento', documentoSeleccionado.nombre);
-      formData.append('descripcion', documentoSeleccionado.descripcion || '');
+      formData.append('documento', archivoSeleccionado); // Campo de archivo
+      // Enviar el ID (valor enum esperado por el backend), no el nombre legible
+      formData.append('tipoDocumento', documentoSeleccionado.id);
+      // Usar el nombre como descripción por defecto
+      formData.append('descripcion', documentoSeleccionado.nombre || documentoSeleccionado.descripcion || '');
       formData.append('personaID', id);
 
       const token = localStorage.getItem('token');
@@ -1787,7 +1789,7 @@ useEffect(() => {
                   <div className="bg-gradient-to-r from-orange-600 to-orange-700 p-6 text-white">
                     <h3 className="text-xl font-bold">Documentos del Profesor</h3>
                     <p className="text-orange-100 mt-1">
-                      {documentosRequeridos.filter(doc => doc.subido).length} de {documentosRequeridos.length} documentos requeridos completados
+                      {documentosRequeridos.filter(doc => doc.subido || documentos.some(d => d.tipoDocumento == doc.id || d.tipoDocumento === doc.nombre)).length} de {documentosRequeridos.length} documentos requeridos completados
                     </p>
                   </div>
                   
@@ -1803,8 +1805,8 @@ useEffect(() => {
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {documentosRequeridos.map(docRequerido => {
-                          const documentoSubido = documentos.find(doc => doc.tipoDocumento === docRequerido.nombre);
-                          const estaSubido = !!documentoSubido;
+                          const documentoSubido = documentos.find(doc => (doc.tipoDocumento == docRequerido.id) || (doc.tipoDocumento === docRequerido.nombre));
+                          const estaSubido = !!documentoSubido || !!docRequerido.subido;
                           
                           return (
                             <div key={docRequerido.id} className={`p-4 rounded-xl border-2 transition-all duration-200 ${
@@ -1894,61 +1896,6 @@ useEffect(() => {
                           );
                         })}
                         
-                        {/* Mostrar documentos adicionales que no están en los requeridos */}
-                        {documentos.filter(doc => !documentosRequeridos.some(req => req.nombre === doc.tipoDocumento)).map(documento => (
-                          <div key={documento.id} className="p-4 rounded-xl border-2 bg-blue-50 border-blue-200 hover:shadow-md transition-all duration-200">
-                            {/* Header de la tarjeta */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-2">
-                                <div className="p-2 rounded-lg bg-blue-100">
-                                  <FaFileAlt className="w-4 h-4 text-blue-600" />
-                                </div>
-                                <div>
-                                  <h4 className="font-semibold text-gray-800 text-sm">{documento.tipoDocumento}</h4>
-                                  <p className="text-xs text-gray-500">Documento adicional</p>
-                                </div>
-                              </div>
-                              <FaCheck className="w-5 h-5 text-blue-600" />
-                            </div>
-
-                            {/* Información del documento */}
-                            <div className="mb-3 p-2 bg-white rounded-lg border">
-                              <p className="text-xs text-gray-600 mb-1">
-                                <strong>Archivo:</strong> {documento.nombre_archivo || 'Sin nombre'}
-                              </p>
-                              {documento.descripcion && (
-                                <p className="text-xs text-gray-600 mb-1">
-                                  <strong>Descripción:</strong> {documento.descripcion}
-                                </p>
-                              )}
-                              <p className="text-xs text-gray-500">
-                                Subido: {formatearFecha(documento.createdAt)}
-                              </p>
-                            </div>
-
-                            {/* Botones de acción */}
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleVistaPrevia(documento)}
-                                className="flex-1 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs hover:bg-blue-200 transition-colors flex items-center justify-center"
-                              >
-                                <FaEye className="mr-1" /> Vista Previa
-                              </button>
-                              <button
-                                onClick={() => handleDescargarDocumento(documento.id)}
-                                className="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded-lg text-xs hover:bg-green-200 transition-colors flex items-center justify-center"
-                              >
-                                <FaFileDownload className="mr-1" /> Descargar
-                              </button>
-                              <button
-                                onClick={() => handleEliminarDocumento(documento.id)}
-                                className="bg-red-100 text-red-700 px-3 py-2 rounded-lg text-xs hover:bg-red-200 transition-colors"
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
                       </div>
                     )}
                   </div>
