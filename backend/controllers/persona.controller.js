@@ -425,17 +425,55 @@ const createPersona = async (req, res) => {
 }
 
 const deletePersona = async (req, res) => {
+  const t = await db.sequelize.transaction();
   try {
-      const deletedPersona = await Personas.destroy({
-          where: { id: req.params.id }
+    const { id } = req.params;
+
+    // 1) Verificar que la persona exista
+    const persona = await Personas.findByPk(id, { transaction: t });
+    if (!persona) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Persona no encontrada' });
+    }
+
+    // 2) Solo permitir eliminar representantes sin estudiantes/inscripciones
+    if (persona.tipo === 'representante') {
+      const inscripcionesCount = await db.Inscripciones.count({
+        where: { representanteID: id },
+        transaction: t
       });
-      if (deletedPersona) {
-          res.json({ message: 'Persona eliminada' });
-      } else {
-          res.status(404).json({ message: 'Persona no encontrada' });
+      if (inscripcionesCount > 0) {
+        await t.rollback();
+        return res.status(400).json({
+          message: 'No se puede eliminar el representante porque tiene estudiantes/inscripciones asociadas.'
+        });
       }
+    }
+
+    // 3) Eliminar dependencias para evitar errores de clave foránea
+    // Usuarios vinculados a la persona
+    await db.Usuarios.destroy({ where: { personaID: id }, transaction: t });
+
+    // Documentos vinculados a la persona
+    await db.Documentos.destroy({ where: { personaID: id }, transaction: t });
+
+    // Roles asociados (por si la FK no está en cascada en DB)
+    await db.Persona_Roles.destroy({ where: { personaID: id }, transaction: t });
+
+    // 4) Eliminar la persona
+    const deletedPersona = await Personas.destroy({ where: { id }, transaction: t });
+
+    if (!deletedPersona) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Persona no encontrada' });
+    }
+
+    await t.commit();
+    return res.json({ message: 'Persona eliminada' });
   } catch (err) {
-      res.status(500).json({ message: err.message });
+    await t.rollback();
+    console.error('Error al eliminar persona:', err);
+    return res.status(500).json({ message: err.message });
   }
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FaArrowLeft, FaPlus, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice } from 'react-icons/fa';
+import { FaArrowLeft, FaPlus, FaTimes, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice, FaFileAlt, FaCheck, FaUser, FaIdCard, FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaBriefcase, FaCommentDots } from 'react-icons/fa';
 import { formatearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado } from '../../../utils/formatters';
 
 const RepresentanteDetail = () => {
@@ -17,8 +17,17 @@ const RepresentanteDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [successToast, setSuccessToast] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
+
+  // UI adicionales
+  const [showPagosModal, setShowPagosModal] = useState(false);
+  const [selectedPagosEstudianteId, setSelectedPagosEstudianteId] = useState(null);
+  const [pagosFiltro, setPagosFiltro] = useState({ desde: '', hasta: '', arancelID: '' });
+  const [pagosPaginados, setPagosPaginados] = useState([]);
+  const [pagosPage, setPagosPage] = useState(1);
+  const pagosPageSize = 5;
 
   // Estados para registrar pagos
   const [showPagoModal, setShowPagoModal] = useState(false);
@@ -48,6 +57,7 @@ const RepresentanteDetail = () => {
   const [documentoSeleccionado, setDocumentoSeleccionado] = useState(null);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [subiendoDocumento, setSubiendoDocumento] = useState(false);
+  const [descargandoTodos, setDescargandoTodos] = useState(false);
   const fileInputRef = useRef(null);
   
   // Cargar datos del representante
@@ -198,21 +208,30 @@ const RepresentanteDetail = () => {
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
-      // Actualizar datos del representante
+      // Actualizar datos del representante (usar el mismo endpoint por ID para consistencia)
       const representanteResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/tipo/representante/${id}`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${id}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
       setRepresentante(representanteResponse.data);
+      setEditData({
+        nombre: representanteResponse.data.nombre || '',
+        apellido: representanteResponse.data.apellido || '',
+        cedula: representanteResponse.data.cedula || '',
+        telefono: representanteResponse.data.telefono || '',
+        email: representanteResponse.data.email || '',
+        direccion: representanteResponse.data.direccion || '',
+        profesion: representanteResponse.data.profesion || '',
+        fechaNacimiento: representanteResponse.data.fechaNacimiento || '',
+        observaciones: representanteResponse.data.observaciones || ''
+      });
       setIsEditing(false);
       setSuccess('Datos del representante actualizados correctamente');
+      setSuccessToast('Datos del representante actualizados correctamente');
+      setTimeout(() => setSuccessToast(''), 3000);
       
-      // Ocultar mensaje de éxito después de 3 segundos
-      setTimeout(() => {
-        setSuccess('');
-      }, 3000);
-      
+      setTimeout(() => setSuccess(''), 3000);
       setLoading(false);
     } catch (err) {
       console.error('Error al guardar cambios:', err);
@@ -433,6 +452,33 @@ const RepresentanteDetail = () => {
       fileInputRef.current.value = '';
     }
   };
+
+  // const handleDescargarTodos = async () => {
+  //   try {
+  //     setDescargandoTodos(true);
+  //     const token = localStorage.getItem('token');
+  //     // Endpoint genérico para descargar todos los documentos del representante
+  //     const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/persona/${id}/descargar-todos`;
+  //     const response = await axios.get(url, {
+  //       responseType: 'blob',
+  //       headers: { 'Authorization': `Bearer ${token}` }
+  //     });
+
+  //     const blob = new Blob([response.data], { type: 'application/zip' });
+  //     const downloadUrl = window.URL.createObjectURL(blob);
+  //     const a = document.createElement('a');
+  //     a.href = downloadUrl;
+  //     a.download = `documentos_representante_${id}.zip`;
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     a.remove();
+  //     window.URL.revokeObjectURL(downloadUrl);
+  //   } catch (err) {
+  //     console.error('Error al descargar todos los documentos:', err);
+  //   } finally {
+  //     setDescargandoTodos(false);
+  //   }
+  // };
   
   const handleUploadDocument = async () => {
     if (!archivoSeleccionado) {
@@ -577,14 +623,44 @@ const RepresentanteDetail = () => {
   const handleDownloadDocument = async (documentoId) => {
     try {
       const token = localStorage.getItem('token');
-      
-      window.open(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/download/${documentoId}`,
-        '_blank'
-      );
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/${documentoId}/download`;
+      window.open(url, '_blank');
     } catch (err) {
       console.error('Error al descargar documento:', err);
       setError('Error al descargar el documento. Por favor, intente nuevamente.');
+    }
+  };
+
+  const handleDescargarTodos = async () => {
+    if (documentos.length === 0) {
+      setError('No hay documentos para descargar');
+      return;
+    }
+    setDescargandoTodos(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/documentos/persona/${id}/descargar-todos`,
+        {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      if (!response.ok) throw new Error('Error al descargar documentos');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `documentos_${representante?.nombre}_${representante?.apellido}_${representante?.cedula}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error al descargar documentos:', error);
+      setError('Error al descargar los documentos. Por favor, intente nuevamente.');
+    } finally {
+      setDescargandoTodos(false);
     }
   };
   
@@ -635,13 +711,29 @@ const RepresentanteDetail = () => {
      
       <div className="container mx-auto px-4 py-8">
         {/* Botón de regreso */}
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => navigate('/admin/representantes')}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             <FaArrowLeft className="mr-2" /> Volver a la lista
           </button>
+
+          {/* Botones de acción */}
+          <div className="mt-4 flex flex-wrap gap-2">         
+            <button
+              onClick={handleOpenPagoModal}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg shadow-sm text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
+            >
+              <FaMoneyBillWave /> Registrar Pago
+            </button>
+            
+            <button
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+            >
+              <FaFileInvoice /> Generar Comprobante
+            </button>
+          </div>
         </div>
         
         {/* Mensajes de error o éxito */}
@@ -675,30 +767,38 @@ const RepresentanteDetail = () => {
           </div>
         )}
         
-        {/* Información del representante */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-            <div>
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Información del Representante
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Datos personales y de contacto.
-              </p>
+        {/* Layout principal */}
+        <div className="flex flex-col gap-8">
+          {/* Información del representante */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 overflow-hidden ring-1 ring-black/5 transition-all duration-300 hover:shadow-2xl">
+          <div className="bg-gradient-to-r from-violet-600 to-violet-700 px-6 py-5 text-white flex items-center justify-between">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 p-3 rounded-xl bg-white/10 ring-1 ring-white/20 shadow-sm shadow-black/10 transition-transform duration-300 hover:scale-105">
+                <FaUser className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold tracking-tight flex items-center gap-2">
+                  Información del Representante
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold bg-white/10 px-2 py-0.5 rounded-full ring-1 ring-white/20">
+                    <FaIdCard className="w-3 h-3" /> ID: {representante?.id || '—'}
+                  </span>
+                </h3>
+                <p className="text-violet-100/90 text-sm">Datos personales y de contacto.</p>
+              </div>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
               {isEditing ? (
-                <div className="flex space-x-2">
+                <div className="flex gap-2">
                   <button
                     onClick={handleSaveChanges}
                     disabled={loading}
-                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-400 transition"
                   >
                     {loading ? 'Guardando...' : 'Guardar'}
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg shadow-sm text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-300 transition"
                   >
                     Cancelar
                   </button>
@@ -706,275 +806,330 @@ const RepresentanteDetail = () => {
               ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="group inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg shadow-sm text-white bg-white/10 hover:bg-white/20 ring-1 ring-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/40 transition"
                 >
-                  <FaEdit className="mr-1" /> Editar
+                  <FaEdit className="mr-0.5 transition-transform group-hover:rotate-6" /> Editar
                 </button>
               )}
             </div>
           </div>
           
-          <div className="border-t border-gray-200">
-            <dl>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Nombre completo</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+          <div className="border-t border-gray-100">
+            <div className="p-6">
+              <div className="flex flex-wrap gap-4">
+                {/* Nombre completo */}
+                <div className="rounded-xl border border-gray-100 bg-white/60 p-4 hover:border-violet-200 transition w-full md:w-[calc(50%-0.5rem)]">
+                  <div className="flex items-center gap-2 text-gray-600 mb-1">
+                    <FaUser className="w-4 h-4 text-violet-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wide">Nombre completo</span>
+                  </div>
                   {isEditing ? (
-                    <div className="flex space-x-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="relative">
+                        <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                          type="text"
+                          name="nombre"
+                          value={editData.nombre || ''}
+                          onChange={handleEditChange}
+                          className="w-full pl-9 rounded-lg border-gray-200 bg-white/80 focus:ring-violet-500 focus:border-violet-500 text-sm"
+                          placeholder="Nombre"
+                        />
+                      </div>
+                      <div className="relative">
+                        <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                          type="text"
+                          name="apellido"
+                          value={editData.apellido || ''}
+                          onChange={handleEditChange}
+                          className="w-full pl-9 rounded-lg border-gray-200 bg-white/80 focus:ring-violet-500 focus:border-violet-500 text-sm"
+                          placeholder="Apellido"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium text-gray-900">{representante ? `${representante.nombre || ''} ${representante.apellido || ''}` : 'Cargando...'}</p>
+                  )}
+                </div>
+
+                {/* Cédula */}
+                <div className="rounded-xl border border-gray-100 bg-white/60 p-4 hover:border-violet-200 transition w-full md:w-[calc(50%-0.5rem)]">
+                  <div className="flex items-center gap-2 text-gray-600 mb-1">
+                    <FaIdCard className="w-4 h-4 text-violet-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wide">Cédula/Documento</span>
+                  </div>
+                  {isEditing ? (
+                    <div className="relative">
+                      <FaIdCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <input
                         type="text"
-                        name="nombre"
-                        value={editData.nombre || ''}
+                        name="cedula"
+                        value={editData.cedula || ''}
                         onChange={handleEditChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      />
-                      <input
-                        type="text"
-                        name="apellido"
-                        value={editData.apellido || ''}
-                        onChange={handleEditChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        className="w-full pl-9 rounded-lg border-gray-200 bg-white/80 focus:ring-violet-500 focus:border-violet-500 text-sm"
+                        placeholder="Documento"
                       />
                     </div>
                   ) : (
-                    representante ? `${representante.nombre || ''} ${representante.apellido || ''}` : 'Cargando...'
+                    <p className="text-sm font-medium text-gray-900">{representante?.cedula || 'No disponible'}</p>
                   )}
-                </dd>
-              </div>
-              
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Cédula/Documento</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                </div>
+
+                {/* Fecha de nacimiento */}
+                <div className="rounded-xl border border-gray-100 bg-white/60 p-4 hover:border-violet-200 transition w-full md:w-[calc(50%-0.5rem)]">
+                  <div className="flex items-center gap-2 text-gray-600 mb-1">
+                    <FaCalendarAlt className="w-4 h-4 text-violet-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wide">Fecha de nacimiento</span>
+                  </div>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      name="cedula"
-                      value={editData.cedula || ''}
-                      onChange={handleEditChange}
-                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    />
+                    <div className="relative">
+                      <FaCalendarAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="date"
+                        name="fechaNacimiento"
+                        value={formatearFechaParaInput(editData.fechaNacimiento)}
+                        onChange={handleEditChange}
+                        className="w-full pl-9 rounded-lg border-gray-200 bg-white/80 focus:ring-violet-500 focus:border-violet-500 text-sm"
+                      />
+                    </div>
                   ) : (
-                    representante?.cedula || 'No disponible'
+                    <p className="text-sm font-medium text-gray-900">{representante?.fechaNacimiento ? formatearFecha(representante.fechaNacimiento) : 'No disponible'}</p>
                   )}
-                </dd>
-              </div>
-              
-              {/* Añadir div para fecha de nacimiento */}
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Fecha de Nacimiento</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                </div>
+
+                {/* Teléfono */}
+                <div className="rounded-xl border border-gray-100 bg-white/60 p-4 hover:border-violet-200 transition w-full md:w-[calc(50%-0.5rem)]">
+                  <div className="flex items-center gap-2 text-gray-600 mb-1">
+                    <FaPhone className="w-4 h-4 text-violet-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wide">Teléfono</span>
+                  </div>
                   {isEditing ? (
-                    <input
-                      type="date"
-                      name="fechaNacimiento"
-                      value={formatearFechaParaInput(editData.fechaNacimiento)}
-                      onChange={handleEditChange}
-                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    />
+                    <div className="relative">
+                      <FaPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="tel"
+                        name="telefono"
+                        value={editData.telefono || ''}
+                        onChange={handleEditChange}
+                        className="w-full pl-9 rounded-lg border-gray-200 bg-white/80 focus:ring-violet-500 focus:border-violet-500 text-sm"
+                        placeholder="Teléfono"
+                      />
+                    </div>
                   ) : (
-                    representante?.fechaNacimiento ? 
-                    formatearFecha(representante.fechaNacimiento) : 
-                    'No disponible'
+                    <p className="text-sm font-medium text-gray-900">{representante?.telefono || 'No disponible'}</p>
                   )}
-                </dd>
-              </div>
-              
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                </div>
+
+                {/* Email */}
+                <div className="rounded-xl border border-gray-100 bg-white/60 p-4 hover:border-violet-200 transition w-full md:w-[calc(50%-0.5rem)]">
+                  <div className="flex items-center gap-2 text-gray-600 mb-1">
+                    <FaEnvelope className="w-4 h-4 text-violet-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wide">Email</span>
+                  </div>
                   {isEditing ? (
-                    <input
-                      type="tel"
-                      name="telefono"
-                      value={editData.telefono || ''}
-                      onChange={handleEditChange}
-                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    />
+                    <div className="relative">
+                      <FaEnvelope className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="email"
+                        name="email"
+                        value={editData.email || ''}
+                        onChange={handleEditChange}
+                        className="w-full pl-9 rounded-lg border-gray-200 bg-white/80 focus:ring-violet-500 focus:border-violet-500 text-sm"
+                        placeholder="correo@dominio.com"
+                      />
+                    </div>
                   ) : (
-                    representante?.telefono || 'No disponible'
+                    <p className="text-sm font-medium text-gray-900">{representante?.email || 'No disponible'}</p>
                   )}
-                </dd>
-              </div>
-              
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Email</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                </div>
+
+                {/* Dirección */}
+                <div className="rounded-xl border border-gray-100 bg-white/60 p-4 hover:border-violet-200 transition md:col-span-2">
+                  <div className="flex items-center gap-2 text-gray-600 mb-1">
+                    <FaMapMarkerAlt className="w-4 h-4 text-violet-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wide">Dirección</span>
+                  </div>
                   {isEditing ? (
-                    <input
-                      type="email"
-                      name="email"
-                      value={editData.email || ''}
-                      onChange={handleEditChange}
-                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    />
+                    <div className="relative">
+                      <FaMapMarkerAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        name="direccion"
+                        value={editData.direccion || ''}
+                        onChange={handleEditChange}
+                        className="w-full pl-9 rounded-lg border-gray-200 bg-white/80 focus:ring-violet-500 focus:border-violet-500 text-sm"
+                        placeholder="Dirección"
+                      />
+                    </div>
                   ) : (
-                    representante?.email || 'No disponible'
+                    <p className="text-sm text-gray-900">{representante?.direccion || 'No disponible'}</p>
                   )}
-                </dd>
-              </div>
-              
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Dirección</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                </div>
+
+                {/* Profesión */}
+                <div className="rounded-xl border border-gray-100 bg-white/60 p-4 hover:border-violet-200 transition w-full md:w-[calc(50%-0.5rem)]">
+                  <div className="flex items-center gap-2 text-gray-600 mb-1">
+                    <FaBriefcase className="w-4 h-4 text-violet-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wide">Profesión</span>
+                  </div>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      name="direccion"
-                      value={editData.direccion || ''}
-                      onChange={handleEditChange}
-                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    />
+                    <div className="relative">
+                      <FaBriefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        name="profesion"
+                        value={editData.profesion || ''}
+                        onChange={handleEditChange}
+                        className="w-full pl-9 rounded-lg border-gray-200 bg-white/80 focus:ring-violet-500 focus:border-violet-500 text-sm"
+                        placeholder="Profesión"
+                      />
+                    </div>
                   ) : (
-                    representante?.direccion || 'No disponible'
+                    <p className="text-sm font-medium text-gray-900">{representante?.profesion || 'No especificada'}</p>
                   )}
-                </dd>
-              </div>
-              
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Profesión</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                </div>
+
+                {/* Observaciones */}
+                <div className="rounded-xl border border-gray-100 bg-white/60 p-4 hover:border-violet-200 transition w-full">
+                  <div className="flex items-center gap-2 text-gray-600 mb-1">
+                    <FaCommentDots className="w-4 h-4 text-violet-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wide">Observaciones</span>
+                  </div>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      name="profesion"
-                      value={editData.profesion || ''}
-                      onChange={handleEditChange}
-                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    />
+                    <div className="relative">
+                      <FaCommentDots className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
+                      <textarea
+                        name="observaciones"
+                        value={editData.observaciones || ''}
+                        onChange={handleEditChange}
+                        rows="3"
+                        className="w-full pl-9 rounded-lg border-gray-200 bg-white/80 focus:ring-violet-500 focus:border-violet-500 text-sm"
+                        placeholder="Añade observaciones"
+                      ></textarea>
+                    </div>
                   ) : (
-                    representante?.profesion || 'No especificada'
+                    <p className="text-sm text-gray-700 leading-relaxed">{representante?.observaciones || 'Sin observaciones'}</p>
                   )}
-                </dd>
+                </div>
               </div>
-              
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Observaciones</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {isEditing ? (
-                    <textarea
-                      name="observaciones"
-                      value={editData.observaciones || ''}
-                      onChange={handleEditChange}
-                      rows="3"
-                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    ></textarea>
-                  ) : (
-                    representante?.observaciones || 'Sin observaciones'
-                  )}
-                </dd>
-              </div>
-            </dl>
+            </div>
+          </div>
           </div>
         </div>
 
         {/* Tabla de estudiantes */}
-        <div className="overflow-x-auto mb-5">
-          <div className="flex justify-between items-center pl-6 mb-3">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Estudiantes inscritos
-            </h3>
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl my-5 shadow-xl border border-gray-100 overflow-hidden ring-1 ring-black/5 transition-all duration-300 hover:shadow-2xl">
+          <div className="bg-gradient-to-r from-violet-600 to-violet-700 px-6 py-5 text-white flex items-center justify-between">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 p-3 rounded-xl bg-white/10 ring-1 ring-white/20 shadow-sm shadow-black/10 transition-transform duration-300 hover:scale-105">
+                <FaUserGraduate className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold tracking-tight">Estudiantes inscritos</h3>
+                <p className="text-violet-100/90 text-sm">Listado de estudiantes vinculados al representante</p>
+              </div>
+            </div>
             <Link
               to={`/inscripcion/nuevo-estudiante?repId=${representante?.id}&repCedula=${representante?.cedula}&repNombre=${representante?.nombre}&repApellido=${representante?.apellido}`}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="group inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl text-white bg-white/10 hover:bg-white/20 ring-1 ring-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/40 transition"
             >
-              <FaPlus className="mr-2" /> Añadir Estudiante
+              <FaPlus className="transition-transform group-hover:rotate-6" /> Añadir Estudiante
             </Link>
         </div>
-        <table className="min-w-full divide-y divide-gray-200 sm:rounded-lg">
-            <thead className="bg-gray-50">
-            <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Cédula
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nombre
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Grado
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Estado de Pagos
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-                </th>
-            </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-            {estudiantes.map((estudiante) => (
-                <tr key={estudiante.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {estudiante.cedula}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                    {estudiante.nombre} {estudiante.apellido}
-                    </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {estudiante.grado && estudiante.grado.nombre_grado ? 
-                    formatearNombreGrado(estudiante.grado.nombre_grado) : 
-                    'No asignado'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    estudiante.estadoPagos?.alDia ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {estudiante.estadoPagos?.alDia 
-                      ? 'Al día' 
-                      : `${estudiante.estadoPagos?.pagosPendientes || 0} pendientes`}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                    <Link
-                        to={`/admin/estudiantes/${estudiante.id}`}
-                        className="text-indigo-600 hover:text-indigo-900"
-                        title="Ver detalles"
-                    >
-                        <FaEye />
-                    </Link>
-                    <Link
-                        to={`/admin/estudiantes/${estudiante.id}/notas`}
-                        className="text-green-600 hover:text-green-900"
-                        title="Ver notas"
-                    >
-                        <FaUserGraduate />
-                    </Link>
-                    <Link
-                        to={`/admin/pagos/estudiante/${estudiante.id}`}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Ver pagos"
-                    >
-                        <FaMoneyBillWave />
-                    </Link>
-                    <button
-                      onClick={handleOpenPagoModal}
-                      className="text-yellow-600 hover:text-yellow-900"
-                      title="Registrar pago"
-                    >
-                      <FaPlus />
-                    </button>
-                    </div>
-                </td>
+        <div className="">
+          <div className="overflow-x-auto rounded-xl border border-gray-100">
+            <table className="min-w-full divide-y divide-gray-200 table-auto">
+              <thead className="bg-gray-50/80">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cédula</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Grado</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado de Pagos</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
                 </tr>
-            ))}
-            </tbody>
-        </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {estudiantes.map((estudiante) => (
+                  <tr key={estudiante.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{estudiante.cedula}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{estudiante.nombre} {estudiante.apellido}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {estudiante.grado && estudiante.grado.nombre_grado
+                        ? formatearNombreGrado(estudiante.grado.nombre_grado)
+                        : 'No asignado'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        estudiante.estadoPagos?.alDia ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                      }`}>
+                        {estudiante.estadoPagos?.alDia ? 'Al día' : `${estudiante.estadoPagos?.pagosPendientes || 0} pendientes`}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/admin/estudiantes/${estudiante.id}`}
+                          className="group inline-flex items-center justify-center w-8 h-8 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition"
+                          title="Ver detalles"
+                        >
+                          <FaEye className="transition-transform group-hover:scale-110" />
+                        </Link>
+                        <button
+                          onClick={() => navigate(`/admin/estudiantes/${estudiante.id}`, { state: { activeTab: 'calificaciones' } })}
+                          className="group inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition"
+                          title="Ver notas"
+                        >
+                          <FaUserGraduate className="transition-transform group-hover:scale-110" />
+                        </button>
+                        <button
+                          onClick={() => { setSelectedPagosEstudianteId(estudiante.id); setShowPagosModal(true); }}
+                          className="group inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+                          title="Ver pagos"
+                        >
+                          <FaMoneyBillWave className="transition-transform group-hover:scale-110" />
+                        </button>
+                        <button
+                          onClick={() => { setFormPago(p => ({ ...p, estudianteID: estudiante.id, inscripcionID: estudiante?.inscripcion?.id || '' })); setShowPagoModal(true); }}
+                          className="inline-flex items-center justify-center px-2 h-8 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition"
+                          title="Registrar pago"
+                        >
+                          Registrar pago
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
         </div>
 
           {/* Historial de pagos */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Historial de Pagos
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Pagos realizados por el representante.
-            </p>
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 overflow-hidden ring-1 ring-black/5 transition-all duration-300 hover:shadow-2xl mb-6">
+          <div className="bg-gradient-to-r from-violet-600 to-violet-700 px-6 py-5 text-white flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold">
+                Historial de pagos
+              </h3>
+              <p className="text-violet-100">
+                Resumen de pagos recientes del representante
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowPagosModal(true)}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+              >
+                <FaFileInvoice className="w-4 h-4" /> Ver historial completo
+              </button>
+            </div>
           </div>
           
-          <div className="border-t border-gray-200">
+          <div className="border-t border-gray-100">
             {pagos.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -1004,7 +1159,7 @@ const RepresentanteDetail = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {pagos.map((pago) => (
+                    {pagos.slice(0, 5).map((pago) => (
                       <tr key={pago.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatearFecha(pago.fechaPago || pago.fecha)}
@@ -1041,7 +1196,7 @@ const RepresentanteDetail = () => {
                 </table>
               </div>
             ) : (
-              <div className="px-6 py-4 text-center text-sm text-gray-500">
+              <div className="px-6 py-8 text-center text-sm text-gray-500">
                 No hay pagos registrados para este representante.
               </div>
             )}
@@ -1049,28 +1204,62 @@ const RepresentanteDetail = () => {
         </div>
 
         {/* Documentos */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Documentos del Representante
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Documentos requeridos y subidos por el representante.
-            </p>
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 overflow-hidden ring-1 ring-black/5 transition-all duration-300 hover:shadow-2xl mb-6">
+          <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-orange-100 rounded-xl">
+                  <FaFileAlt className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Documentos</h3>
+                  <p className="text-orange-100 mt-1">
+                  {documentosRequeridos.filter(doc => doc.subido || documentos.some(d => d.tipoDocumento == doc.id || d.tipoDocumento === doc.nombre)).length} de {documentosRequeridos.length} documentos requeridos completados
+                </p>
+              </div>
+              <div className="flex space-x-3">
+                {documentos.length > 0 && (
+                  <button
+                    onClick={handleDescargarTodos}
+                    disabled={descargandoTodos}
+                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
+                  >
+                    {descargandoTodos ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>Descargando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaFileDownload />
+                        <span>Descargar Todos</span>
+                      </>
+                    )}
+                  </button>
+                )}
+                {/* <button
+                  onClick={() => setShowModal(true)}
+                  className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
+                >
+                  <FaUpload />
+                  <span>Subir Documento</span>
+                </button> */}
+              </div>
+            </div>
           </div>
           
-          <div className="border-t border-gray-200">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="border-t border-gray-100">
+            <div className="px-6 py-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {documentosRequeridos.map((doc) => {
                   // Buscar si existe un documento subido de este tipo
                   const documentoSubido = documentos.find(d => d.tipoDocumento === doc.id);
                   
                   return (
-                    <div key={doc.id} className="border rounded-lg overflow-hidden">
-                      <div className={`p-4 ${documentoSubido ? 'bg-green-50' : 'bg-gray-50'}`}>
+                    <div key={doc.id} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+                      <div className={`px-4 py-3 ${documentoSubido ? 'bg-green-50' : 'bg-gray-50'} border-b border-gray-100`}>
                         <div className="flex justify-between items-start">
-                          <h4 className="text-sm font-medium text-gray-900">
+                          <h4 className="text-sm font-semibold text-gray-900">
                             {doc.nombre} {doc.obligatorio && <span className="text-red-500">*</span>}
                           </h4>
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${documentoSubido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
@@ -1099,7 +1288,7 @@ const RepresentanteDetail = () => {
                             <div className="flex-shrink-0 flex space-x-2">
                               <button
                                 onClick={() => handlePreviewDocument(documentoSubido)}
-                                className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                className="inline-flex items-center p-1 rounded-full shadow-sm text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
                                 title="Ver documento"
                               >
                                 <FaEye className="h-4 w-4" />
@@ -1107,7 +1296,7 @@ const RepresentanteDetail = () => {
                               
                               <button
                                 onClick={() => handleDownloadDocument(documentoSubido.id)}
-                                className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                className="inline-flex items-center p-1 rounded-full shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
                                 title="Descargar documento"
                               >
                                 <FaFileDownload className="h-4 w-4" />
@@ -1115,7 +1304,7 @@ const RepresentanteDetail = () => {
                               
                               <button
                                 onClick={() => handleOpenUploadModal(doc)}
-                                className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                className="inline-flex items-center p-1 rounded-full shadow-sm text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
                                 title="Resubir documento"
                               >
                                 <FaUpload className="h-4 w-4" />
@@ -1123,7 +1312,7 @@ const RepresentanteDetail = () => {
                               
                               <button
                                 onClick={() => handleDeleteDocument(documentoSubido.id)}
-                                className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                className="inline-flex items-center p-1 rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                 title="Eliminar documento"
                               >
                                 <FaTrash className="h-4 w-4" />
@@ -1135,7 +1324,7 @@ const RepresentanteDetail = () => {
                         <div className="p-4">
                           <button
                             onClick={() => handleOpenUploadModal(doc)}
-                            className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            className="w-full inline-flex justify-center items-center px-4 py-2 border border-violet-200 shadow-sm text-sm font-medium rounded-md text-violet-700 bg-violet-50 hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
                           >
                             <FaUpload className="mr-2" /> Subir documento
                           </button>
@@ -1148,22 +1337,92 @@ const RepresentanteDetail = () => {
             </div>
           </div>
         </div>
-  
-        {/* Botones de accion */}
-        <div className="mt-4 flex flex-wrap space-x-2">         
-          <button
-            onClick={handleOpenPagoModal}
-            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
-          >
-            <FaMoneyBillWave className="mr-2" /> Registrar Pago
-          </button>
-          
-          <button
-            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-          >
-            <FaFileInvoice className="mr-2" /> Generar Comprobante
-          </button>
+
         </div>
+
+        {/* Modal de historial de pagos */}
+        {showPagosModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPagosModal(false)} />
+            <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-5xl mx-4">
+              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Histórico de pagos del representante</h3>
+                <button className="text-gray-400 hover:text-gray-600" onClick={() => setShowPagosModal(false)}>✕</button>
+              </div>
+
+              <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Desde</label>
+                  <input type="date" value={pagosFiltro.desde} onChange={e => setPagosFiltro({ ...pagosFiltro, desde: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-300 focus:ring-violet-500 focus:border-violet-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Hasta</label>
+                  <input type="date" value={pagosFiltro.hasta} onChange={e => setPagosFiltro({ ...pagosFiltro, hasta: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-300 focus:ring-violet-500 focus:border-violet-500" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">Concepto</label>
+                  <select value={pagosFiltro.arancelID} onChange={e => setPagosFiltro({ ...pagosFiltro, arancelID: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-300 focus:ring-violet-500 focus:border-violet-500">
+                    <option value="">Todos</option>
+                    {aranceles.map(a => (
+                      <option key={a.id} value={a.id}>{a.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="px-6 pb-4">
+                <div className="overflow-x-auto border border-gray-100 rounded-xl">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estudiante</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referencia</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {pagos
+                        .filter(p => {
+                          const okDesde = pagosFiltro.desde ? new Date(p.fechaPago) >= new Date(pagosFiltro.desde) : true;
+                          const okHasta = pagosFiltro.hasta ? new Date(p.fechaPago) <= new Date(pagosFiltro.hasta) : true;
+                          const okArancel = pagosFiltro.arancelID ? String(p.arancelID) === String(pagosFiltro.arancelID) : true;
+                          const okEst = selectedPagosEstudianteId ? String(p.estudianteID) === String(selectedPagosEstudianteId) : true;
+                          return okDesde && okHasta && okArancel && okEst;
+                        })
+                        .slice((pagosPage - 1) * pagosPageSize, pagosPage * pagosPageSize)
+                        .map(pago => (
+                          <tr key={pago.id}>
+                            <td className="px-6 py-3 text-sm text-gray-700">{new Date(pago.fechaPago).toLocaleDateString()}</td>
+                            <td className="px-6 py-3 text-sm text-gray-700">{pago.estudiante?.nombre} {pago.estudiante?.apellido}</td>
+                            <td className="px-6 py-3 text-sm text-gray-700">{pago.arancel?.nombre || pago.concepto}</td>
+                            <td className="px-6 py-3 text-sm text-gray-700">{pago.metodoPago?.nombre}</td>
+                            <td className="px-6 py-3 text-sm text-gray-700">{pago.referencia || '-'}</td>
+                            <td className="px-6 py-3 text-sm text-right font-semibold text-gray-900">${Number(pago.montoTotal || pago.monto || 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Paginación simple */}
+                <div className="flex justify-between items-center mt-4">
+                  <button
+                    onClick={() => setPagosPage(p => Math.max(1, p - 1))}
+                    className="px-3 py-1 text-sm rounded-lg border hover:bg-gray-50"
+                  >Anterior</button>
+                  <span className="text-sm text-gray-500">Página {pagosPage}</span>
+                  <button
+                    onClick={() => setPagosPage(p => p + 1)}
+                    className="px-3 py-1 text-sm rounded-lg border hover:bg-gray-50"
+                  >Siguiente</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal para subir/resubir documentos */}
         {showModal && (
@@ -1266,13 +1525,52 @@ const RepresentanteDetail = () => {
               
               <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
               
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <div className="sm:flex sm:items-start">
-                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                        Registrar Nuevo Pago
-                      </h3>
+              <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <div className="bg-white p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-800">Registrar Pago</h3>
+                    <button onClick={handleClosePagoModal} className="text-gray-400 hover:text-gray-600">
+                      <FaTimes className="w-6 h-6" />
+                    </button>
+                  </div>
+
+                  {/* Panel info estudiante (estilo EstudianteDetail, paleta violeta) */}
+                  <div className="bg-violet-50 rounded-lg p-4 mb-6">
+                    <h4 className="font-semibold text-violet-800 mb-2">Información del Estudiante</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-violet-600">Estudiante:</span>
+                        <span className="ml-2 font-medium">
+                          {(() => {
+                            const est = estudiantes.find(e => String(e.id) === String(formPago.estudianteID));
+                            return est ? `${est.nombre} ${est.apellido}` : 'No seleccionado';
+                          })()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-violet-600">Cédula:</span>
+                        <span className="ml-2 font-medium">
+                          {(() => {
+                            const est = estudiantes.find(e => String(e.id) === String(formPago.estudianteID));
+                            return est?.cedula || '-';
+                          })()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-violet-600">Grado:</span>
+                        <span className="ml-2 font-medium">
+                          {(() => {
+                            const est = estudiantes.find(e => String(e.id) === String(formPago.estudianteID));
+                            return est?.grado?.nombre_grado ? formatearNombreGrado(est.grado.nombre_grado) : 'Sin grado';
+                          })()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-violet-600">Representante:</span>
+                        <span className="ml-2 font-medium">{representante ? `${representante.nombre} ${representante.apellido}` : 'Sin representante'}</span>
+                      </div>
+                    </div>
+                  </div>
                       
                       {/* Mensajes de error o éxito */}
                       {errorPago && (
@@ -1307,51 +1605,6 @@ const RepresentanteDetail = () => {
                       
                       <div className="mt-2">
                         <form onSubmit={handleSubmitPago} className="space-y-6">
-                          {/* Sección de Representante y Estudiante */}
-                          <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                            <div className="sm:col-span-6">
-                              <label htmlFor="representante" className="block text-sm font-medium text-gray-700">
-                                Representante
-                              </label>
-                              <div className="mt-1">
-                                <input
-                                  type="text"
-                                  id="representante"
-                                  value={`${representante.nombre} ${representante.apellido} - ${representante.cedula}`}
-                                  className="bg-gray-100 shadow-sm block w-full sm:text-sm border-gray-300 rounded-md"
-                                  disabled
-                                />
-                                <input
-                                  type="hidden"
-                                  name="representanteID"
-                                  value={representante.id}
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-6">
-                              <label htmlFor="estudiante" className="block text-sm font-medium text-gray-700">
-                                Estudiante <span className="text-red-500">*</span>
-                              </label>
-                              <div className="mt-1">
-                                <select
-                                  id="estudiante"
-                                  name="estudianteID"
-                                  value={formPago.estudianteID}
-                                  onChange={handleEstudianteChange}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                  required
-                                >
-                                  <option value="">Seleccione un estudiante</option>
-                                  {estudiantes.map((est) => (
-                                    <option key={est.id} value={est.id}>
-                                      {est.nombre} {est.apellido} - {est.cedula}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                          </div>
                           
                             {/* Sección de Detalles del Pago */}
                             <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
@@ -1601,14 +1854,14 @@ const RepresentanteDetail = () => {
                               <button
                                 type="button"
                                 onClick={handleClosePagoModal}
-                                className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
                               >
                                 Cancelar
                               </button>
                               <button
                                 type="submit"
                                 disabled={loadingPago}
-                                className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                                className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 disabled:opacity-50"
                               >
                                 {loadingPago ? (
                                   <span className="flex items-center">
@@ -1629,12 +1882,32 @@ const RepresentanteDetail = () => {
                     </div>
                   </div>
                 </div>
+          </div>
+        )}
+
+        {/* Toast flotante de éxito */}
+        {successToast && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <div className="flex items-start gap-3 bg-white shadow-xl border border-violet-200 rounded-xl px-4 py-3 min-w-[280px]">
+              <div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center">
+                <svg className="h-5 w-5 text-violet-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
               </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">{successToast}</p>
+              </div>
+              <button
+                onClick={() => setSuccessToast('')}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
             </div>
           </div>
         )}
       </div>
-     
   );
 };
 

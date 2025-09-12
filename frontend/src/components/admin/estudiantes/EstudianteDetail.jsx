@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { FaArrowLeft, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice, FaBook, FaGraduationCap, FaChalkboardTeacher, FaUser, FaIdCard, FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaStickyNote, FaChartLine, FaAward, FaTimes, FaCheck, FaPlus } from 'react-icons/fa';
 import { formatearFecha, parsearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado } from '../../../utils/formatters';
@@ -25,7 +25,8 @@ const EstudianteDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const [annoEscolar, setAnnoEscolar] = useState(null);
-  const [activeTab, setActiveTab] = useState('info');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'info');
   
   // Estados adicionales para las nuevas funcionalidades
   const [filtroMateria, setFiltroMateria] = useState('');
@@ -1817,56 +1818,6 @@ const EstudianteDetail = () => {
                         );
                       })}
 
-                      {/* Documentos adicionales no requeridos
-                      {documentos.filter(doc => !documentosRequeridos.some(req => (doc.tipoDocumento == req.id) || (doc.tipoDocumento === req.nombre))).map(documento => (
-                        <div key={documento.id} className="p-4 rounded-xl border-2 bg-blue-50 border-blue-200 hover:shadow-md transition-all duration-200">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                              <div className="p-2 rounded-lg bg-blue-100">
-                                <FaFileDownload className="w-4 h-4 text-blue-600" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-gray-800 text-sm">{documento.tipoDocumento}</h4>
-                                <p className="text-xs text-gray-500">Documento adicional</p>
-                              </div>
-                            </div>
-                            <FaCheck className="w-5 h-5 text-blue-600" />
-                          </div>
-
-                          <div className="mb-3 p-2 bg-white rounded-lg border">
-                            <p className="text-xs text-gray-600 mb-1">
-                              <strong>Archivo:</strong> {documento.nombre_archivo || 'Sin nombre'}
-                            </p>
-                            {documento.descripcion && (
-                              <p className="text-xs text-gray-600 mb-1">
-                                <strong>Descripción:</strong> {documento.descripcion}
-                              </p>
-                            )}
-                            <p className="text-xs text-gray-500">Subido: {formatearFecha(documento.createdAt)}</p>
-                          </div>
-
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleVistaPrevia(documento)}
-                              className="flex-1 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs hover:bg-blue-200 transition-colors flex items-center justify-center"
-                            >
-                              <FaEye className="mr-1" /> Vista Previa
-                            </button>
-                            <button
-                              onClick={() => handleDescargarDocumento(documento.id)}
-                              className="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded-lg text-xs hover:bg-green-200 transition-colors flex items-center justify-center"
-                            >
-                              <FaFileDownload className="mr-1" /> Descargar
-                            </button>
-                            <button
-                              onClick={() => handleEliminarDocumento(documento.id)}
-                              className="bg-red-100 text-red-700 px-3 py-2 rounded-lg text-xs hover:bg-red-200 transition-colors"
-                            >
-                              <FaTrash />
-                            </button>
-                          </div>
-                        </div>
-                      ))} */}
                     </div>
                   )}
                 </div>
