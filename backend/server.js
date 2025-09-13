@@ -41,6 +41,7 @@ const pagoEstudiantesRoutes = require('./routes/pagoEstudiantes.routes');
 const configuracionNominaRoutes = require('./routes/configuracionNomina.routes')
 const configuracionBeneficioRoutes = require('./routes/configuracionBeneficio.routes')
 const configuracionRoutes = require('./routes/configuracion.routes')
+const configuracionPagosRoutes = require('./routes/configuracionPagos.routes')
 const liquidacionRoutes = require('./routes/liquidacion.routes')
 const inscripcionRoutes = require('./routes/inscripcion.routes')
 const cuposRoutes = require('./routes/cupos.routes')
@@ -48,6 +49,7 @@ const authRoutes = require('./routes/auth.routes');
 const archivosEvaluacionesRoutes = require('./routes/archivosevaluaciones.routes');
 const horariosRoutes = require('./routes/horarios.routes');
 const pdfRoutes = require('./routes/pdf.routes');
+const mensualidadesRoutes = require('./routes/mensualidades.routes');
 
 // ruta de prueba multer
 const testRoutes = require('./routes/test.routes');
@@ -108,11 +110,13 @@ app.use('/', pagoEstudiantesRoutes)
 app.use('/', configuracionNominaRoutes);
 app.use('/', configuracionBeneficioRoutes)
 app.use('/', configuracionRoutes);
+app.use('/', configuracionPagosRoutes);
 app.use('/', liquidacionRoutes);
 app.use('/', inscripcionRoutes)
 app.use('/', cuposRoutes);
 app.use('/', authRoutes);
 app.use('/', archivosEvaluacionesRoutes);
+app.use('/', mensualidadesRoutes);
 // Ruta de prueba directa
 app.get('/test-horarios', (req, res) => {
   res.json({

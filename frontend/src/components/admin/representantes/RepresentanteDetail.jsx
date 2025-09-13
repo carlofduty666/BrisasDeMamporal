@@ -1216,8 +1216,9 @@ const RepresentanteDetail = () => {
                   <p className="text-orange-100 mt-1">
                   {documentosRequeridos.filter(doc => doc.subido || documentos.some(d => d.tipoDocumento == doc.id || d.tipoDocumento === doc.nombre)).length} de {documentosRequeridos.length} documentos requeridos completados
                 </p>
+                  
               </div>
-              <div className="flex space-x-3">
+              <div className="flex flex-end">
                 {documentos.length > 0 && (
                   <button
                     onClick={handleDescargarTodos}
@@ -1237,13 +1238,6 @@ const RepresentanteDetail = () => {
                     )}
                   </button>
                 )}
-                {/* <button
-                  onClick={() => setShowModal(true)}
-                  className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
-                >
-                  <FaUpload />
-                  <span>Subir Documento</span>
-                </button> */}
               </div>
             </div>
           </div>

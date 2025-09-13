@@ -14,7 +14,17 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   ConfiguracionPagos.init({
-    porcentajeMora: {
+    precioMensualidad: { // USD base
+      type: DataTypes.DECIMAL(10,2),
+      allowNull: false,
+      defaultValue: 0
+    },
+    politicaPrecio: { // 'retroactivo' | 'congelado'
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'retroactivo'
+    },
+    porcentajeMora: { // tasa diaria en %
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
       defaultValue: 5.00
@@ -23,6 +33,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 5
+    },
+    topeMoraPorcentaje: { // 0-100
+      type: DataTypes.DECIMAL(5,2),
+      allowNull: false,
+      defaultValue: 20.00
     },
     descuentoProntoPago: {
       type: DataTypes.DECIMAL(5, 2),
@@ -38,6 +53,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true
+    },
+    vigenciaDesde: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
     },
     stripePublicKey: {
       type: DataTypes.STRING,

@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { FaPlus, FaSearch, FaEye, FaFileInvoiceDollar, FaSave, FaTimes, FaCheck } from 'react-icons/fa';
 import axios from 'axios';
-import AdminLayout from '../layout/AdminLayout';
+import HeaderStats from './components/HeaderStats';
+import PaymentItem from './components/PaymentItem';
+import PaymentDetailModal from './components/PaymentDetailModal';
 
 const PagosList = () => {
   const [pagos, setPagos] = useState([]);
@@ -603,7 +605,6 @@ const PagosList = () => {
   // Función para abrir el modal con los detalles del pago
   const handleOpenDetailModal = async (pagoId) => {
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
       
       // Obtener detalles completos del pago
@@ -720,11 +721,9 @@ const PagosList = () => {
       
       setSelectedPago(pagoDetallado);
       setShowDetailModal(true);
-      setLoading(false);
     } catch (err) {
       console.error('Error al obtener detalles del pago:', err);
       setError(err.response?.data?.message || 'Error al cargar los detalles del pago. Por favor, intente nuevamente.');
-      setLoading(false);
     }
   };
 
@@ -851,17 +850,45 @@ const PagosList = () => {
   
   
   return (
-     
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-800">Gestión de Pagos</h1>
+    <div className="container mx-auto px-4 py-8">
+      {/* Header Hero con métricas */}
+      <HeaderStats
+        filteredPagos={filteredPagos}
+        pagosPendientes={pagosPendientes}
+        pagosRevisados={pagosRevisados}
+        annoEscolar={annoEscolar}
+      />
+
+      {/* Barra de acciones */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <input
+          type="text"
+          placeholder="Buscar por estudiante, referencia o ID..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full md:w-80 px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-500"
+        />
+        <div className="inline-flex rounded-xl overflow-hidden border border-slate-200">
           <button
-            onClick={handleOpenModal}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            onClick={() => cambiarTab('pendientes')}
+            className={`${tabActiva === 'pendientes' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
           >
-            <FaPlus className="mr-2" /> Registrar Nuevo Pago
+            Pendientes ({pagosPendientes.length})
+          </button>
+          <button
+            onClick={() => cambiarTab('revisados')}
+            className={`${tabActiva === 'revisados' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+          >
+            Revisados ({pagosRevisados.length})
           </button>
         </div>
+        <button
+          onClick={handleOpenModal}
+          className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl bg-pink-700 text-white hover:bg-pink-800 shadow"
+        >
+          <FaPlus className="mr-2" /> Registrar Pago
+        </button>
+      </div>
         
         {/* Mensajes de error o éxito */}
         {error && (
@@ -894,182 +921,28 @@ const PagosList = () => {
           </div>
         )}
         
-        {/* Barra de búsqueda */}
-        <div className="mb-6">
-          <div className="flex items-center">
-            <div className="relative flex-grow">
-              <input
-                type="text"
-                placeholder="Buscar por nombre, cédula, referencia..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-10 sm:text-sm border-gray-300 rounded-md"
-              />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <FaSearch className="h-5 w-5 text-gray-400" />
-              </div>
+        {/* Vista en tarjetas */}
+        {loading ? (
+          <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-pink-600"></div>
             </div>
           </div>
-        </div>
-        
-        {/* Pestañas para filtrar por estado */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => cambiarTab('pendientes')}
-              className={`${
-                tabActiva === 'pendientes'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Pendientes ({pagosPendientes.length})
-            </button>
-            <button
-              onClick={() => cambiarTab('revisados')}
-              className={`${
-                tabActiva === 'revisados'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Revisados ({pagosRevisados.length})
-            </button>
-          </nav>
-        </div>
-        
-        {/* Tabla de pagos */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estudiante
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Representante
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Concepto
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Método
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan="9" className="px-6 py-4 text-center">
-                      <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500"></div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : currentItems.length === 0 ? (
-                  <tr>
-                    <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No se encontraron pagos
-                    </td>
-                  </tr>
-                ) : (
-                  currentItems.map((pago) => (
-                    <tr key={pago.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {pago.id}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {pago.estudiantes ? `${pago.estudiantes.nombre} ${pago.estudiantes.apellido}` : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {pago.representantes ? `${pago.representantes.nombre} ${pago.representantes.apellido}` : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {pago.aranceles ? pago.aranceles.nombre : 'N/A'}
-                        {pago.mesPago ? ` (${pago.mesPago})` : ''}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatMonto(pago.montoTotal)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(pago.fechaPago)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          pago.estado === 'pagado' ? 'bg-green-100 text-green-800' : 
-                          pago.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {pago.estado}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {pago.metodoPagos ? pago.metodoPagos.nombre : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleOpenDetailModal(pago.id)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                            title="Ver detalles"
-                          >
-                            <FaEye />
-                          </button>
-                          
-                          {pago.estado === 'pendiente' && (
-                            <button
-                              onClick={() => handleUpdateEstado(pago.id, 'pagado')}
-                              className="text-green-600 hover:text-green-900"
-                              title="Marcar como pagado"
-                            >
-                              <FaFileInvoiceDollar />
-                            </button>
-                          )}
-                          
-                          {pago.estado === 'pendiente' && (
-                            <button
-                              onClick={() => handleUpdateEstado(pago.id, 'anulado')}
-                              className="text-red-600 hover:text-red-900"
-                              title="Anular pago"
-                            >
-                              <FaTimes />
-                            </button>
-                          )}
-                          
-                          {pago.urlComprobante && (
-                            <button
-                              onClick={() => handlePreviewComprobante(pago)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Ver comprobante"
-                            >
-                              <FaFileInvoiceDollar />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        ) : currentItems.length === 0 ? (
+          <div className="bg-white border border-dashed border-slate-300 rounded-xl p-8 text-center text-slate-500">
+            No hay pagos para mostrar
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currentItems.map((p) => (
+              <PaymentItem
+                key={p.id}
+                pago={p}
+                onClick={(e) => { e?.preventDefault?.(); handleOpenDetailModal(p.id); }}
+              />
+            ))}
+          </div>
+        )}
         
         {/* Paginación */}
         {filteredPagos.length > itemsPerPage && (
@@ -1506,217 +1379,15 @@ const PagosList = () => {
           </div>
         )}
 
-        {/* Modal de Detalles del Pago */}
+        {/* Modal de Detalles del Pago (nuevo estilo) */}
         {showDetailModal && selectedPago && (
-          <div className="fixed z-10 inset-0 overflow-y-auto">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-                <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-              </div>
-              
-              <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-              
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <div className="sm:flex sm:items-start">
-                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                          Detalles del Pago #{selectedPago.id}
-                        </h3>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          selectedPago.estado === 'pagado' ? 'bg-green-100 text-green-800' : 
-                          selectedPago.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {selectedPago.estado.charAt(0).toUpperCase() + selectedPago.estado.slice(1)}
-                        </span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Información del Estudiante */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-md font-medium text-gray-900 mb-2">Información del Estudiante</h4>
-                        {(selectedPago.estudiante || selectedPago.estudiantes) ? (
-                          <div className="space-y-2">
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Nombre:</span> {selectedPago.estudiante?.nombre || selectedPago.estudiantes?.nombre} {selectedPago.estudiante?.apellido || selectedPago.estudiantes?.apellido}
-                            </p>
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Cédula:</span> {selectedPago.estudiante?.cedula || selectedPago.estudiantes?.cedula}
-                            </p>
-                            {selectedPago.inscripcion && (
-                              <>
-                                <p className="text-sm text-gray-700">
-                                  <span className="font-medium">Grado:</span> {selectedPago.inscripcion.grado?.nombre_grado || 'No asignado'}
-                                </p>
-                                <p className="text-sm text-gray-700">
-                                  <span className="font-medium">Sección:</span> {selectedPago.inscripcion.seccion?.nombre_seccion || 'No asignada'}
-                                </p>
-                              </>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-500">No hay información disponible</p>
-                        )}
-                      </div>
-
-                      {/* Información del Representante */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-md font-medium text-gray-900 mb-2">Información del Representante</h4>
-                        {(selectedPago.representante || selectedPago.representantes) ? (
-                          <div className="space-y-2">
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Nombre:</span> {selectedPago.representante?.nombre || selectedPago.representantes?.nombre} {selectedPago.representante?.apellido || selectedPago.representantes?.apellido}
-                            </p>
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Cédula:</span> {selectedPago.representante?.cedula || selectedPago.representantes?.cedula}
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-500">No hay información disponible</p>
-                        )}
-                      </div>
-
-                      {/* Información del Pago */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-md font-medium text-gray-900 mb-2">Información del Pago</h4>
-                        <div className="space-y-2">
-                          <p className="text-sm text-gray-700">
-                            <span className="font-medium">Concepto:</span> {selectedPago.arancel?.nombre || selectedPago.aranceles?.nombre || selectedPago.concepto || '-'}
-                          </p>
-                          <p className="text-sm text-gray-700">
-                            <span className="font-medium">Monto:</span> {formatMonto(selectedPago.monto)}
-                          </p>
-                          {selectedPago.montoMora > 0 && (
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Mora:</span> {formatMonto(selectedPago.montoMora)}
-                            </p>
-                          )}
-                          {selectedPago.descuento > 0 && (
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Descuento:</span> {formatMonto(selectedPago.descuento)}
-                            </p>
-                          )}
-                          <p className="text-sm text-gray-700">
-                            <span className="font-medium">Monto Total:</span> {formatMonto(selectedPago.montoTotal || (parseFloat(selectedPago.monto) + parseFloat(selectedPago.montoMora || 0) - parseFloat(selectedPago.descuento || 0)))}
-                          </p>
-                          <p className="text-sm text-gray-700">
-                            <span className="font-medium">Método de Pago:</span> {selectedPago.metodoPago?.nombre || selectedPago.metodoPagos?.nombre || '-'}
-                          </p>
-                          <p className="text-sm text-gray-700">
-                            <span className="font-medium">Referencia:</span> {selectedPago.referencia || '-'}
-                          </p>
-                          {selectedPago.mesPago && (
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Mes de Pago:</span> {selectedPago.mesPago}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                        
-                        {/* Fechas */}
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <h4 className="text-md font-medium text-gray-900 mb-2">Fechas</h4>
-                          <div className="space-y-2">
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Fecha de Pago:</span> {formatDate(selectedPago.fechaPago)}
-                            </p>
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Fecha de Registro:</span> {formatDate(selectedPago.createdAt)}
-                            </p>
-                            {selectedPago.updatedAt && selectedPago.updatedAt !== selectedPago.createdAt && (
-                              <p className="text-sm text-gray-700">
-                                <span className="font-medium">Última Actualización:</span> {formatDate(selectedPago.updatedAt)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Observaciones */}
-                        {selectedPago.observaciones && (
-                          <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">
-                            <h4 className="text-md font-medium text-gray-900 mb-2">Observaciones</h4>
-                            <p className="text-sm text-gray-700">{selectedPago.observaciones}</p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Comprobante de Pago */}
-                      {selectedPago.urlComprobante && (
-                        <div className="mt-6">
-                          <h4 className="text-md font-medium text-gray-900 mb-2">Comprobante de Pago</h4>
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm text-gray-700">
-                                {selectedPago.nombreArchivo || selectedPago.urlComprobante.split('/').pop()}
-                              </p>
-                              <button
-                                onClick={() => handlePreviewComprobante(selectedPago)}
-                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                              >
-                                <FaEye className="mr-1" /> Ver Comprobante
-                              </button>
-                            </div>
-                            
-                            {/* Vista previa del comprobante (si es una imagen) */}
-                            {selectedPago.urlComprobante && 
-                            (selectedPago.urlComprobante.toLowerCase().endsWith('.jpg') || 
-                              selectedPago.urlComprobante.toLowerCase().endsWith('.jpeg') || 
-                              selectedPago.urlComprobante.toLowerCase().endsWith('.png')) && (
-                              <div className="mt-4 flex justify-center">
-                                <img 
-                                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedPago.urlComprobante}`}
-                                  alt="Comprobante de pago"
-                                  className="max-h-64 object-contain border rounded"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Acciones para el pago */}
-                      {selectedPago.estado === 'pendiente' && (
-                        <div className="mt-6 bg-yellow-50 p-4 rounded-lg">
-                          <h4 className="text-md font-medium text-yellow-800 mb-2">Acciones Disponibles</h4>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => {
-                                handleUpdateEstado(selectedPago.id, 'pagado');
-                                handleCloseDetailModal();
-                              }}
-                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                            >
-                              <FaCheck className="mr-2" /> Aprobar Pago
-                            </button>
-                            <button
-                              onClick={() => {
-                                handleUpdateEstado(selectedPago.id, 'anulado');
-                                handleCloseDetailModal();
-                              }}
-                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                            >
-                              <FaTimes className="mr-2" /> Rechazar Pago
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button
-                    type="button"
-                    onClick={handleCloseDetailModal}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <PaymentDetailModal
+            pago={selectedPago}
+            onClose={handleCloseDetailModal}
+            onPreview={handlePreviewComprobante}
+            onApprove={(p) => { handleUpdateEstado(p.id, 'pagado'); handleCloseDetailModal(); }}
+            onReject={(p) => { handleUpdateEstado(p.id, 'anulado'); handleCloseDetailModal(); }}
+          />
         )}
 
       </div>

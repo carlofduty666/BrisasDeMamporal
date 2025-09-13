@@ -480,6 +480,36 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
               )}
             </NavLink>
           </li>
+
+          {/* Submenú Pagos */}
+          <li className="ml-6">
+            <NavLink
+              to="/admin/pagos/mensualidades"
+              onClick={handleLinkClick}
+              className={({ isActive }) => 
+                `group flex items-center ${isOpen ? 'p-2' : 'p-2 justify-center'} rounded-lg transition-colors duration-200 text-white/90 relative ${
+                  isActive ? 'bg-white/10 border border-white/20' : 'hover:bg-white/5'
+                }`
+              }
+              title='Mensualidades'
+            >
+              <span className="text-xs ml-2">Mensualidades</span>
+            </NavLink>
+          </li>
+          <li className="ml-6">
+            <NavLink
+              to="/admin/pagos/configuracion"
+              onClick={handleLinkClick}
+              className={({ isActive }) => 
+                `group flex items-center ${isOpen ? 'p-2' : 'p-2 justify-center'} rounded-lg transition-colors duration-200 text-white/90 relative ${
+                  isActive ? 'bg-white/10 border border-white/20' : 'hover:bg-white/5'
+                }`
+              }
+              title='Configuración de pagos'
+            >
+              <span className="text-xs ml-2">Config. de Pagos</span>
+            </NavLink>
+          </li>
           
           <li>
             <NavLink

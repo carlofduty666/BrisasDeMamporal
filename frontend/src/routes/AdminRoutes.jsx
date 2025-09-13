@@ -24,6 +24,8 @@ import ProfesorDetail from '../components/admin/profesores/ProfesorDetail';
 import ProfesorForm from '../components/admin/profesores/ProfesorForm';
 import ArancelesManager from '../components/admin/pagos/ArancelesManager';
 import PagosList from '../components/admin/pagos/PagosList';
+import MensualidadesAdmin from '../pages/admin/pagos/MensualidadesAdmin';
+import ConfiguracionPagosAdmin from '../pages/admin/pagos/ConfiguracionPagosAdmin';
 // import EmpleadosList from '../components/admin/empleados/EmpleadosList';
 // import EmpleadoDetail from '../components/admin/empleados/EmpleadoDetail';
 // import EmpleadoForm from '../components/admin/empleados/EmpleadoForm';
@@ -113,6 +115,8 @@ const AdminRoutes = () => {
           {/* Pagos y aranceles */}
           <Route path="aranceles" element={<ArancelesManager />} />
           <Route path="pagos" element={<PagosList />} />
+          <Route path="pagos/mensualidades" element={<MensualidadesAdmin />} />
+          <Route path="pagos/configuracion" element={<ConfiguracionPagosAdmin />} />
           
           {/* Empleados */}
           {/* <Route path="empleados" element={<EmpleadosList />} />
