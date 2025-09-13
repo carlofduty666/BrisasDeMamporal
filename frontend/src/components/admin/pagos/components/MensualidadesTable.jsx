@@ -58,8 +58,18 @@ export default function MensualidadesTable({ filtro = {}, titulo = 'Mensualidade
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl">
-      <div className="px-4 py-3 border-b">
+      <div className="px-4 py-3 border-b flex items-center justify-between gap-3">
         <h3 className="font-semibold text-slate-800">{titulo}</h3>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async ()=>{ await mensualidadesService.recalcularMoras(); await load(); }}
+            className="px-3 py-1.5 text-xs rounded bg-slate-700 text-white hover:bg-slate-800"
+          >Recalcular moras</button>
+          <button
+            onClick={async ()=>{ await mensualidadesService.enviarRecordatorioMasivo({}); alert('Recordatorios encolados'); }}
+            className="px-3 py-1.5 text-xs rounded bg-pink-600 text-white hover:bg-pink-700"
+          >Recordar a todos</button>
+        </div>
       </div>
       {loading ? (
         <div className="p-6 text-center text-slate-500">Cargando...</div>
@@ -72,8 +82,10 @@ export default function MensualidadesTable({ filtro = {}, titulo = 'Mensualidade
           <table className="min-w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-left">
+                <th className="px-3 py-2">Periodo</th>
                 <th className="px-3 py-2">Mes</th>
                 <th className="px-3 py-2">Año</th>
+                <th className="px-3 py-2">Vencimiento</th>
                 <th className="px-3 py-2">Monto</th>
                 <th className="px-3 py-2">Mora</th>
                 <th className="px-3 py-2">Estado</th>

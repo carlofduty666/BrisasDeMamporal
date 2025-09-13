@@ -115,8 +115,8 @@ const AdminRoutes = () => {
           {/* Pagos y aranceles */}
           <Route path="aranceles" element={<ArancelesManager />} />
           <Route path="pagos" element={<PagosList />} />
-          <Route path="pagos/mensualidades" element={<MensualidadesAdmin />} />
-          <Route path="pagos/configuracion" element={<ConfiguracionPagosAdmin />} />
+          {/* <Route path="pagos/mensualidades" element={<MensualidadesAdmin />} />
+          <Route path="pagos/configuracion" element={<ConfiguracionPagosAdmin />} /> */}
           
           {/* Empleados */}
           {/* <Route path="empleados" element={<EmpleadosList />} />

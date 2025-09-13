@@ -17,6 +17,16 @@ const configuracionPagosController = {
       let cfg = await ConfiguracionPagos.findOne({ where: { activo: true } });
       if (!cfg) cfg = await ConfiguracionPagos.create({ ...payload, activo: true });
       else await cfg.update(payload);
+
+      // Aplicar nuevos precios a mensualidades pendientes/reportadas si política es retroactiva
+      if (cfg.politicaPrecio === 'retroactivo') {
+        const precio = Number(cfg.precioMensualidadUSD ?? cfg.precioMensualidad ?? 0);
+        await Mensualidades.update(
+          { montoBase: precio },
+          { where: { estado: ['pendiente','reportado'] } }
+        );
+      }
+
       res.json({ message: 'Configuración actualizada', config: cfg });
     } catch (e) {
       console.error(e);

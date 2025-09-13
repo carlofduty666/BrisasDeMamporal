@@ -13,10 +13,21 @@ function badge(estado) {
 export default function MensualidadRow({ m, onAprobar, onRechazar, onRecordatorio, loadingId }) {
   const total = (Number(m.montoBase || m.monto || 0) + Number(m.moraAcumulada || 0)).toFixed(2);
 
+  const fmt = (d) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    const dd = String(dt.getDate()).padStart(2,'0');
+    const mm = String(dt.getMonth()+1).padStart(2,'0');
+    const yy = dt.getFullYear();
+    return `${dd}/${mm}/${yy}`;
+  };
+
   return (
     <tr className="border-b">
+      <td className="px-3 py-2 text-sm text-slate-700">{m.periodo ?? '-'}</td>
       <td className="px-3 py-2 text-sm text-slate-700">{m.mesNombre || m.mes}</td>
-      <td className="px-3 py-2 text-sm text-slate-700">{m.anio}</td>
+      <td className="px-3 py-2 text-sm text-slate-700">{m.anio ?? '-'}</td>
+      <td className="px-3 py-2 text-sm text-slate-700">{fmt(m.fechaVencimiento)}</td>
       <td className="px-3 py-2 text-sm text-slate-700">${Number(m.montoBase ?? m.monto ?? 0).toFixed(2)}</td>
       <td className="px-3 py-2 text-sm text-slate-700">${Number(m.moraAcumulada ?? 0).toFixed(2)}</td>
       <td className="px-3 py-2">

@@ -482,7 +482,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           </li>
 
           {/* Submenú Pagos */}
-          <li className="ml-6">
+          {/* <li className="ml-6">
             <NavLink
               to="/admin/pagos/mensualidades"
               onClick={handleLinkClick}
@@ -509,7 +509,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             >
               <span className="text-xs ml-2">Config. de Pagos</span>
             </NavLink>
-          </li>
+          </li> */}
           
           <li>
             <NavLink

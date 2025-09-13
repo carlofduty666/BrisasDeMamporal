@@ -5,6 +5,8 @@ import axios from 'axios';
 import HeaderStats from './components/HeaderStats';
 import PaymentItem from './components/PaymentItem';
 import PaymentDetailModal from './components/PaymentDetailModal';
+import MensualidadesTable from './components/MensualidadesTable';
+import ConfiguracionPagosPanel from './components/PagosConfigPanel.jsx';
 
 const PagosList = () => {
   const [pagos, setPagos] = useState([]);
@@ -42,7 +44,7 @@ const PagosList = () => {
   const [selectedEstudiante, setSelectedEstudiante] = useState(null);
   const [pagosPendientes, setPagosPendientes] = useState([]);
   const [pagosRevisados, setPagosRevisados] = useState([]);
-  const [tabActiva, setTabActiva] = useState('pendientes'); // 'pendientes' o 'revisados'
+  const [tabActiva, setTabActiva] = useState('pendientes'); // 'pendientes' | 'revisados' | 'mensualidades' | 'configuracion'
 
   // Estados para modal de detalles
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -881,6 +883,18 @@ const PagosList = () => {
           >
             Revisados ({pagosRevisados.length})
           </button>
+          <button
+            onClick={() => cambiarTab('mensualidades')}
+            className={`${tabActiva === 'mensualidades' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+          >
+            Mensualidades
+          </button>
+          <button
+            onClick={() => cambiarTab('configuracion')}
+            className={`${tabActiva === 'configuracion' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+          >
+            Configuración
+          </button>
         </div>
         <button
           onClick={handleOpenModal}
@@ -928,9 +942,14 @@ const PagosList = () => {
               <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-pink-600"></div>
             </div>
           </div>
-        ) : currentItems.length === 0 ? (
-          <div className="bg-white border border-dashed border-slate-300 rounded-xl p-8 text-center text-slate-500">
-            No hay pagos para mostrar
+        ) : tabActiva === 'mensualidades' ? (
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            {/* Mensualidades */}
+            <MensualidadesTable titulo="Mensualidades" filtro={{ annoEscolarID: annoEscolar?.id }} />
+          </div>
+        ) : tabActiva === 'configuracion' ? (
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <ConfiguracionPagosPanel />
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -945,7 +964,7 @@ const PagosList = () => {
         )}
         
         {/* Paginación */}
-        {filteredPagos.length > itemsPerPage && (
+        {tabActiva !== 'mensualidades' && tabActiva !== 'configuracion' && filteredPagos.length > itemsPerPage && (
           <div className="mt-4 flex justify-center">
             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
               <button

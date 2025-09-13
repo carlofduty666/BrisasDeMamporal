@@ -47,4 +47,16 @@ export const mensualidadesService = {
     const { data } = await axios.post(url, {}, authHeaders());
     return data;
   },
+
+  async enviarRecordatorioMasivo(payload = {}) {
+    const url = `${API}/mensualidades/recordatorios/masivo`;
+    const { data } = await axios.post(url, payload, authHeaders());
+    return data;
+  },
+
+  async recalcularMoras() {
+    const url = `${API}/mensualidades/recalcular-moras`;
+    const { data } = await axios.post(url, {}, authHeaders());
+    return data;
+  },
 };

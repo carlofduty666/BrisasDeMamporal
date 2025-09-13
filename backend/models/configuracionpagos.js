@@ -14,8 +14,20 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   ConfiguracionPagos.init({
-    precioMensualidad: { // USD base
+    // Compatibilidad: precioMensualidad (obsoleto). Mantener mientras migramos
+    precioMensualidad: {
       type: DataTypes.DECIMAL(10,2),
+      allowNull: false,
+      defaultValue: 0
+    },
+    // Nuevos campos independientes
+    precioMensualidadUSD: {
+      type: DataTypes.DECIMAL(10,2),
+      allowNull: false,
+      defaultValue: 0
+    },
+    precioMensualidadVES: {
+      type: DataTypes.DECIMAL(14,2),
       allowNull: false,
       defaultValue: 0
     },
