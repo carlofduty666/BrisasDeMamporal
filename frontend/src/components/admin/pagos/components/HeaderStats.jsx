@@ -14,7 +14,7 @@ function calcPagoTotal(p) {
   return monto + mora - desc;
 }
 
-export default function HeaderStats({ filteredPagos = [], pagosPendientes = [], pagosRevisados = [], annoEscolar }) {
+export default function HeaderStats({ filteredPagos = [], pagosPendientes = [], pagosAprobados = [], pagosReportados = [], annoEscolar, mensualidadesAprobadas = 0, totalMensualidades = 0, onOpenMonthlySummary }) {
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -55,7 +55,7 @@ export default function HeaderStats({ filteredPagos = [], pagosPendientes = [], 
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-pink-100 text-sm font-medium">Pagos Pendientes</p>
-                    <p className="text-2xl font-bold text-white">{pagosPendientes.length}</p>
+                    <p className="text-2xl font-bold text-white">{pagosPendientes.length - pagosReportados.length}</p>
                   </div>
                   <FaClock className="w-8 h-8 text-pink-200" />
                 </div>
@@ -64,8 +64,8 @@ export default function HeaderStats({ filteredPagos = [], pagosPendientes = [], 
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-pink-100 text-sm font-medium">Pagos Revisados</p>
-                    <p className="text-2xl font-bold text-white">{pagosRevisados.length}</p>
+                    <p className="text-pink-100 text-sm font-medium">Pagos Aprobados</p>
+                    <p className="text-2xl font-bold text-white">{pagosAprobados.length}</p>
                   </div>
                   <FaCheckCircle className="w-8 h-8 text-pink-200" />
                 </div>
@@ -76,12 +76,23 @@ export default function HeaderStats({ filteredPagos = [], pagosPendientes = [], 
                   <div>
                     <p className="text-pink-100 text-sm font-medium">Total del Mes</p>
                     <p className="text-2xl font-bold text-white">{formatCurrency(totalMes)} <span className="text-sm">({countMes})</span></p>
+                    {onOpenMonthlySummary && (
+                      <button onClick={onOpenMonthlySummary} className="mt-2 text-xs px-2 py-1 rounded bg-white/20 border border-white/30 text-white hover:bg-white/30">Ver resumen</button>
+                    )}
                   </div>
                   <FaChartLine className="w-8 h-8 text-pink-200" />
                 </div>
                 <div className="flex items-center text-pink-100/80 text-sm mt-2">
                   <FaCalendarAlt className="mr-2" />
                   <span>{annoEscolar?.periodo || 'Año escolar'}</span>
+                </div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-pink-100 text-sm font-medium">Mensualidades aprobadas</p>
+                    <p className="text-2xl font-bold text-white">{mensualidadesAprobadas} <span className="text-sm">de {totalMensualidades}</span></p>
+                  </div>
                 </div>
               </div>
             </div>

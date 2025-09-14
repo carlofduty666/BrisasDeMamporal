@@ -7,7 +7,9 @@ const {
   MetodoPagos, 
   Aranceles, 
   Inscripciones, 
-  AnnoEscolar 
+  AnnoEscolar,
+  Grados,
+  Secciones
 } = require('../models');
 const db = require('../models');
 
@@ -41,6 +43,15 @@ const pagoEstudiantesController = {
             model: AnnoEscolar,
             as: 'annoEscolar',
             attributes: ['id', 'periodo']
+          },
+          {
+            model: Inscripciones,
+            as: 'inscripciones',
+            attributes: ['id', 'gradoID', 'seccionID'],
+            include: [
+              { model: Grados, as: 'grado', attributes: ['id','nombre_grado'] },
+              { model: Secciones, as: 'Secciones', attributes: ['id','nombre_seccion'] }
+            ]
           }
         ],
         order: [['createdAt', 'DESC']]

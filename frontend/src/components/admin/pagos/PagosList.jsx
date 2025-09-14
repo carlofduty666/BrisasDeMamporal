@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaPlus, FaSearch, FaEye, FaFileInvoiceDollar, FaSave, FaTimes, FaCheck } from 'react-icons/fa';
 import axios from 'axios';
 import HeaderStats from './components/HeaderStats';
+import MonthlySummaryModal from './components/MonthlySummaryModal.jsx';
 import PaymentItem from './components/PaymentItem';
 import PaymentDetailModal from './components/PaymentDetailModal';
 import MensualidadesTable from './components/MensualidadesTable';
@@ -43,8 +44,9 @@ const PagosList = () => {
   const [selectedRepresentante, setSelectedRepresentante] = useState(null);
   const [selectedEstudiante, setSelectedEstudiante] = useState(null);
   const [pagosPendientes, setPagosPendientes] = useState([]);
-  const [pagosRevisados, setPagosRevisados] = useState([]);
-  const [tabActiva, setTabActiva] = useState('pendientes'); // 'pendientes' | 'revisados' | 'mensualidades' | 'configuracion'
+  const [pagosAprobados, setPagosAprobados] = useState([]);
+  const [pagosReportados, setPagosReportados] = useState([]);
+  const [tabActiva, setTabActiva] = useState('pendientes'); // 'pendientes' | 'reportados' | 'aprobados' | 'mensualidades' | 'configuracion'
 
   // Estados para modal de detalles
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -71,6 +73,7 @@ const PagosList = () => {
   
   // Estado para el cálculo automático del monto total
   const [montoTotal, setMontoTotal] = useState('0');
+  const [showMonthlySummary, setShowMonthlySummary] = useState(false);
 
   // Efecto para calcular el monto total automáticamente
   useEffect(() => {
@@ -173,35 +176,22 @@ const PagosList = () => {
 
   // Filtrar pagos cuando cambia el término de búsqueda
   useEffect(() => {
-    if (tabActiva === 'pendientes') {
-        if (searchTerm.trim() === '') {
-          setFilteredPagos(pagosPendientes);
-        } else {
-          const filtered = pagosPendientes.filter(pago => 
-            (pago.estudiante && pago.estudiante.nombre && pago.estudiante.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (pago.estudiante && pago.estudiante.apellido && pago.estudiante.apellido.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (pago.estudiante && pago.estudiante.cedula && pago.estudiante.cedula.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (pago.referencia && pago.referencia.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (pago.id && pago.id.toString().toLowerCase().includes(searchTerm.toLowerCase()))
-          );
-          setFilteredPagos(filtered);
-        }
-      } else {
-        if (searchTerm.trim() === '') {
-          setFilteredPagos(pagosRevisados);
-        } else {
-          const filtered = pagosRevisados.filter(pago => 
-            (pago.estudiante && pago.estudiante.nombre && pago.estudiante.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (pago.estudiante && pago.estudiante.apellido && pago.estudiante.apellido.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (pago.estudiante && pago.estudiante.cedula && pago.estudiante.cedula.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (pago.referencia && pago.referencia.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (pago.id && pago.id.toString().toLowerCase().includes(searchTerm.toLowerCase()))
-          );
-          setFilteredPagos(filtered);
-        }
-      }
-      setCurrentPage(1);
-    }, [searchTerm, pagosPendientes, pagosRevisados, tabActiva]);
+    const base = tabActiva === 'pendientes' ? pagosPendientes : tabActiva === 'reportados' ? pagosReportados : pagosAprobados;
+    if (searchTerm.trim() === '') {
+      setFilteredPagos(base);
+    } else {
+      const q = searchTerm.toLowerCase();
+      const filtered = base.filter(pago => 
+        (pago.estudiantes && pago.estudiantes.nombre && pago.estudiantes.nombre.toLowerCase().includes(q)) ||
+        (pago.estudiantes && pago.estudiantes.apellido && pago.estudiantes.apellido.toLowerCase().includes(q)) ||
+        (pago.estudiantes && pago.estudiantes.cedula && pago.estudiantes.cedula.toLowerCase().includes(q)) ||
+        (pago.referencia && pago.referencia.toLowerCase().includes(q)) ||
+        (pago.id && pago.id.toString().toLowerCase().includes(q))
+      );
+      setFilteredPagos(filtered);
+    }
+    setCurrentPage(1);
+  }, [searchTerm, pagosPendientes, pagosReportados, pagosAprobados, tabActiva]);
   
   // Función para cargar pagos
   const fetchPagos = async () => {
@@ -236,19 +226,23 @@ const PagosList = () => {
         return;
       }
       
-      // Separar pagos por estado de revisión
+      // Separar pagos por estado
       const pendientes = response.data.filter(pago => pago.estado === 'pendiente');
-      const revisados = response.data.filter(pago => pago.estado === 'pagado' || pago.estado === 'anulado');
+      const reportados = response.data.filter(pago => pago.estado === 'pendiente' && pago.urlComprobante); // reportado = pendiente con comprobante
+      const aprobados = response.data.filter(pago => pago.estado === 'pagado');
       
       setPagosPendientes(pendientes);
-      setPagosRevisados(revisados);
+      setPagosReportados(reportados);
+      setPagosAprobados(aprobados);
       setPagos(response.data);
       
       // Filtrar según la pestaña activa
       if (tabActiva === 'pendientes') {
         setFilteredPagos(pendientes);
+      } else if (tabActiva === 'reportados') {
+        setFilteredPagos(reportados);
       } else {
-        setFilteredPagos(revisados);
+        setFilteredPagos(aprobados);
       }
       
       setLoading(false);
@@ -264,8 +258,10 @@ const PagosList = () => {
     setTabActiva(tab);
     if (tab === 'pendientes') {
       setFilteredPagos(pagosPendientes);
-    } else {
-      setFilteredPagos(pagosRevisados);
+    } else if (tab === 'reportados') {
+      setFilteredPagos(pagosReportados);
+    } else if (tab === 'aprobados') {
+      setFilteredPagos(pagosAprobados);
     }
     setCurrentPage(1);
   };
@@ -853,12 +849,23 @@ const PagosList = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Modales */}
+      <MonthlySummaryModal
+        open={showMonthlySummary}
+        onClose={() => setShowMonthlySummary(false)}
+        mes={new Date().getMonth()+1}
+        anio={new Date().getFullYear()}
+        annoEscolarID={annoEscolar?.id}
+      />
+
       {/* Header Hero con métricas */}
       <HeaderStats
         filteredPagos={filteredPagos}
         pagosPendientes={pagosPendientes}
-        pagosRevisados={pagosRevisados}
+        pagosReportados={pagosReportados}
+        pagosAprobados={pagosAprobados}
         annoEscolar={annoEscolar}
+        onOpenMonthlySummary={() => setShowMonthlySummary(true)}
       />
 
       {/* Barra de acciones */}
@@ -878,10 +885,16 @@ const PagosList = () => {
             Pendientes ({pagosPendientes.length})
           </button>
           <button
-            onClick={() => cambiarTab('revisados')}
-            className={`${tabActiva === 'revisados' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+            onClick={() => cambiarTab('reportados')}
+            className={`${tabActiva === 'reportados' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
           >
-            Revisados ({pagosRevisados.length})
+            Reportados ({pagosReportados.length})
+          </button>
+          <button
+            onClick={() => cambiarTab('aprobados')}
+            className={`${tabActiva === 'aprobados' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+          >
+            Aprobados ({pagosAprobados.length})
           </button>
           <button
             onClick={() => cambiarTab('mensualidades')}
