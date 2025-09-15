@@ -5,9 +5,11 @@ import axios from 'axios';
 import HeaderStats from './components/HeaderStats';
 import MonthlySummaryModal from './components/MonthlySummaryModal.jsx';
 import PaymentItem from './components/PaymentItem';
+import PaymentsList from './components/PaymentsList.jsx';
 import PaymentDetailModal from './components/PaymentDetailModal';
 import MensualidadesTable from './components/MensualidadesTable';
 import ConfiguracionPagosPanel from './components/PagosConfigPanel.jsx';
+import PagosConfigModal from './components/PagosConfigModal.jsx';
 
 const PagosList = () => {
   const [pagos, setPagos] = useState([]);
@@ -27,6 +29,16 @@ const PagosList = () => {
   const [itemsPerPage] = useState(10);
   const [annoEscolar, setAnnoEscolar] = useState(null);
   const [annoEscolarActivo, setAnnoEscolarActivo] = useState(null);
+
+  // Filtros
+  const [estadoFilter, setEstadoFilter] = useState('todos'); // 'todos' | 'pendientes' | 'reportados' | 'aprobados'
+  const [gradoFilter, setGradoFilter] = useState('todos');
+  const [seccionFilter, setSeccionFilter] = useState('todos');
+  const [mesFilter, setMesFilter] = useState('todos'); // 1..12
+  const [anioFilter, setAnioFilter] = useState('todos');
+
+  // Config de pagos (para fecha vencimiento, mora, precios)
+  const [configPagos, setConfigPagos] = useState(null);
   
   // Estados para el modal de nuevo pago
   const [showModal, setShowModal] = useState(false);
@@ -47,6 +59,10 @@ const PagosList = () => {
   const [pagosAprobados, setPagosAprobados] = useState([]);
   const [pagosReportados, setPagosReportados] = useState([]);
   const [tabActiva, setTabActiva] = useState('pendientes'); // 'pendientes' | 'reportados' | 'aprobados' | 'mensualidades' | 'configuracion'
+  const [viewMode, setViewMode] = useState('list'); // 'cards' | 'list'
+  const [groupBy, setGroupBy] = useState(false); // agrupar por grado/sección
+  const [showFilters, setShowFilters] = useState(false);
+  const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   // Estados para modal de detalles
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -74,6 +90,9 @@ const PagosList = () => {
   // Estado para el cálculo automático del monto total
   const [montoTotal, setMontoTotal] = useState('0');
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
+  const [selectedMes, setSelectedMes] = useState(new Date().getMonth()+1);
+  const [selectedAnio, setSelectedAnio] = useState(new Date().getFullYear());
+  const [showConfigModal, setShowConfigModal] = useState(false);
 
   // Efecto para calcular el monto total automáticamente
   useEffect(() => {
@@ -174,24 +193,50 @@ const PagosList = () => {
     buscarInscripcionActual();
   };
 
-  // Filtrar pagos cuando cambia el término de búsqueda
+  // Filtrado avanzado (estado, grado, sección, mes, año) + búsqueda (estudiante, cédula, referencia, representante)
   useEffect(() => {
-    const base = tabActiva === 'pendientes' ? pagosPendientes : tabActiva === 'reportados' ? pagosReportados : pagosAprobados;
-    if (searchTerm.trim() === '') {
-      setFilteredPagos(base);
-    } else {
-      const q = searchTerm.toLowerCase();
-      const filtered = base.filter(pago => 
-        (pago.estudiantes && pago.estudiantes.nombre && pago.estudiantes.nombre.toLowerCase().includes(q)) ||
-        (pago.estudiantes && pago.estudiantes.apellido && pago.estudiantes.apellido.toLowerCase().includes(q)) ||
-        (pago.estudiantes && pago.estudiantes.cedula && pago.estudiantes.cedula.toLowerCase().includes(q)) ||
-        (pago.referencia && pago.referencia.toLowerCase().includes(q)) ||
-        (pago.id && pago.id.toString().toLowerCase().includes(q))
+    const base = pagos; // base global
+    const q = searchTerm.trim().toLowerCase();
+
+    let result = base.filter(p => {
+      const est = p.estudiantes || p.estudiante || {};
+      const rep = p.representantes || p.representante || {};
+      const metodo = p.metodoPagos || p.metodoPago || {};
+      const insc = p.inscripciones || p.inscripcion || {};
+      const grado = insc.grado?.nombre_grado || '';
+      const seccion = insc.Secciones?.nombre_seccion || '';
+
+      // Filtro por estado
+      if (estadoFilter === 'pendientes' && p.estado !== 'pendiente') return false;
+      if (estadoFilter === 'reportados' && !(p.estado === 'pendiente' && p.urlComprobante)) return false;
+      if (estadoFilter === 'aprobados' && p.estado !== 'pagado') return false;
+
+      // Filtro por grado/seccion
+      if (gradoFilter !== 'todos' && grado !== gradoFilter) return false;
+      if (seccionFilter !== 'todos' && seccion !== seccionFilter) return false;
+
+      // Filtro por mes/año (usa mesPago si existe; como fallback usa fechaPago)
+      const mes = p.mesPago ? Number(p.mesPago) : (p.fechaPago ? (new Date(p.fechaPago).getMonth()+1) : null);
+      const anio = p.anio || (p.fechaPago ? new Date(p.fechaPago).getFullYear() : null);
+      if (mesFilter !== 'todos' && mes !== Number(mesFilter)) return false;
+      if (anioFilter !== 'todos' && anio !== Number(anioFilter)) return false;
+
+      // Búsqueda
+      if (!q) return true;
+      const matchEst = `${est.nombre||''} ${est.apellido||''}`.toLowerCase().includes(q);
+      const matchCedula = String(est.cedula||'').toLowerCase().includes(q);
+      const matchRef = String(p.referencia||'').toLowerCase().includes(q);
+      const matchRep = (
+        `${rep.nombre||''} ${rep.apellido||''}`.toLowerCase().includes(q) ||
+        String(rep.cedula||'').toLowerCase().includes(q)
       );
-      setFilteredPagos(filtered);
-    }
+      const matchId = String(p.id||'').toLowerCase().includes(q);
+      return matchEst || matchCedula || matchRef || matchRep || matchId;
+    });
+
+    setFilteredPagos(result);
     setCurrentPage(1);
-  }, [searchTerm, pagosPendientes, pagosReportados, pagosAprobados, tabActiva]);
+  }, [searchTerm, pagos, estadoFilter, gradoFilter, seccionFilter, mesFilter, anioFilter]);
   
   // Función para cargar pagos
   const fetchPagos = async () => {
@@ -213,6 +258,17 @@ const PagosList = () => {
           headers: { 'Authorization': `Bearer ${token}` }
         }
       );
+
+      // Obtener configuración de pagos (para precios, mora, fecha vencimiento)
+      try {
+        const cfgResp = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/configuracion-pagos`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        setConfigPagos(cfgResp.data);
+      } catch (e) {
+        console.warn('No se pudo cargar configuracion-pagos', e);
+      }
       
       console.log('Pagos obtenidos:', response.data); // Para depuración
       
@@ -573,6 +629,18 @@ const PagosList = () => {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredPagos.slice(indexOfFirstItem, indexOfLastItem);
+
+  const groupByGradeSection = (items) => {
+    const groups = new Map();
+    for (const p of items) {
+      const grado = p?.inscripciones?.grado?.nombre_grado || p?.inscripcion?.grado?.nombre_grado || 'Sin grado';
+      const seccion = p?.inscripciones?.Secciones?.nombre_seccion || p?.inscripcion?.Secciones?.nombre_seccion || '';
+      const key = `${grado}__${seccion}`;
+      if (!groups.has(key)) groups.set(key, { grado, seccion, items: [] });
+      groups.get(key).items.push(p);
+    }
+    return Array.from(groups.values());
+  };
   
   // Cambiar de página
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -846,6 +914,11 @@ const PagosList = () => {
   };
 
   
+  useEffect(() => {
+    const open = () => setShowConfigModal(true);
+    window.addEventListener('open-config-pagos', open);
+    return () => window.removeEventListener('open-config-pagos', open);
+  }, []);
   
   return (
     <div className="container mx-auto px-4 py-8">
@@ -853,10 +926,25 @@ const PagosList = () => {
       <MonthlySummaryModal
         open={showMonthlySummary}
         onClose={() => setShowMonthlySummary(false)}
-        mes={new Date().getMonth()+1}
-        anio={new Date().getFullYear()}
+        mes={selectedMes}
+        anio={selectedAnio}
         annoEscolarID={annoEscolar?.id}
       />
+      {showConfigModal && (
+        <PagosConfigModal
+          onClose={() => setShowConfigModal(false)}
+          onVerPendientesMes={(m) => {
+            setShowConfigModal(false);
+            setTabActiva('pendientes');
+            setViewMode('list');
+            setGroupBy(false);
+            if (m?.mesNumero || m?.mes) setMesFilter(String(m.mesNumero || m.mes));
+            if (m?.anio) setAnioFilter(String(m.anio));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          annoEscolarID={annoEscolar?.id}
+        />
+      )}
 
       {/* Header Hero con métricas */}
       <HeaderStats
@@ -866,49 +954,50 @@ const PagosList = () => {
         pagosAprobados={pagosAprobados}
         annoEscolar={annoEscolar}
         onOpenMonthlySummary={() => setShowMonthlySummary(true)}
+        selectedMes={selectedMes}
+        selectedAnio={selectedAnio}
+        onChangeMes={setSelectedMes}
+        onChangeAnio={setSelectedAnio}
       />
 
       {/* Barra de acciones */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <input
           type="text"
-          placeholder="Buscar por estudiante, referencia o ID..."
+          placeholder="Buscar por estudiante, cédula, referencia, representante o ID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full md:w-80 px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-500"
         />
         <div className="inline-flex rounded-xl overflow-hidden border border-slate-200">
           <button
-            onClick={() => cambiarTab('pendientes')}
-            className={`${tabActiva === 'pendientes' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+            onClick={() => setViewMode('list')}
+            className={`${viewMode === 'list' ? 'bg-slate-800 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+            title="Vista lista"
           >
-            Pendientes ({pagosPendientes.length})
+            Lista
           </button>
           <button
-            onClick={() => cambiarTab('reportados')}
-            className={`${tabActiva === 'reportados' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+            onClick={() => setViewMode('cards')}
+            className={`${viewMode === 'cards' ? 'bg-slate-800 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+            title="Vista tarjetas"
           >
-            Reportados ({pagosReportados.length})
+            Tarjetas
           </button>
           <button
-            onClick={() => cambiarTab('aprobados')}
-            className={`${tabActiva === 'aprobados' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
+            onClick={() => setGroupBy(v => !v)}
+            className={`px-4 py-2 text-sm font-medium ${groupBy ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
+            title="Agrupar por grado y sección"
           >
-            Aprobados ({pagosAprobados.length})
-          </button>
-          <button
-            onClick={() => cambiarTab('mensualidades')}
-            className={`${tabActiva === 'mensualidades' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
-          >
-            Mensualidades
-          </button>
-          <button
-            onClick={() => cambiarTab('configuracion')}
-            className={`${tabActiva === 'configuracion' ? 'bg-pink-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'} px-4 py-2 text-sm font-medium`}
-          >
-            Configuración
+            {groupBy ? 'Seccionado' : 'Seccionar'}
           </button>
         </div>
+        <button
+          onClick={() => setShowFilters(v => !v)}
+          className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl bg-white border border-slate-200 hover:bg-slate-50"
+        >
+          {showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
+        </button>
         <button
           onClick={handleOpenModal}
           className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl bg-pink-700 text-white hover:bg-pink-800 shadow"
@@ -948,32 +1037,140 @@ const PagosList = () => {
           </div>
         )}
         
-        {/* Vista en tarjetas */}
+        {/* Panel de filtros expandible */}
+        {showFilters && (
+          <div className="mb-6 bg-white border border-slate-200 rounded-xl p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Estado de pago</label>
+                <select
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                  value={estadoFilter}
+                  onChange={(e) => setEstadoFilter(e.target.value)}
+                >
+                  <option value="todos">Todos</option>
+                  <option value="pendientes">Pendientes</option>
+                  <option value="reportados">Reportados sin revisar</option>
+                  <option value="aprobados">Aprobados</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Grado</label>
+                <select
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                  value={gradoFilter}
+                  onChange={(e) => setGradoFilter(e.target.value)}
+                >
+                  <option value="todos">Todos</option>
+                  {[...new Set(pagos.map(p => (p.inscripciones||p.inscripcion)?.grado?.nombre_grado).filter(Boolean))].map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Sección</label>
+                <select
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                  value={seccionFilter}
+                  onChange={(e) => setSeccionFilter(e.target.value)}
+                >
+                  <option value="todos">Todas</option>
+                  {[...new Set(pagos.map(p => (p.inscripciones||p.inscripcion)?.Secciones?.nombre_seccion).filter(Boolean))].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Mes</label>
+                  <select
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                    value={mesFilter}
+                    onChange={(e) => setMesFilter(e.target.value)}
+                  >
+                    <option value="todos">Todos</option>
+                    {MONTHS.map((m, idx) => (
+                      <option key={idx+1} value={idx+1}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Año</label>
+                  <select
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                    value={anioFilter}
+                    onChange={(e) => setAnioFilter(e.target.value)}
+                  >
+                    <option value="todos">Todos</option>
+                    {[...new Set(pagos.map(p => p.anio || (p.fechaPago ? new Date(p.fechaPago).getFullYear() : null)).filter(Boolean))].map(a => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Contenido principal */}
         {loading ? (
           <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
             <div className="flex justify-center">
               <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-pink-600"></div>
             </div>
           </div>
-        ) : tabActiva === 'mensualidades' ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
-            {/* Mensualidades */}
-            <MensualidadesTable titulo="Mensualidades" filtro={{ annoEscolarID: annoEscolar?.id }} />
-          </div>
-        ) : tabActiva === 'configuracion' ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <ConfiguracionPagosPanel />
-          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {currentItems.map((p) => (
-              <PaymentItem
-                key={p.id}
-                pago={p}
-                onClick={(e) => { e?.preventDefault?.(); handleOpenDetailModal(p.id); }}
-              />
-            ))}
-          </div>
+          viewMode === 'cards' ? (
+            groupBy ? (
+              <div className="space-y-6">
+                {groupByGradeSection(currentItems).map(group => {
+                  const subtotal = group.items.reduce((acc, it) => acc + (parseFloat(it.monto||0)+parseFloat(it.montoMora||0)-parseFloat(it.descuento||0)), 0);
+                  return (
+                    <div key={`${group.grado}__${group.seccion}`} className="bg-white border border-slate-200 rounded-xl">
+                      <div className="px-4 py-3 border-b bg-slate-50 rounded-t-xl flex items-center justify-between">
+                        <h4 className="font-semibold text-slate-800">{group.grado} {group.seccion ? `- ${group.seccion}` : ''}</h4>
+                        <span className="text-sm font-medium text-slate-600">Subtotal: {Number(subtotal).toLocaleString('es-VE', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {group.items.map(p => (
+                          <PaymentItem key={p.id} pago={p} onClick={(e) => { e?.preventDefault?.(); handleOpenDetailModal(p.id); }} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {currentItems.map((p) => (
+                  <PaymentItem key={p.id} pago={p} onClick={(e) => { e?.preventDefault?.(); handleOpenDetailModal(p.id); }} />
+                ))}
+              </div>
+            )
+          ) : (
+            groupBy ? (
+              <div className="space-y-6">
+                {groupByGradeSection(currentItems).map(group => {
+                  const subtotal = group.items.reduce((acc, it) => acc + (parseFloat(it.monto||0)+parseFloat(it.montoMora||0)-parseFloat(it.descuento||0)), 0);
+                  return (
+                    <div key={`${group.grado}__${group.seccion}`} className="bg-white border border-slate-200 rounded-xl">
+                      <div className="px-4 py-3 border-b bg-slate-50 rounded-t-xl flex items-center justify-between">
+                        <h4 className="font-semibold text-slate-800">{group.grado} {group.seccion ? `- ${group.seccion}` : ''}</h4>
+                        <span className="text-sm font-medium text-slate-600">Subtotal: {Number(subtotal).toLocaleString('es-VE', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="p-4">
+                        <PaymentsList items={group.items} onOpenDetail={(id) => handleOpenDetailModal(id)} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-xl p-0">
+                <PaymentsList items={currentItems} onOpenDetail={(id) => handleOpenDetailModal(id)} />
+              </div>
+            )
+          )
         )}
         
         {/* Paginación */}

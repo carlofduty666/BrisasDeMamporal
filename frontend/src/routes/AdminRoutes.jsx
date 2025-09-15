@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../components/admin/layout/AdminSidebar';
 import AdminHeader from '../components/admin/layout/AdminHeader';
@@ -30,6 +30,7 @@ import ConfiguracionPagosAdmin from '../pages/admin/pagos/ConfiguracionPagosAdmi
 // import EmpleadoDetail from '../components/admin/empleados/EmpleadoDetail';
 // import EmpleadoForm from '../components/admin/empleados/EmpleadoForm';
 // import ConfiguracionSistema from '../components/admin/configuracion/ConfiguracionSistema';
+import AnnoEscolarManager from '../components/admin/configuracion/AnnoEscolarManager.jsx';
 
 const AdminLayoutWrapper = () => {
     const [user, setUser] = useState(null);
@@ -123,8 +124,18 @@ const AdminRoutes = () => {
           <Route path="empleados/:id" element={<EmpleadoDetail />} />
           <Route path="empleados/nuevo" element={<EmpleadoForm />} /> */}
           
-          {/* Configuración del sistema (solo para propietarios) */}
-          {/* <Route path="configuracion" element={<ConfiguracionSistema />} /> */}
+          {/* Configuración del sistema */}
+          <Route path="configuracion" element={<div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-800">Configuración</h2>
+              <p className="text-sm text-slate-600">Administra parámetros del sistema</p>
+            </div>
+            <div>
+              {/* Manager de Años Escolares */}
+              <div className="mb-4 text-sm text-slate-600">Años escolares</div>
+              <AnnoEscolarManager />
+            </div>
+          </div>} />
         </Route>
       </Routes>
     );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaUserGraduate, FaTag, FaMoneyCheckAlt, FaFileInvoiceDollar, FaEye } from 'react-icons/fa';
+import { FaUserGraduate, FaTag, FaMoneyCheckAlt, FaFileInvoiceDollar, FaEye, FaCalendarAlt } from 'react-icons/fa';
 
 function classEstado(estado) {
   if (estado === 'pagado') return 'bg-green-100 text-green-800';
@@ -49,7 +49,7 @@ export default function PaymentItem({ pago, onClick }) {
           </span>
           {pago.mesPago && (
             <span className="inline-flex items-center text-xs px-2 py-1 rounded-md bg-slate-100 text-slate-700">
-              <FaFileInvoiceDollar className="mr-1" /> {pago.mesPago}
+              <FaCalendarAlt className="mr-1" /> {pago.mesPago}
             </span>
           )}
         </div>
