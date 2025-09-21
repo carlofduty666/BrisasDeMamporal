@@ -1045,9 +1045,10 @@ const handleVerProgreso = (estudiante) => {
                 </div>
                 <Link 
                   to="/pagos" 
-                  className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg border border-white/20 transition-all duration-300 hover:scale-105 text-sm"
+                  className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg border border-white/20 transition-all duration-300 hover:scale-105 text-sm flex items-center"
                 >
-                  Ver Todos
+                  <FaMoneyBillWave className="mr-1 h-4 w-4" />
+                  Gestionar Pagos
                 </Link>
               </div>
             </div>

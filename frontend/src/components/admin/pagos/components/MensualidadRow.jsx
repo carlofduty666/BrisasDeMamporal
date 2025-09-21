@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaClock, FaCheckCircle, FaTimesCircle, FaPaperPlane } from 'react-icons/fa';
+import { formatearNombreGrado, formatearFecha, formatearMetodoPago } from '../../../../utils/formatters'
 
 function badge(estado) {
   switch (estado) {
@@ -28,12 +29,21 @@ export default function MensualidadRow({ m, onAprobar, onRechazar, onRecordatori
       <td className="px-3 py-2 text-sm text-slate-700">{m.mesNombre || m.mes}</td>
       <td className="px-3 py-2 text-sm text-slate-700">{m.anio ?? '-'}</td>
       <td className="px-3 py-2 text-sm text-slate-700">{fmt(m.fechaVencimiento)}</td>
-      <td className="px-3 py-2 text-sm text-slate-700">${Number(m.montoBase ?? m.monto ?? 0).toFixed(2)}</td>
-      <td className="px-3 py-2 text-sm text-slate-700">${Number(m.moraAcumulada ?? 0).toFixed(2)}</td>
+      <td className="px-3 py-2 text-sm text-slate-700">
+        <div>${Number(m.montoBase ?? m.monto ?? 0).toFixed(2)}</div>
+        <div className="text-xs text-slate-500">Bs. {(Number(m.montoBase ?? m.monto ?? 0) * 35).toFixed(2)}</div>
+      </td>
+      <td className="px-3 py-2 text-sm text-slate-700">
+        <div>${Number(m.moraAcumulada ?? 0).toFixed(2)}</div>
+        <div className="text-xs text-slate-500">Bs. {(Number(m.moraAcumulada ?? 0) * 35).toFixed(2)}</div>
+      </td>
       <td className="px-3 py-2">
         <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${badge(m.estado)}`}>{m.estado}</span>
       </td>
-      <td className="px-3 py-2 text-sm font-semibold text-slate-800">${total}</td>
+      <td className="px-3 py-2 text-sm font-semibold text-slate-800">
+        <div>${total}</div>
+        <div className="text-xs text-slate-500">Bs. {(Number(total) * 35).toFixed(2)}</div>
+      </td>
       <td className="px-3 py-2 text-right">
         <div className="inline-flex gap-2">
           {m.estado === 'reportado' && (

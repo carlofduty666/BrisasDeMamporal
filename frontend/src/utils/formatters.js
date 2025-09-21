@@ -16,6 +16,25 @@ export const tipoDocumentoFormateado = {
     'constanciaEstudio6toSemestre': 'Constancia de Estudio 6to Semestre',
     'titulo': 'Título Académico'
   };
+
+    export const formatearMetodoPago = (metodo) => {
+    if (!metodo) return '—';
+    
+    // Si recibimos un objeto con propiedad nombre
+    if (typeof metodo === 'object' && metodo.nombre) {
+      return metodo.nombre;
+    }
+    
+    // Si recibimos directamente el código/nombre del método
+    const metodosFormateados = {
+      'pagoMovil': 'Pago Móvil',
+      'transferenciaBancaria': 'Transferencia bancaria',
+      'efectivo': 'Efectivo'
+    };
+    
+    return metodosFormateados[metodo] || metodo || '—';
+  };
+
   
   // Función para formatear nombres de grados
   export const formatearNombreGrado = (nombreGrado) => {
@@ -159,5 +178,31 @@ export const tipoDocumentoFormateado = {
     // Convertir 'primaria' a 'Primaria' y 'secundaria' a 'Secundaria'
     return nombreNivel.charAt(0).toUpperCase() + nombreNivel.slice(1);
   };
+  
+  // Formateador de moneda
+  export const formatCurrency = (value, currency = 'USD') => {
+    const n = parseFloat(value || 0);
+    return n.toLocaleString('es-VE', { 
+      style: 'currency', 
+      currency, 
+      minimumFractionDigits: 2 
+    });
+  };
+
+  // const formatDate = (dateString) => {
+  //   if (!dateString) return 'N/A';
+  //   const date = new Date(dateString);
+  //   return date.toLocaleDateString('es-ES', {
+  //     day: '2-digit',
+  //     month: '2-digit',
+  //     year: 'numeric'
+  //   });
+  // };
+  
+  // // Formatear monto
+  // const formatMonto = (monto) => {
+  //   if (monto === null || monto === undefined) return 'N/A';
+  //   return `$${parseFloat(monto).toFixed(2)}`;
+  // };
 
   

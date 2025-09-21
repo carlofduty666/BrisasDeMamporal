@@ -29,6 +29,9 @@ import NavBar from './components/NavBar';
 import InfoHome from './components/InfoHome';
 import NuestraInstitucion from './components/NuestraInstitucion';
 import CalendarioAcademico from './components/CalendarioAcademico';
+import axios from 'axios';
+import GestionPagos from './components/pagos/GestionPagos';
+import { jwtDecode } from 'jwt-decode';
 
 
 // Componente para proteger rutas
@@ -54,6 +57,73 @@ const HomePage = () => {
       <NavBar />
       <InfoHome />
     </div>
+  );
+};
+
+// Contenedor para GestionPagos: obtiene personaID, annoEscolar y estudiantes si es representante
+const GestionPagosPage = () => {
+  const token = localStorage.getItem('token');
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const [annoEscolar, setAnnoEscolar] = useState(null);
+  const [estudiantes, setEstudiantes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(storedUser);
+  const [personaIDLocal, setPersonaIDLocal] = useState(storedUser?.personaID || storedUser?.id || null);
+  const [userTypeLocal, setUserTypeLocal] = useState(storedUser?.tipo || '');
+
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        if (!token) return;
+        const headers = { Authorization: `Bearer ${token}` };
+
+        // Decodificar token para asegurar personaID y tipo
+        let decoded = {};
+        try {
+          decoded = jwtDecode(token);
+        } catch {}
+        const finalUser = {
+          ...storedUser,
+          personaID: decoded.personaID ?? storedUser.personaID ?? storedUser.id,
+          tipo: storedUser.tipo || decoded.tipo || decoded.rol,
+        };
+        setUser(finalUser);
+        setPersonaIDLocal(finalUser.personaID || null);
+        setUserTypeLocal(finalUser.tipo || '');
+
+        // Año escolar actual
+        const annoRes = await axios.get(
+          `${import.meta.env.VITE_API_URL}/anno-escolar/actual`,
+          { headers }
+        );
+        setAnnoEscolar(annoRes.data || null);
+
+        // Estudiantes si es representante
+        if (finalUser?.tipo === 'representante' && finalUser?.personaID) {
+          const estRes = await axios.get(
+            `${import.meta.env.VITE_API_URL}/personas/representante/${finalUser.personaID}/estudiantes`,
+            { headers }
+          );
+          setEstudiantes(Array.isArray(estRes.data) ? estRes.data : []);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    cargar();
+  }, []);
+
+  if (!token) return <Navigate to="/login" replace />;
+  if (loading) return null;
+
+  return (
+    <GestionPagos
+      userType={userTypeLocal === 'estudiante' ? 'estudiante' : 'representante'}
+      personaID={personaIDLocal}
+      estudiantes={estudiantes}
+      annoEscolar={annoEscolar}
+      onSuccess={() => {}}
+    />
   );
 };
 
@@ -116,7 +186,17 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        {/* Nueva ruta para registrar pagos */}
+        {/* Nueva ruta para gestionar pagos (vista unificada) */}
+        <Route 
+          path="/pagos" 
+          element={
+            <ProtectedRoute allowedRoles={['representante', 'estudiante', 'adminWeb', 'owner']}>
+              <GestionPagosPage />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Ruta legacy para registrar pagos por inscripcion (si se sigue usando en algún lugar) */}
         <Route 
           path="/pagos/registrar/:inscripcionId" 
           element={

@@ -141,8 +141,9 @@ const pagoEstudiantesController = {
         observaciones
       } = req.body;
       
-      // Validaciones
-      if (!estudianteID || !representanteID || !metodoPagoID || !arancelID || !monto) {
+      // Validaciones (simplificadas para el flujo de reporte de comprobante)
+      // Requerimos: estudianteID, representanteID, annoEscolarID y monto
+      if (!estudianteID || !representanteID || !annoEscolarID || !monto) {
         await transaction.rollback();
         return res.status(400).json({ message: 'Faltan campos obligatorios' });
       }
@@ -169,26 +170,53 @@ const pagoEstudiantesController = {
         return res.status(404).json({ message: 'Representante no encontrado' });
       }
       
-      // Verificar que el método de pago existe y está activo
-      const metodoPago = await MetodoPagos.findOne({ 
-        where: { id: metodoPagoID, activo: true },
-        transaction
-      });
-      
-      if (!metodoPago) {
-        await transaction.rollback();
-        return res.status(404).json({ message: 'Método de pago no encontrado o inactivo' });
+      // Verificar/Asignar método de pago
+      let metodoPago = null;
+      let metodoPagoIdToUse = null;
+      if (metodoPagoID) {
+        // Validar el método recibido
+        metodoPago = await MetodoPagos.findOne({ 
+          where: { id: metodoPagoID, activo: true },
+          transaction
+        });
+        if (!metodoPago) {
+          await transaction.rollback();
+          return res.status(404).json({ message: 'Método de pago no encontrado o inactivo' });
+        }
+        metodoPagoIdToUse = metodoPago.id;
+      } else {
+        // Opción B: usar un método por defecto explícito
+        const [mp] = await MetodoPagos.findOrCreate({
+          where: { nombre: 'Transferencia - Pago móvil' },
+          defaults: { activo: true },
+          transaction
+        });
+        metodoPago = mp;
+        metodoPagoIdToUse = mp.id;
       }
-      
-      // Verificar que el arancel existe y está activo
-      const arancel = await Aranceles.findOne({ 
-        where: { id: arancelID, activo: true },
-        transaction
-      });
-      
-      if (!arancel) {
-        await transaction.rollback();
-        return res.status(404).json({ message: 'Arancel no encontrado o inactivo' });
+
+      // Verificar/Asignar arancel
+      let arancel = null;
+      let arancelIdToUse = null;
+      if (arancelID) {
+        arancel = await Aranceles.findOne({ 
+          where: { id: arancelID, activo: true },
+          transaction
+        });
+        if (!arancel) {
+          await transaction.rollback();
+          return res.status(404).json({ message: 'Arancel no encontrado o inactivo' });
+        }
+        arancelIdToUse = arancel.id;
+      } else {
+        // Sin arancel explícito, usamos un arancel genérico de mensualidad para cumplir NOT NULL
+        const [ar] = await Aranceles.findOrCreate({
+          where: { nombre: 'Mensualidad' },
+          defaults: { monto: 0, descripcion: 'Pago mensual reportado', activo: true },
+          transaction
+        });
+        arancel = ar;
+        arancelIdToUse = ar.id;
       }
       
       // Verificar año escolar
@@ -238,12 +266,12 @@ const pagoEstudiantesController = {
       const descuentoFinal = parseFloat(descuento) || 0;
       const montoTotalFinal = montoTotal ? parseFloat(montoTotal) : (montoFinal + montoMoraFinal - descuentoFinal);
       
-      // Crear el pago
+      // Crear el pago (cumpliendo NOT NULL con valores por defecto cuando faltan)
       const nuevoPago = await PagoEstudiantes.create({
         estudianteID,
         representanteID,
-        metodoPagoID,
-        arancelID,
+        metodoPagoID: metodoPagoIdToUse, // siempre definido a este punto
+        arancelID: arancelIdToUse,       // siempre definido a este punto
         inscripcionID: inscripcionID || null,
         annoEscolarID,
         monto: montoFinal,
@@ -253,7 +281,7 @@ const pagoEstudiantesController = {
         mesPago: mesPago || null,
         fechaPago: fechaPago || new Date(),
         referencia: referencia || null,
-        estado: metodoPago.nombre === 'Efectivo' ? 'pagado' : 'pendiente',
+        estado: (metodoPago && metodoPago.nombre === 'Efectivo') ? 'pagado' : 'pendiente',
         urlComprobante,
         nombreArchivo,
         tipoArchivo,
@@ -267,7 +295,7 @@ const pagoEstudiantesController = {
         
         if (inscripcion) {
           // Si el arancel es de tipo inscripción, marcar como pagado
-          if (arancel.nombre === 'inscripcion') {
+          if (arancel && arancel.nombre === 'inscripcion') {
             await inscripcion.update({ 
               pagoInscripcionCompletado: true 
             }, { transaction });

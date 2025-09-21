@@ -6,7 +6,7 @@ alwaysApply: true
 # Brisas de Mamporal Information
 
 ## Summary
-A comprehensive school management system for "Brisas de Mamporal" educational institution. The system handles academic management, student enrollment, grades, payments, and administrative tasks through a web-based interface.
+A comprehensive school management system for "Brisas de Mamporal" educational institution. The system handles academic management, student enrollment, grades, payments, and administrative tasks through a web-based interface. Recently implemented a reusable payment management component for streamlined payment processing.
 
 ## Structure
 The repository is organized as a full-stack application with separate frontend and backend directories:
@@ -108,9 +108,10 @@ node server.js  # Start the server
 
 ### Financial Management
 - Fee configuration
-- Payment processing
-- Monthly payment tracking
-- Payment reports
+- Payment processing with reusable payment component
+- Monthly payment tracking with dual currency (USD/VES)
+- Payment receipt uploads and verification
+- Payment reports and status tracking
 
 ### Administrative Features
 - Staff management
@@ -120,10 +121,12 @@ node server.js  # Start the server
 
 ## Frontend Structure
 - **src/components/**: UI components organized by feature
+  - **src/components/pagos/**: Payment management components
+  - **src/components/dashboard/**: Dashboard components for different user types
 - **src/routes/**: Route definitions and protected routes
 - **src/services/**: API service integrations
 - **src/context/**: React context providers
-- **src/pages/**: Page components
+- **src/pages/**: Page components including PagosPage for payment management
 - **src/hooks/**: Custom React hooks
 - **src/utils/**: Utility functions
 

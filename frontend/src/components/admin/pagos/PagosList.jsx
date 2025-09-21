@@ -10,6 +10,7 @@ import PaymentDetailModal from './components/PaymentDetailModal';
 import MensualidadesTable from './components/MensualidadesTable';
 import ConfiguracionPagosPanel from './components/PagosConfigPanel.jsx';
 import PagosConfigModal from './components/PagosConfigModal.jsx';
+import { formatearNombreGrado } from '../../../utils/formatters'
 
 const PagosList = () => {
   const [pagos, setPagos] = useState([]);
@@ -644,23 +645,6 @@ const PagosList = () => {
   
   // Cambiar de página
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
-  
-  // Formatear fecha
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-  
-  // Formatear monto
-  const formatMonto = (monto) => {
-    if (monto === null || monto === undefined) return 'N/A';
-    return `$${parseFloat(monto).toFixed(2)}`;
-  };
 
   const handlePreviewComprobante = (pago) => {
     if (pago && pago.urlComprobante) {
@@ -1126,9 +1110,9 @@ const PagosList = () => {
                 {groupByGradeSection(currentItems).map(group => {
                   const subtotal = group.items.reduce((acc, it) => acc + (parseFloat(it.monto||0)+parseFloat(it.montoMora||0)-parseFloat(it.descuento||0)), 0);
                   return (
-                    <div key={`${group.grado}__${group.seccion}`} className="bg-white border border-slate-200 rounded-xl">
+                    <div key={`${formatearNombreGrado(group.grado)}__${group.seccion}`} className="bg-white border border-slate-200 rounded-xl">
                       <div className="px-4 py-3 border-b bg-slate-50 rounded-t-xl flex items-center justify-between">
-                        <h4 className="font-semibold text-slate-800">{group.grado} {group.seccion ? `- ${group.seccion}` : ''}</h4>
+                        <h4 className="font-semibold text-slate-800">{formatearNombreGrado(group.grado)} {group.seccion ? `- ${group.seccion}` : ''}</h4>
                         <span className="text-sm font-medium text-slate-600">Subtotal: {Number(subtotal).toLocaleString('es-VE', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}</span>
                       </div>
                       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1153,7 +1137,7 @@ const PagosList = () => {
                 {groupByGradeSection(currentItems).map(group => {
                   const subtotal = group.items.reduce((acc, it) => acc + (parseFloat(it.monto||0)+parseFloat(it.montoMora||0)-parseFloat(it.descuento||0)), 0);
                   return (
-                    <div key={`${group.grado}__${group.seccion}`} className="bg-white border border-slate-200 rounded-xl">
+                    <div key={`${formatearNombreGrado(group.grado)}__${group.seccion}`} className="bg-white border border-slate-200 rounded-xl">
                       <div className="px-4 py-3 border-b bg-slate-50 rounded-t-xl flex items-center justify-between">
                         <h4 className="font-semibold text-slate-800">{group.grado} {group.seccion ? `- ${group.seccion}` : ''}</h4>
                         <span className="text-sm font-medium text-slate-600">Subtotal: {Number(subtotal).toLocaleString('es-VE', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}</span>

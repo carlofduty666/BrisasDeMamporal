@@ -6,6 +6,7 @@ const annoEscolarController = require('../controllers/annoEscolar.controller');
 router.get('/anno-escolar', annoEscolarController.getAllAnnoEscolares); // Obtener todos los años escolares
 router.get('/anno-escolar/actual', annoEscolarController.getAnnoEscolarActual); // Obtener el año escolar actual (activo)
 router.get('/anno-escolar/:id', annoEscolarController.getAnnoEscolarById); // Obtener año escolar por ID
+router.get('/anno-escolar/:id/meses', annoEscolarController.getMesesAnnoEscolar); // Obtener meses del año escolar
 
 router.post('/anno-escolar', annoEscolarController.createAnnoEscolar); // Crear nuevo año escolar
 

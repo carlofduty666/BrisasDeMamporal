@@ -45,6 +45,57 @@ const annoEscolarController = {
       res.status(500).json({ message: err.message });
     }
   },
+
+  // Obtener meses del año escolar (Sep-Jun) con precio vigente de ConfiguracionPagos
+  getMesesAnnoEscolar: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const anno = await AnnoEscolar.findByPk(id);
+      if (!anno) {
+        return res.status(404).json({ message: 'Año escolar no encontrado' });
+      }
+
+      // Cargar configuración de pagos activa para obtener precio mensual
+      const { ConfiguracionPagos } = db;
+      const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
+      const precioUSD = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+
+      // Meses típicos del ciclo escolar: Sep(9) .. Jun(6)
+      const mesesNombres = [
+        { mes: 9, nombre: 'Septiembre' },
+        { mes: 10, nombre: 'Octubre' },
+        { mes: 11, nombre: 'Noviembre' },
+        { mes: 12, nombre: 'Diciembre' },
+        { mes: 1, nombre: 'Enero' },
+        { mes: 2, nombre: 'Febrero' },
+        { mes: 3, nombre: 'Marzo' },
+        { mes: 4, nombre: 'Abril' },
+        { mes: 5, nombre: 'Mayo' },
+        { mes: 6, nombre: 'Junio' }
+      ];
+
+      // Derivar años desde el periodo YYYY-YYYY
+      const [yStartStr, yEndStr] = String(anno.periodo).split('-');
+      const yStart = Number(yStartStr);
+      const yEnd = Number(yEndStr);
+
+      const meses = mesesNombres.map((m, idx) => {
+        const anio = m.mes >= 9 ? yStart : yEnd; // Sep-Dic usan yStart; Ene-Jun usan yEnd
+        return {
+          id: `${id}-${idx+1}`,
+          nombre: m.nombre,
+          mesNumero: m.mes,
+          anio,
+          montoPago: precioUSD
+        };
+      });
+
+      return res.json(meses);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Error al obtener meses del año escolar' });
+    }
+  },
   
   // Crear nuevo año escolar
   createAnnoEscolar: async (req, res) => {

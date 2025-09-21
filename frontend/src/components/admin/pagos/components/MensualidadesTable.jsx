@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { mensualidadesService } from '../../../../services/mensualidadesService';
 import MensualidadRow from './MensualidadRow';
+import { formatearNombreGrado, formatearFecha, formatearMetodoPago } from '../../../../utils/formatters'
+
 
 export default function MensualidadesTable({ filtro = {}, titulo = 'Mensualidades' }) {
   const [items, setItems] = useState([]);
