@@ -70,6 +70,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATEONLY,
       allowNull: true
     },
+    // Texto libre para instrucciones de pago (cuentas bancarias, pago móvil, horarios, etc.)
+    instruccionesPago: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     stripePublicKey: {
       type: DataTypes.STRING,
       allowNull: true

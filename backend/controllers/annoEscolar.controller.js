@@ -59,6 +59,7 @@ const annoEscolarController = {
       const { ConfiguracionPagos } = db;
       const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
       const precioUSD = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+      const precioVES = Number(cfg?.precioMensualidadVES ?? 0);
 
       // Meses típicos del ciclo escolar: Sep(9) .. Jun(6)
       const mesesNombres = [
@@ -86,7 +87,9 @@ const annoEscolarController = {
           nombre: m.nombre,
           mesNumero: m.mes,
           anio,
-          montoPago: precioUSD
+          montoPago: precioUSD,
+          montoPagoUSD: precioUSD,
+          montoPagoVES: precioVES
         };
       });
 

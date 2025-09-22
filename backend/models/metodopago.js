@@ -11,8 +11,9 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      // Nota: en PagoEstudiantes la columna es 'metodoPagoID' (camelCase, m minúscula)
       MetodoPagos.hasMany(models.PagoEstudiantes, {
-        foreignKey: 'MetodoPagoID',
+        foreignKey: 'metodoPagoID',
         as: 'pagos'
       })
     }
