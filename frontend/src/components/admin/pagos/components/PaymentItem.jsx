@@ -58,6 +58,7 @@ export default function PaymentItem({ pago, onClick }) {
           <div>
             <p className="text-xs text-slate-500">Monto total</p>
             <p className="text-lg font-bold text-slate-800">{formatCurrency(montoTotal)}</p>
+            <p className="text-xs text-slate-500">Bs. {Number((pago.montoTotalVES ?? pago.montoVES ?? 0)).toFixed(2)}</p>
           </div>
           <button
             onClick={onClick}

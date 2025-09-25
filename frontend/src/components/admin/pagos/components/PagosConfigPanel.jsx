@@ -1,22 +1,91 @@
 import React, { useEffect, useState } from 'react';
 import { pagosConfigService } from '../../../../services/pagosConfigService';
+import { annoEscolarService } from '../../../../services/annoEscolar.service';
 
-export default function ConfiguracionPagosPanel({ onVerPendientesMes, embedded = false }) {
+export default function ConfiguracionPagosPanel({ embedded = false }) {
   const [config, setConfig] = useState({
     precioMensualidad: '', // base
     politicaPrecio: 'retroactivo', // 'retroactivo' | 'congelado'
     mora: { tipo: 'porcentaje-diario', tasa: 0.001, diasGracia: 0, topePorcentaje: 0.2 },
     vigenciaDesde: '',
+    instruccionesPago: '', // texto libre para cuentas/indicaciones
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState('view'); // 'view' | 'edit'
+  // Año escolar y meses del período (derivados de vigenciaDesde)
+  const [annoEscolarTarget, setAnnoEscolarTarget] = useState(null);
+  const [mesesPeriodo, setMesesPeriodo] = useState([]); // [{mes, nombre, anio}]
+  const [seleccion, setSeleccion] = useState(null); // {mes, anio}
+  const [actualizarParametrosMora, setActualizarParametrosMora] = useState(true);
+  // NOTA: Este componente no renderiza tarjetas por mes. Esa UI vive en PagosConfigModal.
+
+  const nombreMes = (m) => (
+    ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m] || ''
+  );
+
+  // Dado un período "YYYY-YYYY" genera meses Sep..Jun del ciclo
+  // Construcción de meses del período ahora se delega al backend según la configuración del año escolar
+  const buildMesesPeriodo = async (annoEscolarID) => {
+    if (!annoEscolarID) return [];
+    try {
+      const meses = await annoEscolarService.getMeses(annoEscolarID);
+      // Backend devuelve: { nombre, mesNumero, anio, montoPagoUSD?, montoPagoVES? }
+      return (meses || []).map(m => ({
+        mes: Number(m.mesNumero),
+        nombre: m.nombre ?? nombreMes(Number(m.mesNumero)),
+        anio: Number(m.anio),
+        montoUSDDefault: Number(m.montoPagoUSD ?? m.montoPago ?? 0),
+        montoVESDefault: Number(m.montoPagoVES ?? 0),
+      }));
+    } catch {
+      return [];
+    }
+  };
+
+  const derivePeriodoFromVigencia = (vigencia) => {
+    if (!vigencia) return null;
+    const d = new Date(vigencia);
+    if (isNaN(d)) return null;
+    const y = d.getFullYear();
+    // Regla de negocio solicitada: si la vigencia es 01/05/2025 -> objetivo Septiembre 2025 => período 2025-2026
+    return `${y}-${y + 1}`;
+  };
+
+  const syncPeriodoByVigencia = async (vigencia) => {
+    // Intenta encontrar el año escolar cuyo período coincide con la vigencia
+    const periodoObj = derivePeriodoFromVigencia(vigencia);
+    try {
+      const lista = await annoEscolarService.list();
+      let target = periodoObj ? lista.find((a) => a.periodo === periodoObj) : null;
+      if (!target) {
+        // Si no existe el período exacto, usar el activo como fallback
+        try { target = await annoEscolarService.getActual(); } catch {}
+      }
+      setAnnoEscolarTarget(target || null);
+      if (target?.id) {
+        const meses = await buildMesesPeriodo(target.id);
+        setMesesPeriodo(meses);
+        // Selección por defecto: primer mes configurado del período
+        const defaultSel = meses[0] || null;
+        setSeleccion(defaultSel);
+      } else {
+        setMesesPeriodo([]);
+        setSeleccion(null);
+      }
+    } catch (e) {
+      setAnnoEscolarTarget(null);
+      setMesesPeriodo([]);
+      setSeleccion(null);
+    }
+  };
 
   const load = async () => {
     try {
       setLoading(true);
       const data = await pagosConfigService.getConfig();
       if (data) setConfig(data);
+      await syncPeriodoByVigencia(data?.vigenciaDesde);
       setLoading(false);
       setMode('view');
     } catch (e) {
@@ -25,9 +94,13 @@ export default function ConfiguracionPagosPanel({ onVerPendientesMes, embedded =
   };
   useEffect(() => { load(); }, []);
 
-  const onChange = (e) => {
+  const onChange = async (e) => {
     const { name, value } = e.target;
     setConfig((prev) => ({ ...prev, [name]: value }));
+    if (name === 'vigenciaDesde') {
+      // Recalcular período/meses al cambiar vigencia
+      await syncPeriodoByVigencia(value);
+    }
   };
 
   const toggleOrSave = async () => {
@@ -42,9 +115,7 @@ export default function ConfiguracionPagosPanel({ onVerPendientesMes, embedded =
     }
   };
 
-
-
-
+  const accionesDeshabilitadas = !annoEscolarTarget || !seleccion;
 
   if (loading) return <div className="p-6 text-slate-500">Cargando configuración...</div>;
 
@@ -57,53 +128,7 @@ export default function ConfiguracionPagosPanel({ onVerPendientesMes, embedded =
         )}
       </div>
 
-      {/* Tarjetas por mes configurado */}
-      {/* <div className="p-6">
-        <h4 className="text-sm font-semibold text-slate-700 mb-3">Resumen por mes</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(config?.meses || []).map((m, idx) => (
-            <div key={idx} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-xs text-slate-500">Mes</div>
-                  <div className="text-lg font-semibold text-slate-800">{m.nombreMes || m.mesNombre || m.mes}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-slate-500">Vence</div>
-                  <div className="text-sm font-medium text-slate-800">{m.fechaVencimiento ? new Date(m.fechaVencimiento).toLocaleDateString('es-VE') : '-'}</div>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <div className="text-xs text-slate-500">Monto USD</div>
-                  <div className="font-semibold text-slate-800">${Number(m.montoUSD ?? m.montoBaseUSD ?? config.precioMensualidadUSD ?? 0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">Monto VES</div>
-                  <div className="font-semibold text-slate-800">Bs {Number(m.montoVES ?? m.montoBaseVES ?? config.precioMensualidadVES ?? 0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">Mora</div>
-                  <div className="font-semibold text-slate-800">{((m.mora?.tasa ?? config.mora?.tasa ?? 0) * 100).toFixed(2)}% día</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">Recaudado</div>
-                  <div className="font-semibold text-slate-800">${Number(m.recaudadoUSD ?? 0).toFixed(2)}</div>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <div className="text-xs text-slate-500">Pendientes: <span className="font-semibold text-slate-800">{m.pendientes ?? 0}</span></div>
-                <button
-                  onClick={() => onVerPendientesMes?.(m)}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-pink-200 bg-pink-50 text-pink-700 hover:bg-pink-100"
-                >
-                  Ver pendientes
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div> */}
+
 
       {/* Formulario de edición */}
       <div className="px-6 pb-6">
@@ -143,19 +168,7 @@ export default function ConfiguracionPagosPanel({ onVerPendientesMes, embedded =
               disabled={mode==='view' || saving}
             />
           </div>
-          <div>
-            <label className="block text-sm text-slate-600">Política de precio</label>
-            <select
-              className="mt-1 w-full border rounded px-3 py-2"
-              name="politicaPrecio"
-              value={config.politicaPrecio}
-              onChange={onChange}
-              disabled={mode==='view' || saving}
-            >
-              <option value="retroactivo">Retroactivo (B)</option>
-              <option value="congelado">Congelado por creación (A)</option>
-            </select>
-          </div>
+
           <div>
             <label className="block text-sm text-slate-600">Mora (tasa diaria en %)</label>
             <input
@@ -187,8 +200,103 @@ export default function ConfiguracionPagosPanel({ onVerPendientesMes, embedded =
               </div>
             </div>
           </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm text-slate-600">Instrucciones de pago (visible para representantes/estudiantes)</label>
+            <textarea
+              className="mt-1 w-full border rounded px-3 py-2"
+              name="instruccionesPago"
+              value={config.instruccionesPago || ''}
+              onChange={onChange}
+              rows={5}
+              placeholder="Ejemplo: Transferencia a Banco X, Cuenta: 0000-0000-00-0000000000, Titular: U.E. Brisas de Mamporal, RIF: J-00000000-0. Pago móvil: 0412-0000000 (Banco Y), CI: V-00000000. Indique referencia y nombre del estudiante."
+              disabled={mode==='view' || saving}
+            />
+          </div>
         </div>
-        <div className="mt-4 flex justify-end">
+        {/* Acciones por mes */}
+        <div className="mt-8 border-t pt-6">
+          <h4 className="text-sm font-semibold text-slate-700 mb-4">Acciones por mes</h4>
+
+          {/* Info del período objetivo */}
+          {annoEscolarTarget?.periodo ? (
+            <p className="text-xs text-slate-500 mb-3">Período objetivo: <span className="font-medium text-slate-700">{annoEscolarTarget.periodo}</span></p>
+          ) : (
+            <p className="text-xs text-amber-600 mb-3">No se encontró un año escolar que coincida con la vigencia. Active o cree el período correspondiente para habilitar las acciones.</p>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm text-slate-600">Mes</label>
+              <select
+                className="mt-1 w-full border rounded px-3 py-2"
+                value={seleccion ? `${seleccion.mes}-${seleccion.anio}` : ''}
+                onChange={(e) => {
+                  const [mStr, aStr] = e.target.value.split('-');
+                  setSeleccion({ mes: Number(mStr), anio: Number(aStr) });
+                }}
+                disabled={accionesDeshabilitadas}
+              >
+                {mesesPeriodo.map((m) => (
+                  <option key={`${m.mes}-${m.anio}`} value={`${m.mes}-${m.anio}`}>
+                    {m.nombre} {m.anio}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-slate-600">Año</label>
+              <input
+                type="text"
+                className="mt-1 w-full border rounded px-3 py-2 bg-slate-50"
+                value={seleccion?.anio ?? ''}
+                disabled
+              />
+            </div>
+            <div className="flex items-end">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" className="h-4 w-4" checked={actualizarParametrosMora} onChange={(e)=>setActualizarParametrosMora(e.target.checked)} />
+                <span>Actualizar parámetros de mora</span>
+              </label>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              onClick={async()=>{
+                if (accionesDeshabilitadas) return;
+                await pagosConfigService.congelarMes({ mes: seleccion.mes, anio: seleccion.anio, annoEscolarID: annoEscolarTarget.id });
+                alert('Mes congelado: snapshot aplicado');
+              }}
+              className="px-4 py-2 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              disabled={accionesDeshabilitadas}
+            >
+              Congelar configuración del mes
+            </button>
+            <button
+              onClick={async()=>{
+                if (accionesDeshabilitadas) return;
+                await pagosConfigService.actualizarPrecios({ mes: seleccion.mes, anio: seleccion.anio, annoEscolarID: annoEscolarTarget.id, actualizarParametrosMora });
+                alert('Mes actualizado: precios ' + (actualizarParametrosMora ? 'y parámetros de mora sincronizados' : 'actualizados'));
+              }}
+              className="px-4 py-2 rounded border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50"
+              disabled={accionesDeshabilitadas}
+            >
+              Actualizar mes actual
+            </button>
+            <button
+              onClick={async()=>{
+                if (accionesDeshabilitadas) return;
+                await pagosConfigService.recalcularMoras({ annoEscolarID: annoEscolarTarget.id });
+                alert('Moras recalculadas');
+              }}
+              className="px-4 py-2 rounded border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50"
+              disabled={accionesDeshabilitadas}
+            >
+              Recalcular moras
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-8 flex justify-end">
           <button onClick={toggleOrSave} disabled={saving} className="px-4 py-2 rounded bg-pink-600 text-white hover:bg-pink-700">
             {mode === 'view' ? 'Actualizar' : 'Guardar configuración'}
           </button>

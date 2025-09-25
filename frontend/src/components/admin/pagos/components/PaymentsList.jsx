@@ -60,13 +60,15 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
                 <div className="col-span-1 text-slate-700">{fechaVenc ? new Date(fechaVenc).toLocaleDateString('es-VE') : '—'}</div>
                 <div className="col-span-1 font-semibold text-slate-800">
                   <div>$ {montoReportado.toFixed(2)}</div>
-                  <div className="text-xs text-slate-500">Bs. {(montoReportado * 35).toFixed(2)}</div>
+                  <div className="text-xs text-slate-500">Bs. {Number((p.montoTotalVES ?? p.montoVES ?? 0)).toFixed(2)}</div>
                 </div>
                 <div className="col-span-1 text-slate-700">
                   {mora ? (
                     <>
                       <div>${mora.toFixed(2)}</div>
-                      <div className="text-xs text-slate-500">Bs. {(mora * 35).toFixed(2)}</div>
+                      {typeof p.montoMoraVES === 'number' ? (
+                        <div className="text-xs text-slate-500">Bs. {Number(p.montoMoraVES).toFixed(2)}</div>
+                      ) : null}
                     </>
                   ) : '—'}
                 </div>
@@ -94,7 +96,7 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
                   <div className="flex items-center gap-1"><FaMoneyBill /> <span>Monto:</span> 
                     <span className="text-slate-800">
                       <div>${montoReportado.toFixed(2)}</div>
-                      <div className="text-xs text-slate-500">Bs. {(montoReportado * 35).toFixed(2)}</div>
+                      <div className="text-xs text-slate-500">Bs. {Number((p.montoTotalVES ?? p.montoVES ?? 0)).toFixed(2)}</div>
                     </span>
                   </div>
                   <div className="flex items-center gap-1"><FaMoneyCheckAlt /> <span>Mora:</span> 
@@ -102,7 +104,7 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
                       {mora ? (
                         <>
                           <div>${mora.toFixed(2)}</div>
-                          <div className="text-xs text-slate-500">Bs. {(mora * 35).toFixed(2)}</div>
+                          <div className="text-xs text-slate-500">Bs. {Number(p.montoMoraVES ?? 0).toFixed(2)}</div>
                         </>
                       ) : '—'}
                     </span>

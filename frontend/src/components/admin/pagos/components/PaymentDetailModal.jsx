@@ -89,10 +89,12 @@ export default function PaymentDetailModal({ pago, onClose, onPreview, onApprove
               <div className="p-3 rounded-lg bg-white border">
                 <p className="text-xs text-slate-500 flex items-center"><FaMoneyBill className="mr-1 text-pink-700" /> Monto</p>
                 <p className="font-semibold text-slate-800">{formatCurrency(monto)}</p>
+                <p className="text-xs text-slate-500">Bs. {Number(pago.montoVES ?? 0).toFixed(2)}</p>
               </div>
               <div className="p-3 rounded-lg bg-white border">
                 <p className="text-xs text-slate-500 flex items-center"><FaExclamationCircle className="mr-1 text-pink-700" /> Mora</p>
                 <p className="font-semibold text-slate-800">{formatCurrency(mora)}</p>
+                <p className="text-xs text-slate-500">Bs. {Number(pago.montoMoraVES ?? 0).toFixed(2)}</p>
               </div>
               <div className="p-3 rounded-lg bg-white border">
                 <p className="text-xs text-slate-500 flex items-center"><FaPercentage className="mr-1 text-pink-700" /> Descuento</p>
@@ -102,6 +104,7 @@ export default function PaymentDetailModal({ pago, onClose, onPreview, onApprove
               <div className="p-3 rounded-lg bg-pink-50 border border-pink-200 md:col-span-3">
                 <p className="text-xs text-pink-600 flex items-center"><FaCreditCard className="mr-1" /> Total</p>
                 <p className="text-xl font-extrabold text-pink-800">{formatCurrency(total)}</p>
+                <p className="text-xs text-pink-700">Bs. {Number(pago.montoTotalVES ?? 0).toFixed(2)}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-white border">

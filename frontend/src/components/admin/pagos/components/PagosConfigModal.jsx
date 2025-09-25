@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { mensualidadesService } from '../../../../services/mensualidadesService';
+import { annoEscolarService } from '../../../../services/annoEscolar.service';
 import ConfiguracionPagosPanel from './PagosConfigPanel.jsx';
 
 function formatCurrency(value) {
@@ -13,11 +14,30 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
 
+  // Resolver año escolar objetivo: usar prop si viene; si no, consultar el activo
+  const [targetAnnoEscolarID, setTargetAnnoEscolarID] = useState(annoEscolarID || null);
+  useEffect(() => {
+    setTargetAnnoEscolarID(annoEscolarID || null);
+  }, [annoEscolarID]);
+  useEffect(() => {
+    const ensureAnnoEscolar = async () => {
+      if (targetAnnoEscolarID) return;
+      try {
+        const actual = await annoEscolarService.getActual();
+        setTargetAnnoEscolarID(actual?.id || null);
+      } catch {
+        setTargetAnnoEscolarID(null);
+      }
+    };
+    ensureAnnoEscolar();
+  }, [targetAnnoEscolarID]);
+
   useEffect(() => {
     const load = async () => {
       try {
+        if (!targetAnnoEscolarID) { setItems([]); return; }
         setLoading(true);
-        const data = await mensualidadesService.list({ annoEscolarID });
+        const data = await mensualidadesService.list({ annoEscolarID: targetAnnoEscolarID });
         setItems(Array.isArray(data) ? data : []);
         setLoading(false);
       } catch (e) {
@@ -27,7 +47,7 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
       }
     };
     load();
-  }, [annoEscolarID]);
+  }, [targetAnnoEscolarID]);
 
   useEffect(() => {
     const onKeyDown = (e) => { if (e.key === 'Escape') onClose?.(); };
@@ -55,12 +75,75 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
     return Array.from(map.values()).sort((a, b) => (a.anio - b.anio) || (a.mes - b.mes));
   }, [items]);
 
-  const mesesEsperados = [9,10,11,12,1,2,3,4,5,6,7];
+  // Meses esperados ahora vienen del backend según el año escolar seleccionado
+  const [mesesPeriodo, setMesesPeriodo] = useState([]); // [{ mesNumero, nombre, anio }]
+
+  // Helper para nombre del mes
+  const nombreMes = (m) => (
+    ['', 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(m)] || String(m)
+  );
+
+  useEffect(() => {
+    const loadMeses = async () => {
+      try {
+        if (!targetAnnoEscolarID) { setMesesPeriodo([]); return; }
+        const meses = await annoEscolarService.getMeses(targetAnnoEscolarID);
+        setMesesPeriodo(Array.isArray(meses) ? meses : []);
+      } catch {
+        setMesesPeriodo([]);
+      }
+    };
+    loadMeses();
+  }, [targetAnnoEscolarID]);
+
+  const mesesEsperados = useMemo(() => (
+    (mesesPeriodo || []).map(m => Number(m.mesNumero ?? m.mes)).filter(Boolean)
+  ), [mesesPeriodo]);
+
   const faltantes = useMemo(() => {
     // detectar meses del período que no llegaron desde backend
     const setMeses = new Set(porMes.map(m => m.mes));
     return mesesEsperados.filter(m => !setMeses.has(m));
-  }, [porMes]);
+  }, [porMes, mesesEsperados]);
+
+  // Fusionar meses del período con el agregado real por mes para mostrar SIEMPRE todas las tarjetas
+  const tarjetas = useMemo(() => {
+    // Mapa de agregados reales por clave anio-mes
+    const map = new Map();
+    for (const m of porMes) {
+      const key = `${m.anio}-${m.mes}`;
+      map.set(key, m);
+    }
+
+    // Si no hay definición de meses de período, usa los reales tal cual
+    if (!Array.isArray(mesesPeriodo) || mesesPeriodo.length === 0) {
+      return porMes;
+    }
+
+    const out = [];
+    for (const mp of mesesPeriodo) {
+      const mes = Number(mp.mesNumero ?? mp.mes);
+      const anio = Number(mp.anio);
+      if (!mes || !anio) continue;
+      const key = `${anio}-${mes}`;
+      const real = map.get(key);
+      out.push({
+        mes,
+        anio,
+        nombreMes: real?.nombreMes || mp.nombre || nombreMes(mes),
+        fechaVencimiento: real?.fechaVencimiento || null,
+        // Preferir valores reales si existen; si no, usar defaults del backend de meses del período
+        montoUSD: Number(real?.montoUSD ?? (mp.montoPagoUSD ?? mp.montoPago ?? 0)),
+        montoVES: Number(real?.montoVES ?? (mp.montoPagoVES ?? 0)),
+        moraTasa: Number(real?.moraTasa ?? 0),
+        recaudadoUSD: Number(real?.recaudadoUSD ?? 0),
+        pendientes: Number(real?.pendientes ?? 0),
+      });
+    }
+
+    // Ordenar por año y mes
+    return out.sort((a, b) => (a.anio - b.anio) || (a.mes - b.mes));
+  }, [porMes, mesesPeriodo]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
@@ -80,10 +163,10 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
             {/* Formulario de configuración embebido */}
             <ConfiguracionPagosPanel embedded />
 
-            {/* Advertencia si faltan meses como Nov/Dic */}
+            {/* Advertencia si faltan meses del período configurado */}
             {!loading && !error && faltantes.length > 0 && (
               <div className="p-3 rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-800 text-sm">
-                Aviso: No se encontraron mensualidades para los meses: {faltantes.map(m => m === 11 ? 'Noviembre' : m === 12 ? 'Diciembre' : m).join(', ')}. 
+                Aviso: No se encontraron mensualidades para los meses: {faltantes.map((m) => nombreMes(m)).join(', ')}.
                 Esto puede indicar que aún no se han generado para el año escolar seleccionado.
               </div>
             )}
@@ -93,11 +176,11 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
               <div className="p-6 text-center text-slate-500">Cargando...</div>
             ) : error ? (
               <div className="p-6 text-center text-red-600">{error}</div>
-            ) : porMes.length === 0 ? (
+            ) : tarjetas.length === 0 ? (
               <div className="p-6 text-center text-slate-500">No hay mensualidades configuradas</div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {porMes.map((m, idx) => (
+                {tarjetas.map((m, idx) => (
                   <div key={idx} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
                     <div className="flex items-start justify-between">
                       <div>

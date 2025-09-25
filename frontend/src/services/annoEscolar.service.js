@@ -11,6 +11,10 @@ export const annoEscolarService = {
     const { data } = await api.get(`${base}/actual`);
     return data;
   },
+  getMeses: async (id) => {
+    const { data } = await api.get(`${base}/${id}/meses`);
+    return data;
+  },
   create: async (payload) => {
     const { data } = await api.post(`${base}`, payload);
     return data;

@@ -13,6 +13,8 @@ const {
 } = require('../models');
 const db = require('../models');
 
+const { ConfiguracionPagos } = require('../models');
+
 const pagoEstudiantesController = {
   // Obtener todos los pagos
   getAllPagos: async (req, res) => {
@@ -56,8 +58,29 @@ const pagoEstudiantesController = {
         ],
         order: [['createdAt', 'DESC']]
       });
+
+      // Obtener tasa implícita USD->VES desde configuración activa
+      const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
+      const usdBase = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+      const vesBase = Number(cfg?.precioMensualidadVES ?? 0);
+      const tasa = usdBase > 0 ? (vesBase / usdBase) : null;
+
+      const mapWithVES = (pago) => {
+        const plain = pago.toJSON();
+        if (tasa && isFinite(tasa)) {
+          const monto = Number(plain.monto ?? 0);
+          const mora = Number(plain.montoMora ?? 0);
+          const desc = Number(plain.descuento ?? 0);
+          const total = Number(plain.montoTotal ?? (monto + mora - desc));
+          const to2 = (n) => Math.round(n * 100) / 100;
+          plain.montoVES = to2(monto * tasa);
+          plain.montoMoraVES = to2(mora * tasa);
+          plain.montoTotalVES = to2(total * tasa);
+        }
+        return plain;
+      };
       
-      res.status(200).json(pagos);
+      res.status(200).json(pagos.map(mapWithVES));
     } catch (err) {
       console.error('Error al obtener pagos:', err);
       res.status(500).json({ 
@@ -106,7 +129,24 @@ const pagoEstudiantesController = {
         return res.status(404).json({ message: 'Pago no encontrado' });
       }
       
-      res.status(200).json(pago);
+      // Adjuntar campos VES derivados igual que en getAllPagos
+      const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
+      const usdBase = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+      const vesBase = Number(cfg?.precioMensualidadVES ?? 0);
+      const tasa = usdBase > 0 ? (vesBase / usdBase) : null;
+      const plain = pago.toJSON();
+      if (tasa && isFinite(tasa)) {
+        const monto = Number(plain.monto ?? 0);
+        const mora = Number(plain.montoMora ?? 0);
+        const desc = Number(plain.descuento ?? 0);
+        const total = Number(plain.montoTotal ?? (monto + mora - desc));
+        const to2 = (n) => Math.round(n * 100) / 100;
+        plain.montoVES = to2(monto * tasa);
+        plain.montoMoraVES = to2(mora * tasa);
+        plain.montoTotalVES = to2(total * tasa);
+      }
+      
+      res.status(200).json(plain);
     } catch (err) {
       console.error('Error al obtener pago:', err);
       res.status(500).json({ 
@@ -465,7 +505,27 @@ const pagoEstudiantesController = {
         order: [['createdAt', 'DESC']]
       });
       
-      res.status(200).json(pagos);
+      // Adjuntar campos VES derivados igual que en getAllPagos
+      const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
+      const usdBase = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+      const vesBase = Number(cfg?.precioMensualidadVES ?? 0);
+      const tasa = usdBase > 0 ? (vesBase / usdBase) : null;
+      const to2 = (n) => Math.round(n * 100) / 100;
+      const pagosWithVES = pagos.map(p => {
+        const plain = p.toJSON();
+        if (tasa && isFinite(tasa)) {
+          const monto = Number(plain.monto ?? 0);
+          const mora = Number(plain.montoMora ?? 0);
+          const desc = Number(plain.descuento ?? 0);
+          const total = Number(plain.montoTotal ?? (monto + mora - desc));
+          plain.montoVES = to2(monto * tasa);
+          plain.montoMoraVES = to2(mora * tasa);
+          plain.montoTotalVES = to2(total * tasa);
+        }
+        return plain;
+      });
+      
+      res.status(200).json(pagosWithVES);
     } catch (err) {
       console.error('Error al obtener pagos del estudiante:', err);
       res.status(500).json({ 
@@ -512,7 +572,27 @@ const pagoEstudiantesController = {
         order: [['createdAt', 'DESC']]
       });
       
-      res.status(200).json(pagos);
+      // Adjuntar campos VES derivados igual que en getAllPagos
+      const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
+      const usdBase = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+      const vesBase = Number(cfg?.precioMensualidadVES ?? 0);
+      const tasa = usdBase > 0 ? (vesBase / usdBase) : null;
+      const to2 = (n) => Math.round(n * 100) / 100;
+      const pagosWithVES = pagos.map(p => {
+        const plain = p.toJSON();
+        if (tasa && isFinite(tasa)) {
+          const monto = Number(plain.monto ?? 0);
+          const mora = Number(plain.montoMora ?? 0);
+          const desc = Number(plain.descuento ?? 0);
+          const total = Number(plain.montoTotal ?? (monto + mora - desc));
+          plain.montoVES = to2(monto * tasa);
+          plain.montoMoraVES = to2(mora * tasa);
+          plain.montoTotalVES = to2(total * tasa);
+        }
+        return plain;
+      });
+      
+      res.status(200).json(pagosWithVES);
     } catch (err) {
       console.error('Error al obtener pagos del representante:', err);
       res.status(500).json({ 

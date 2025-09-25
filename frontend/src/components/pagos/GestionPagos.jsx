@@ -8,8 +8,10 @@ import {
   FaCalendarAlt, 
   FaInfoCircle,
   FaEye,
-  FaSpinner
+  FaSpinner,
+  FaCopy
 } from 'react-icons/fa';
+import { pagosConfigService } from '../../services/pagosConfigService';
 
 const GestionPagos = ({ 
   userType, // 'representante' o 'estudiante'
@@ -25,6 +27,56 @@ const GestionPagos = ({
   const [mesesPago, setMesesPago] = useState([]);
   const [pagosPorMes, setPagosPorMes] = useState({});
   
+  // Estado y helpers para visor de comprobantes
+  const [comprobanteModal, setComprobanteModal] = useState({ visible: false, pago: null });
+  const abrirComprobante = (pago) => {
+    if (!pago?.urlComprobante) return;
+    setComprobanteModal({ visible: true, pago });
+  };
+  const cerrarComprobante = () => setComprobanteModal({ visible: false, pago: null });
+  const getComprobanteUrl = (url) => `${import.meta.env.VITE_API_URL}${url}`;
+  const esPdf = (pago) => {
+    const tipo = pago?.tipoArchivo || '';
+    const url = pago?.urlComprobante || '';
+    return tipo.includes('pdf') || url.toLowerCase().endsWith('.pdf');
+  };
+
+  // Instrucciones de pago (desde configuración global)
+  const [cfgPagos, setCfgPagos] = useState(null);
+  const copiarInstrucciones = async () => {
+    const texto = cfgPagos?.instruccionesPago || '';
+    if (!texto) return;
+    try {
+      await navigator.clipboard.writeText(texto);
+      setSuccess('Instrucciones copiadas al portapapeles');
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (_) {}
+  };
+
+  // Helpers para conteo por mes considerando múltiples estudiantes
+  const obtenerUltimoPagoPorEstudiante = (mesNombre) => {
+    const pagosMes = pagosPorMes[mesNombre] || [];
+    const ultimoPorEstudiante = {};
+    pagosMes.forEach((p) => {
+      const key = String(p.estudianteID);
+      const previo = ultimoPorEstudiante[key];
+      if (!previo || new Date(p.createdAt) > new Date(previo.createdAt)) {
+        ultimoPorEstudiante[key] = p;
+      }
+    });
+    return ultimoPorEstudiante;
+  };
+
+  const obtenerConteosMes = (mes) => {
+    const totalEstudiantes = userType === 'representante' ? (estudiantes?.length || 0) : 1;
+    const ultimoPorEstudiante = obtenerUltimoPagoPorEstudiante(mes.nombre);
+    const listaUltimos = Object.values(ultimoPorEstudiante);
+    const aprobados = listaUltimos.filter((p) => p.estado === 'pagado').length;
+    const enRevision = listaUltimos.filter((p) => p.estado === 'pendiente').length;
+    const restantes = Math.max(0, totalEstudiantes - (aprobados + enRevision));
+    return { totalEstudiantes, aprobados, enRevision, restantes };
+  };
+
   // Estados para el modal de pago
   const [showModal, setShowModal] = useState(false);
   const [selectedMes, setSelectedMes] = useState(null);
@@ -69,7 +121,6 @@ const GestionPagos = ({
           `${import.meta.env.VITE_API_URL}/anno-escolar/${annoEscolar.id}/meses`,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
-        
         if (mesesResponse.data && Array.isArray(mesesResponse.data)) {
           setMesesPago(mesesResponse.data);
         }
@@ -100,8 +151,14 @@ const GestionPagos = ({
             }
           });
         }
-        
         setPagosPorMes(pagosMes);
+
+        // 3. Obtener configuración global de pagos (para instrucciones)
+        try {
+          const cfg = await pagosConfigService.getConfig();
+          setCfgPagos(cfg);
+        } catch (_) {}
+
         setLoading(false);
       } catch (err) {
         console.error('Error al cargar datos de pagos:', err);
@@ -301,9 +358,9 @@ const GestionPagos = ({
               <div className="mt-2 flex justify-between">
                 <span>{selectedMes.nombre} {annoEscolar?.periodo}</span>
                 <span className="font-semibold">
-                  <div>${Number(selectedMes.montoPago).toFixed(2)}</div>
+                  <div>${Number(selectedMes.montoPagoUSD ?? selectedMes.montoPago).toFixed(2)}</div>
                   <div className="text-xs text-slate-500">
-                    Bs. {(Number(selectedMes.montoPago) * 35).toFixed(2)}
+                    Bs. {Number(selectedMes.montoPagoVES ?? 0).toFixed(2)}
                   </div>
                 </span>
               </div>
@@ -328,6 +385,32 @@ const GestionPagos = ({
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+            
+            {userType === 'representante' && formPago.estudianteID && (
+              <div className="mt-3 text-sm text-slate-600">
+                {(() => {
+                  const ultimos = obtenerUltimoPagoPorEstudiante(selectedMes?.nombre || formPago.mesPago);
+                  const info = ultimos?.[String(formPago.estudianteID)];
+                  if (!info) return <span>No hay pagos registrados aún para este estudiante en este mes.</span>;
+                  return (
+                    <div className="flex items-center gap-3">
+                      <span>
+                        Último pago: <b>{info.estado}</b> · {new Date(info.createdAt).toLocaleString()}
+                      </span>
+                      {info.urlComprobante && (
+                        <button
+                          type="button"
+                          onClick={() => abrirComprobante(info)}
+                          className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                        >
+                          <FaEye /> Ver comprobante
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
             
@@ -374,9 +457,9 @@ const GestionPagos = ({
                 
                 <div>Monto:</div>
                 <div className="font-medium">
-                  ${Number(selectedMes.montoPago).toFixed(2)}
+                  ${Number(selectedMes.montoPagoUSD ?? selectedMes.montoPago).toFixed(2)}
                   <div className="text-xs text-slate-500">
-                    Bs. {(Number(selectedMes.montoPago) * 35).toFixed(2)}
+                    Bs. {Number(selectedMes.montoPagoVES ?? 0).toFixed(2)}
                   </div>
                 </div>
                 
@@ -560,8 +643,8 @@ const GestionPagos = ({
               <p className="text-sm text-gray-500">{annoEscolar?.periodo}</p>
             </div>
             <div className="text-right">
-              <div className="font-bold">${Number(mes.montoPago).toFixed(2)}</div>
-              <div className="text-xs text-gray-500">Bs. {(Number(mes.montoPago) * 35).toFixed(2)}</div>
+              <div className="font-bold">${Number(mes.montoPagoUSD ?? mes.montoPago).toFixed(2)}</div>
+              <div className="text-xs text-gray-500">Bs. {Number(mes.montoPagoVES ?? 0).toFixed(2)}</div>
             </div>
           </div>
           
@@ -581,20 +664,41 @@ const GestionPagos = ({
           
           {ultimoPago && ultimoPago.urlComprobante && (
             <div className="mt-2 text-xs flex items-center text-blue-600">
-              <FaEye className="mr-1" />
-              <a 
-                href={ultimoPago.urlComprobante} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:underline"
+              <button
+                type="button"
+                onClick={() => abrirComprobante(ultimoPago)}
+                className="inline-flex items-center hover:underline"
+                title="Ver comprobante"
               >
-                Ver comprobante
-              </a>
+                <FaEye className="mr-1" /> Ver comprobante
+              </button>
             </div>
           )}
         </div>
         
         <div className="bg-white p-3 border-t">
+          {/* Conteos por mes para representantes con múltiples estudiantes */}
+          {userType === 'representante' && (
+            <div className="mb-3 grid grid-cols-3 gap-2 text-xs">
+              {(() => {
+                const { aprobados, enRevision, restantes } = obtenerConteosMes(mes);
+                return (
+                  <>
+                    <div className="bg-green-50 text-green-700 px-2 py-1 rounded">
+                      Aprobados: <span className="font-semibold">{aprobados}</span>
+                    </div>
+                    <div className="bg-yellow-50 text-yellow-700 px-2 py-1 rounded">
+                      En revisión: <span className="font-semibold">{enRevision}</span>
+                    </div>
+                    <div className="bg-gray-50 text-gray-700 px-2 py-1 rounded">
+                      Restantes: <span className="font-semibold">{restantes}</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
           <button
             onClick={() => iniciarPago(mes)}
             disabled={estadoPago === 'pagado'}
@@ -612,7 +716,29 @@ const GestionPagos = ({
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="relative bg-white rounded-lg shadow-sm p-6">
+      {error && (
+        <div className="absolute top-3 right-3 z-50">
+          <div className="flex items-center gap-2 bg-red-600 text-white text-sm px-3 py-2 rounded shadow-lg">
+            <FaInfoCircle className="opacity-90" />
+            <span>{error}</span>
+            <button onClick={() => setError('')} className="ml-2 text-white/80 hover:text-white">
+              <FaTimes />
+            </button>
+          </div>
+        </div>
+      )}
+      {success && (
+        <div className="absolute top-3 right-3 z-50">
+          <div className="flex items-center gap-2 bg-green-600 text-white text-sm px-3 py-2 rounded shadow-lg">
+            <FaCheck className="opacity-90" />
+            <span>{success}</span>
+            <button onClick={() => setSuccess('')} className="ml-2 text-white/80 hover:text-white">
+              <FaTimes />
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold flex items-center">
           <FaMoneyBillWave className="mr-2 text-blue-600" />
@@ -633,6 +759,25 @@ const GestionPagos = ({
         </div>
       ) : (
         <>
+          {/* Instrucciones de pago (si existen) */}
+          {cfgPagos?.instruccionesPago && (
+            <div className="mb-6 p-4 border rounded-lg bg-pink-50">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h4 className="font-semibold text-pink-800 mb-1">Instrucciones de pago</h4>
+                  <p className="text-sm text-pink-900 whitespace-pre-line">{cfgPagos.instruccionesPago}</p>
+                </div>
+                <button
+                  onClick={copiarInstrucciones}
+                  className="shrink-0 inline-flex items-center gap-2 px-3 py-2 text-sm rounded bg-pink-600 text-white hover:bg-pink-700"
+                  title="Copiar instrucciones"
+                >
+                  <FaCopy /> Copiar
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="mb-4">
             <p className="text-gray-600">
               Seleccione el mes que desea pagar. Los pagos serán revisados por administración antes de ser aprobados.
@@ -653,6 +798,68 @@ const GestionPagos = ({
             </div>
           )}
         </>
+      )}
+
+      {/* Modal visor de comprobante */}
+      {comprobanteModal.visible && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b flex justify-between items-center">
+              <h3 className="font-semibold">
+                Comprobante - {comprobanteModal.pago?.mesPago}
+              </h3>
+              <button
+                onClick={cerrarComprobante}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <div className="p-4 overflow-auto flex-1">
+              {esPdf(comprobanteModal.pago) ? (
+                <iframe
+                  src={getComprobanteUrl(comprobanteModal.pago.urlComprobante)}
+                  className="w-full h-[70vh] border rounded"
+                  title="Comprobante PDF"
+                />
+              ) : (
+                <img
+                  src={getComprobanteUrl(comprobanteModal.pago.urlComprobante)}
+                  alt="Comprobante"
+                  className="max-h-[70vh] mx-auto object-contain"
+                />
+              )}
+            </div>
+            <div className="px-4 py-3 border-t flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                {comprobanteModal.pago?.nombreArchivo} · {comprobanteModal.pago?.tipoArchivo} · {Math.round((comprobanteModal.pago?.tamanoArchivo || 0) / 1024)} KB
+              </div>
+              <div className="flex gap-2">
+                <a
+                  href={getComprobanteUrl(comprobanteModal.pago.urlComprobante)}
+                  download
+                  className="px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                >
+                  Descargar
+                </a>
+                <a
+                  href={getComprobanteUrl(comprobanteModal.pago.urlComprobante)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                >
+                  Abrir en pestaña
+                </a>
+                <button
+                  onClick={cerrarComprobante}
+                  className="px-3 py-2 bg-gray-200 text-gray-800 text-sm rounded hover:bg-gray-300"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       
       {/* Modal de pago */}

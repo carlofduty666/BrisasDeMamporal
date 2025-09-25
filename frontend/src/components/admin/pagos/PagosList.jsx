@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FaPlus, FaSearch, FaEye, FaFileInvoiceDollar, FaSave, FaTimes, FaCheck } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaEye, FaFileInvoiceDollar, FaSave, FaTimes, FaCheck, FaInfoCircle } from 'react-icons/fa';
 import axios from 'axios';
 import HeaderStats from './components/HeaderStats';
 import MonthlySummaryModal from './components/MonthlySummaryModal.jsx';
@@ -903,9 +903,47 @@ const PagosList = () => {
     window.addEventListener('open-config-pagos', open);
     return () => window.removeEventListener('open-config-pagos', open);
   }, []);
+
+  // Auto-cierre de toasts
+  useEffect(() => {
+    if (success) {
+      const t = setTimeout(() => setSuccess(''), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [success]);
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
   
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 relative">
+      {/* Toasts absolute */}
+      {error && (
+        <div className="absolute top-3 right-3 z-50">
+          <div className="flex items-center gap-2 bg-red-600 text-white text-sm px-3 py-2 rounded shadow-lg">
+            <FaInfoCircle className="opacity-90" />
+            <span>{error}</span>
+            <button onClick={() => setError('')} className="ml-2 text-white/80 hover:text-white">
+              <FaTimes />
+            </button>
+          </div>
+        </div>
+      )}
+      {success && (
+        <div className="absolute top-3 right-3 z-50">
+          <div className="flex items-center gap-2 bg-green-600 text-white text-sm px-3 py-2 rounded shadow-lg">
+            <FaCheck className="opacity-90" />
+            <span>{success}</span>
+            <button onClick={() => setSuccess('')} className="ml-2 text-white/80 hover:text-white">
+              <FaTimes />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Modales */}
       <MonthlySummaryModal
         open={showMonthlySummary}
@@ -990,111 +1028,80 @@ const PagosList = () => {
         </button>
       </div>
         
-        {/* Mensajes de error o éxito */}
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
+      {/* Panel de filtros expandible */}
+      {showFilters && (
+        <div className="mb-6 bg-white border border-slate-200 rounded-xl p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Estado de pago</label>
+              <select
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                value={estadoFilter}
+                onChange={(e) => setEstadoFilter(e.target.value)}
+              >
+                <option value="todos">Todos</option>
+                <option value="pendientes">Pendientes</option>
+                <option value="reportados">Reportados sin revisar</option>
+                <option value="aprobados">Aprobados</option>
+              </select>
             </div>
-          </div>
-        )}
-        
-        {success && (
-          <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-green-700">{success}</p>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Grado</label>
+              <select
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                value={gradoFilter}
+                onChange={(e) => setGradoFilter(e.target.value)}
+              >
+                <option value="todos">Todos</option>
+                {[...new Set(pagos.map(p => (p.inscripciones||p.inscripcion)?.grado?.nombre_grado).filter(Boolean))].map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
             </div>
-          </div>
-        )}
-        
-        {/* Panel de filtros expandible */}
-        {showFilters && (
-          <div className="mb-6 bg-white border border-slate-200 rounded-xl p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Sección</label>
+              <select
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                value={seccionFilter}
+                onChange={(e) => setSeccionFilter(e.target.value)}
+              >
+                <option value="todos">Todas</option>
+                {[...new Set(pagos.map(p => (p.inscripciones||p.inscripcion)?.Secciones?.nombre_seccion).filter(Boolean))].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Estado de pago</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Mes</label>
                 <select
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                  value={estadoFilter}
-                  onChange={(e) => setEstadoFilter(e.target.value)}
+                  value={mesFilter}
+                  onChange={(e) => setMesFilter(e.target.value)}
                 >
                   <option value="todos">Todos</option>
-                  <option value="pendientes">Pendientes</option>
-                  <option value="reportados">Reportados sin revisar</option>
-                  <option value="aprobados">Aprobados</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Grado</label>
-                <select
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                  value={gradoFilter}
-                  onChange={(e) => setGradoFilter(e.target.value)}
-                >
-                  <option value="todos">Todos</option>
-                  {[...new Set(pagos.map(p => (p.inscripciones||p.inscripcion)?.grado?.nombre_grado).filter(Boolean))].map(g => (
-                    <option key={g} value={g}>{g}</option>
+                  {MONTHS.map((m, idx) => (
+                    <option key={idx+1} value={idx+1}>{m}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Sección</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Año</label>
                 <select
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                  value={seccionFilter}
-                  onChange={(e) => setSeccionFilter(e.target.value)}
+                  value={anioFilter}
+                  onChange={(e) => setAnioFilter(e.target.value)}
                 >
-                  <option value="todos">Todas</option>
-                  {[...new Set(pagos.map(p => (p.inscripciones||p.inscripcion)?.Secciones?.nombre_seccion).filter(Boolean))].map(s => (
-                    <option key={s} value={s}>{s}</option>
+                  <option value="todos">Todos</option>
+                  {[...new Set(pagos.map(p => p.anio || (p.fechaPago ? new Date(p.fechaPago).getFullYear() : null)).filter(Boolean))].map(a => (
+                    <option key={a} value={a}>{a}</option>
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Mes</label>
-                  <select
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                    value={mesFilter}
-                    onChange={(e) => setMesFilter(e.target.value)}
-                  >
-                    <option value="todos">Todos</option>
-                    {MONTHS.map((m, idx) => (
-                      <option key={idx+1} value={idx+1}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Año</label>
-                  <select
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                    value={anioFilter}
-                    onChange={(e) => setAnioFilter(e.target.value)}
-                  >
-                    <option value="todos">Todos</option>
-                    {[...new Set(pagos.map(p => p.anio || (p.fechaPago ? new Date(p.fechaPago).getFullYear() : null)).filter(Boolean))].map(a => (
-                      <option key={a} value={a}>{a}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* Contenido principal */}
         {loading ? (

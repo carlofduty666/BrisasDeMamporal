@@ -20,8 +20,20 @@ export const pagosConfigService = {
   },
 
   async actualizarPrecios(payload) {
-    // Política B: aplicar precio retroactivo a mensualidades pendientes/reportadas
+    // Aplicar precio a mensualidades pendientes/reportadas del mes indicado
     const { data } = await axios.post(`${API}/configuracion-pagos/actualizar-precios`, payload, authHeaders());
+    return data;
+  },
+
+  async congelarMes(payload) {
+    // Congelar snapshot del mes (precios y parámetros de mora)
+    const { data } = await axios.post(`${API}/configuracion-pagos/congelar-mes`, payload, authHeaders());
+    return data;
+  },
+
+  async recalcularMoras(payload) {
+    // Recalcular moras de mensualidades pendientes (opcionalmente por annoEscolarID)
+    const { data } = await axios.post(`${API}/mensualidades/recalcular-moras`, payload, authHeaders());
     return data;
   },
 };

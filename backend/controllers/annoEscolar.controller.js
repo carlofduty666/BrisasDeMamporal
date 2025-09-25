@@ -46,7 +46,7 @@ const annoEscolarController = {
     }
   },
 
-  // Obtener meses del año escolar (Sep-Jun) con precio vigente de ConfiguracionPagos
+  // Obtener meses del año escolar usando rango configurable (startMonth/endMonth) y precios vigentes
   getMesesAnnoEscolar: async (req, res) => {
     try {
       const { id } = req.params;
@@ -61,31 +61,35 @@ const annoEscolarController = {
       const precioUSD = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
       const precioVES = Number(cfg?.precioMensualidadVES ?? 0);
 
-      // Meses típicos del ciclo escolar: Sep(9) .. Jun(6)
-      const mesesNombres = [
-        { mes: 9, nombre: 'Septiembre' },
-        { mes: 10, nombre: 'Octubre' },
-        { mes: 11, nombre: 'Noviembre' },
-        { mes: 12, nombre: 'Diciembre' },
-        { mes: 1, nombre: 'Enero' },
-        { mes: 2, nombre: 'Febrero' },
-        { mes: 3, nombre: 'Marzo' },
-        { mes: 4, nombre: 'Abril' },
-        { mes: 5, nombre: 'Mayo' },
-        { mes: 6, nombre: 'Junio' }
-      ];
-
       // Derivar años desde el periodo YYYY-YYYY
       const [yStartStr, yEndStr] = String(anno.periodo).split('-');
       const yStart = Number(yStartStr);
       const yEnd = Number(yEndStr);
 
-      const meses = mesesNombres.map((m, idx) => {
-        const anio = m.mes >= 9 ? yStart : yEnd; // Sep-Dic usan yStart; Ene-Jun usan yEnd
+      // Determinar rango de meses
+      const start = Number(anno.startMonth ?? 9);
+      const end = Number(anno.endMonth ?? 7);
+
+      // Helper para nombre del mes
+      const nombres = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+      // Construir secuencia inclusiva desde start hasta end con wrap
+      const mesesSecuencia = [];
+      let m = start;
+      while (true) {
+        mesesSecuencia.push(m);
+        if (m === end) break;
+        m = m === 12 ? 1 : m + 1;
+      }
+
+      // Mapear meses a objetos con año correcto
+      const wrap = end < start; // típico ciclo que cruza de dic->ene
+      const meses = mesesSecuencia.map((mesNumero, idx) => {
+        const anio = wrap ? (mesNumero >= start ? yStart : yEnd) : yStart;
         return {
           id: `${id}-${idx+1}`,
-          nombre: m.nombre,
-          mesNumero: m.mes,
+          nombre: nombres[mesNumero],
+          mesNumero,
           anio,
           montoPago: precioUSD,
           montoPagoUSD: precioUSD,
@@ -103,7 +107,7 @@ const annoEscolarController = {
   // Crear nuevo año escolar
   createAnnoEscolar: async (req, res) => {
     try {
-      const { periodo, activo } = req.body;
+      const { periodo, activo, startMonth, endMonth } = req.body;
       
       // Validar formato del período (YYYY-YYYY)
       if (!periodo || !periodo.match(/^\d{4}-\d{4}$/)) {
@@ -119,6 +123,13 @@ const annoEscolarController = {
           message: 'El año inicial debe ser menor que el año final' 
         });
       }
+
+      // Validar meses si vienen informados (1..12). Si no, usar defaults.
+      const sMonth = startMonth != null ? Number(startMonth) : 9;
+      const eMonth = endMonth != null ? Number(endMonth) : 7;
+      if (sMonth < 1 || sMonth > 12 || eMonth < 1 || eMonth > 12) {
+        return res.status(400).json({ message: 'startMonth y endMonth deben estar entre 1 y 12' });
+      }
       
       // Verificar si ya existe un período con el mismo nombre
       const existingPeriodo = await AnnoEscolar.findOne({ where: { periodo } });
@@ -131,7 +142,7 @@ const annoEscolarController = {
         await AnnoEscolar.update({ activo: false }, { where: {} });
       }
       
-      const newAnnoEscolar = await AnnoEscolar.create({ periodo, activo });
+      const newAnnoEscolar = await AnnoEscolar.create({ periodo, activo, startMonth: sMonth, endMonth: eMonth });
       res.status(201).json(newAnnoEscolar);
     } catch (err) {
       console.error(err);
@@ -143,7 +154,7 @@ const annoEscolarController = {
   updateAnnoEscolar: async (req, res) => {
     try {
       const { id } = req.params;
-      const { periodo, activo } = req.body;
+      const { periodo, activo, startMonth, endMonth } = req.body;
       
       // Buscar el año escolar
       const annoEscolar = await AnnoEscolar.findByPk(id);
@@ -176,6 +187,25 @@ const annoEscolarController = {
           return res.status(400).json({ message: 'Ya existe otro año escolar con este período' });
         }
       }
+
+      // Validar meses si vienen informados (1..12)
+      const updateData = {};
+      if (periodo != null) updateData.periodo = periodo;
+      if (typeof activo === 'boolean') updateData.activo = activo;
+      if (startMonth != null) {
+        const sMonth = Number(startMonth);
+        if (sMonth < 1 || sMonth > 12) {
+          return res.status(400).json({ message: 'startMonth debe estar entre 1 y 12' });
+        }
+        updateData.startMonth = sMonth;
+      }
+      if (endMonth != null) {
+        const eMonth = Number(endMonth);
+        if (eMonth < 1 || eMonth > 12) {
+          return res.status(400).json({ message: 'endMonth debe estar entre 1 y 12' });
+        }
+        updateData.endMonth = eMonth;
+      }
       
       // Si se está activando este año escolar, desactivamos los demás
       if (activo) {
@@ -183,7 +213,7 @@ const annoEscolarController = {
       }
       
       // Actualizar el año escolar
-      await annoEscolar.update({ periodo, activo });
+      await annoEscolar.update(updateData);
       
       res.json(annoEscolar);
     } catch (err) {

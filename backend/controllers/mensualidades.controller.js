@@ -176,18 +176,41 @@ const mensualidadesController = {
       const config = await ConfiguracionPagos.findOne({ where: { activo: true } });
       const precio = Number(config?.precioMensualidad || 0);
 
-      // Generar 10 meses: Sep(9) a Jul(7) del período actual
+      // Generar meses del período según startMonth/endMonth del año escolar
       const periodo = await AnnoEscolar.findByPk(annoEscolarID);
       const [anioInicioStr, anioFinStr] = (periodo?.periodo || '').split('-');
       const anioInicio = Number(anioInicioStr) || new Date().getFullYear();
       const anioFin = Number(anioFinStr) || anioInicio + 1;
 
-      const mesesCiclo = [9,10,11,12,1,2,3,4,5,6,7]; // 11 si incluyes julio
+      const startMonth = Number(periodo?.startMonth ?? 9);
+      const endMonth = Number(periodo?.endMonth ?? 7);
+
+      // Construir lista de meses respetando posible wrap del año (ej: 9..12,1..7)
+      let mesesCiclo = [];
+      if (
+        Number.isFinite(startMonth) && Number.isFinite(endMonth) &&
+        startMonth >= 1 && startMonth <= 12 && endMonth >= 1 && endMonth <= 12
+      ) {
+        let m = startMonth;
+        mesesCiclo.push(m);
+        // Incluir endMonth; detener como máximo tras 12 iteraciones para evitar bucles
+        while (m !== endMonth && mesesCiclo.length < 12) {
+          m = (m % 12) + 1;
+          mesesCiclo.push(m);
+        }
+      } else {
+        // Fallback a ciclo tradicional Sep–Jul
+        mesesCiclo = [9,10,11,12,1,2,3,4,5,6,7];
+      }
+
       const fechaCorte = Number((await ConfiguracionPagos.findOne({ where: { activo: true } }))?.fechaCorte || 5);
 
+      const wraps = startMonth > endMonth; // true cuando el rango cruza el año
       const created = [];
       for (const mes of mesesCiclo) {
-        const anio = mes >= 9 ? anioInicio : anioFin;
+        // Si hay wrap, meses >= startMonth pertenecen a anioInicio; el resto a anioFin.
+        // Si no hay wrap (start <= end), los meses del rango pertenecen a anioInicio.
+        const anio = wraps ? (mes >= startMonth ? anioInicio : anioFin) : anioInicio;
         const fechaVencimiento = new Date(anio, mes - 1, Math.min(fechaCorte, 28)); // evitar meses más cortos
 
         const [item] = await Mensualidades.findOrCreate({

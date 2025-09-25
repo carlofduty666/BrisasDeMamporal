@@ -101,6 +101,24 @@ module.exports = (sequelize, DataTypes) => {
     activo: {
       type: DataTypes.BOOLEAN,
       defaultValue: false
+    },
+    startMonth: {
+      type: DataTypes.TINYINT,
+      allowNull: true,
+      defaultValue: 9, // Septiembre
+      validate: {
+        min: 1,
+        max: 12
+      }
+    },
+    endMonth: {
+      type: DataTypes.TINYINT,
+      allowNull: true,
+      defaultValue: 7, // Julio
+      validate: {
+        min: 1,
+        max: 12
+      }
     }
   }, {
     sequelize,
