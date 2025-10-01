@@ -41,7 +41,8 @@ export default function ReportarPagoModal({ mensualidad, open, onClose, onReport
 
   if (!open) return null;
 
-  const total = (Number(mensualidad.montoBase || 0) + Number(mensualidad.moraAcumulada || 0)).toFixed(2);
+  const totalUSD = (Number(mensualidad.montoBase || 0) + Number(mensualidad.moraAcumulada || 0)).toFixed(2);
+  const totalVES = Number(mensualidad.totalVES ?? (Number(mensualidad.precioVES ?? 0) + Number(mensualidad.moraAcumuladaVES ?? 0))).toFixed(2);
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -52,7 +53,7 @@ export default function ReportarPagoModal({ mensualidad, open, onClose, onReport
         </div>
         <div className="space-y-3">
           <div className="text-sm text-slate-700">
-            Mensualidad: <b>{mensualidad.mesNombre || `Mes ${mensualidad.mes}`} {mensualidad.anio || ''}</b> · Total: <b>${total}</b>
+            Mensualidad: <b>{mensualidad.mesNombre || `Mes ${mensualidad.mes}`} {mensualidad.anio || ''}</b> · Total: <b>${totalUSD}</b> · <span className="text-slate-600">Bs. {totalVES}</span>
           </div>
           <div>
             <label className="block text-sm text-slate-600">Método de pago</label>

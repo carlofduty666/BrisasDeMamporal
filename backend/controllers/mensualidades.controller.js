@@ -103,6 +103,13 @@ const mensualidadesController = {
           const fechaCorte = Number(cfg?.fechaCorte || 5);
           fechaVencimiento = new Date(anio, (obj.mes ?? 1) - 1, Math.min(fechaCorte, 28));
         }
+        // Calcular mora y total en VES (mora fija segun porcentajeMora si hoy > fechaVencimiento)
+        const venc = fechaVencimiento ? new Date(fechaVencimiento) : null;
+        const vencido = venc ? (new Date() > venc) : false;
+        const baseVES = Number(cfg?.precioMensualidadVES ?? 0);
+        const tasa = Number(cfg?.porcentajeMora ?? 0) / 100;
+        const moraAcumuladaVES = vencido ? (baseVES * tasa) : 0;
+        const totalVES = baseVES + moraAcumuladaVES;
         return {
           ...obj,
           periodo,
@@ -110,7 +117,9 @@ const mensualidadesController = {
           fechaVencimiento,
           mesNombre: nombres[(obj.mes ?? 1) - 1],
           precioUSD: Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0),
-          precioVES: Number(cfg?.precioMensualidadVES ?? 0)
+          precioVES: baseVES,
+          moraAcumuladaVES,
+          totalVES
         };
       });
       res.json(withNames);
@@ -145,6 +154,13 @@ const mensualidadesController = {
           const fechaCorte = Number(cfg?.fechaCorte || 5);
           fechaVencimiento = new Date(anio, (obj.mes ?? 1) - 1, Math.min(fechaCorte, 28));
         }
+        // Calcular mora y total en VES (mora fija segun porcentajeMora si hoy > fechaVencimiento)
+        const venc = fechaVencimiento ? new Date(fechaVencimiento) : null;
+        const vencido = venc ? (new Date() > venc) : false;
+        const baseVES = Number(cfg?.precioMensualidadVES ?? 0);
+        const tasa = Number(cfg?.porcentajeMora ?? 0) / 100;
+        const moraAcumuladaVES = vencido ? (baseVES * tasa) : 0;
+        const totalVES = baseVES + moraAcumuladaVES;
         return {
           ...obj,
           periodo,
@@ -152,7 +168,9 @@ const mensualidadesController = {
           fechaVencimiento,
           mesNombre: nombres[(obj.mes ?? 1) - 1],
           precioUSD: Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0),
-          precioVES: Number(cfg?.precioMensualidadVES ?? 0)
+          precioVES: baseVES,
+          moraAcumuladaVES,
+          totalVES
         };
       });
       res.json(withNames);
@@ -310,17 +328,17 @@ const mensualidadesController = {
     try {
       const config = await ConfiguracionPagos.findOne({ where: { activo: true } });
       if (!config) return res.status(400).json({ message: 'Configuración de pagos no encontrada' });
-      const { porcentajeMora, topeMoraPorcentaje, fechaCorte, diasGracia } = config;
+      const { porcentajeMora, fechaCorte } = config;
       const hoy = new Date();
 
       const pendientes = await Mensualidades.findAll({ where: { estado: 'pendiente' } });
       let actualizados = 0;
 
       for (const m of pendientes) {
-        // Calcular/asegurar fechaVencimiento correcta
+        // Calcular/asegurar fechaVencimiento correcta (último día de pago = fechaCorte)
         let fv = m.fechaVencimiento ? new Date(m.fechaVencimiento) : null;
         if (!fv) {
-          // Derivar año correcto. Si m.anio existe úsalo; si no, evita errores para meses futuros: intenta derivar de annoEscolar.periodo
+          // Derivar año correcto. Si m.anio existe úsalo; si no, intenta derivar de annoEscolar.periodo
           let anio = m.anio;
           if (!anio && m.annoEscolarID) {
             const ae = await AnnoEscolar.findByPk(m.annoEscolarID);
@@ -330,24 +348,19 @@ const mensualidadesController = {
             }
           }
           if (!anio) {
-            // Si no es posible determinar el año, no calcule mora (evita moras en meses aún no activos)
             await m.update({ moraAcumulada: 0 });
             actualizados++;
             continue;
           }
           fv = new Date(anio, (m.mes ?? (hoy.getMonth()+1)) - 1, Math.min(Number(fechaCorte) || 5, 28));
         }
-        // Aplicar días de gracia
-        const fvConGracia = new Date(fv.getTime());
-        fvConGracia.setDate(fvConGracia.getDate() + Number(diasGracia || 0));
 
+        // Mora fija: se aplica una sola vez a partir del día siguiente al fechaCorte
         let mora = 0;
-        if (hoy > fvConGracia) {
-          const ms = hoy - fvConGracia;
-          const dias = Math.floor(ms / (1000*60*60*24));
+        if (hoy > fv) {
           const base = Number(m.montoBase || 0);
-          const tasaDiaria = Number(porcentajeMora || 0) / 100;
-          mora = Math.min(base * tasaDiaria * dias, base * (Number(topeMoraPorcentaje || 0)/100));
+          const tasaFija = Number(porcentajeMora || 0) / 100; // porcentaje fijo
+          mora = base * tasaFija;
         }
         await m.update({ moraAcumulada: mora, fechaVencimiento: fv });
         actualizados++;

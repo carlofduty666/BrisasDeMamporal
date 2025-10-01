@@ -25,6 +25,15 @@ module.exports = (sequelize, DataTypes) => {
     pagoID: { type: DataTypes.INTEGER, allowNull: true },
     fechaVencimiento: { type: DataTypes.DATE, allowNull: true },
     observacionAdmin: { type: DataTypes.TEXT, allowNull: true },
+    // Nuevos campos para snapshot de precios y mora aplicados
+    precioAplicadoUSD: { type: DataTypes.DECIMAL(10,2), allowNull: true },
+    precioAplicadoVES: { type: DataTypes.DECIMAL(14,2), allowNull: true },
+    tasaAplicadaMes: { type: DataTypes.DECIMAL(12,6), allowNull: true },
+    porcentajeMoraAplicado: { type: DataTypes.DECIMAL(5,2), allowNull: true },
+    fechaCorteAplicada: { type: DataTypes.INTEGER, allowNull: true },
+    configCongelada: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    moraAplicadaVES: { type: DataTypes.DECIMAL(14,2), allowNull: true },
+    moraAplicadaUSD: { type: DataTypes.DECIMAL(10,2), allowNull: true },
   }, {
     sequelize,
     modelName: 'Mensualidades',

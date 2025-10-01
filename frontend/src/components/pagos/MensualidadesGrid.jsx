@@ -50,10 +50,12 @@ export default function MensualidadesGrid({ estudianteID }) {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-slate-800 font-semibold">{m.mesNombre || `Mes ${m.mes}`} {m.anio}</div>
-                <div className="text-sm text-slate-500">Monto: ${Number(m.montoBase ?? m.monto ?? 0).toFixed(2)}</div>
-                {m.moraAcumulada > 0 && (
-                  <div className="text-sm text-slate-500">Mora: ${Number(m.moraAcumulada).toFixed(2)}</div>
+                <div className="text-sm text-slate-500">Monto USD: ${Number(m.montoBase ?? m.monto ?? 0).toFixed(2)}</div>
+                <div className="text-sm text-slate-500">Monto Bs.: {Number(m.precioVES ?? 0).toFixed(2)}</div>
+                {Number(m.moraAcumuladaVES ?? 0) > 0 && (
+                  <div className="text-sm text-slate-500">Mora Bs.: {Number(m.moraAcumuladaVES).toFixed(2)}</div>
                 )}
+                <div className="text-sm text-slate-700 font-medium">Total Bs.: {Number(m.totalVES ?? (Number(m.precioVES ?? 0) + Number(m.moraAcumuladaVES ?? 0))).toFixed(2)}</div>
               </div>
               <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${chip(m.estado)}`}>{m.estado}</span>
             </div>

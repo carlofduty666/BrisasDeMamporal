@@ -36,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'retroactivo'
     },
-    porcentajeMora: { // tasa diaria en %
+    porcentajeMora: { // porcentaje fijo en % (no diario)
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
       defaultValue: 5.00
@@ -44,12 +44,7 @@ module.exports = (sequelize, DataTypes) => {
     diasGracia: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 5
-    },
-    topeMoraPorcentaje: { // 0-100
-      type: DataTypes.DECIMAL(5,2),
-      allowNull: false,
-      defaultValue: 20.00
+      defaultValue: 0
     },
     descuentoProntoPago: {
       type: DataTypes.DECIMAL(5, 2),

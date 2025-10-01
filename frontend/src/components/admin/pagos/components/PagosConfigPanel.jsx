@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { pagosConfigService } from '../../../../services/pagosConfigService';
 import { annoEscolarService } from '../../../../services/annoEscolar.service';
 
-export default function ConfiguracionPagosPanel({ embedded = false }) {
+export default function ConfiguracionPagosPanel({ embedded = false, onSaved }) {
   const [config, setConfig] = useState({
-    precioMensualidad: '', // base
+    precioMensualidadUSD: '',
+    precioMensualidadVES: '',
+    porcentajeMora: 5, // porcentaje fijo (%)
+    fechaCorte: 15, // día del mes para aplicar mora a partir del siguiente día
     politicaPrecio: 'retroactivo', // 'retroactivo' | 'congelado'
-    mora: { tipo: 'porcentaje-diario', tasa: 0.001, diasGracia: 0, topePorcentaje: 0.2 },
     vigenciaDesde: '',
     instruccionesPago: '', // texto libre para cuentas/indicaciones
   });
@@ -17,7 +19,6 @@ export default function ConfiguracionPagosPanel({ embedded = false }) {
   const [annoEscolarTarget, setAnnoEscolarTarget] = useState(null);
   const [mesesPeriodo, setMesesPeriodo] = useState([]); // [{mes, nombre, anio}]
   const [seleccion, setSeleccion] = useState(null); // {mes, anio}
-  const [actualizarParametrosMora, setActualizarParametrosMora] = useState(true);
   // NOTA: Este componente no renderiza tarjetas por mes. Esa UI vive en PagosConfigModal.
 
   const nombreMes = (m) => (
@@ -110,6 +111,8 @@ export default function ConfiguracionPagosPanel({ embedded = false }) {
       await pagosConfigService.updateConfig(config);
       await load();
       setMode('view');
+      // Avisar al contenedor que se guardó exitosamente (para refrescar tarjetas y mostrar toast)
+      onSaved?.();
     } finally {
       setSaving(false);
     }
@@ -170,32 +173,28 @@ export default function ConfiguracionPagosPanel({ embedded = false }) {
           </div>
 
           <div>
-            <label className="block text-sm text-slate-600">Mora (tasa diaria en %)</label>
+            <label className="block text-sm text-slate-600">Mora (%)</label>
             <input
               type="number"
               className="mt-1 w-full border rounded px-3 py-2"
-              value={(config.mora?.tasa ?? 0) * 100}
-              onChange={(e) => setConfig((p) => ({ ...p, mora: { ...p.mora, tasa: Number(e.target.value) / 100 } }))}
+              name="porcentajeMora"
+              value={config.porcentajeMora ?? 0}
+              onChange={(e) => setConfig((p) => ({ ...p, porcentajeMora: Number(e.target.value) }))}
               step="0.01"
+              disabled={mode==='view' || saving}
             />
             <div className="mt-2 grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs text-slate-500">Días de gracia</label>
+                <label className="block text-xs text-slate-500">Fecha de corte (día del mes)</label>
                 <input
                   type="number"
+                  min={1}
+                  max={28}
                   className="mt-1 w-full border rounded px-3 py-2"
-                  value={config.mora?.diasGracia ?? 0}
-                  onChange={(e) => setConfig((p) => ({ ...p, mora: { ...p.mora, diasGracia: Number(e.target.value) } }))}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500">Tope (% del monto)</label>
-                <input
-                  type="number"
-                  className="mt-1 w-full border rounded px-3 py-2"
-                  value={(config.mora?.topePorcentaje ?? 0) * 100}
-                  onChange={(e) => setConfig((p) => ({ ...p, mora: { ...p.mora, topePorcentaje: Number(e.target.value) / 100 } }))}
-                  step="0.1"
+                  name="fechaCorte"
+                  value={config.fechaCorte ?? 15}
+                  onChange={(e) => setConfig((p) => ({ ...p, fechaCorte: Number(e.target.value) }))}
+                  disabled={mode==='view' || saving}
                 />
               </div>
             </div>
@@ -213,88 +212,15 @@ export default function ConfiguracionPagosPanel({ embedded = false }) {
             />
           </div>
         </div>
-        {/* Acciones por mes */}
-        <div className="mt-8 border-t pt-6">
-          <h4 className="text-sm font-semibold text-slate-700 mb-4">Acciones por mes</h4>
-
-          {/* Info del período objetivo */}
-          {annoEscolarTarget?.periodo ? (
-            <p className="text-xs text-slate-500 mb-3">Período objetivo: <span className="font-medium text-slate-700">{annoEscolarTarget.periodo}</span></p>
-          ) : (
-            <p className="text-xs text-amber-600 mb-3">No se encontró un año escolar que coincida con la vigencia. Active o cree el período correspondiente para habilitar las acciones.</p>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm text-slate-600">Mes</label>
-              <select
-                className="mt-1 w-full border rounded px-3 py-2"
-                value={seleccion ? `${seleccion.mes}-${seleccion.anio}` : ''}
-                onChange={(e) => {
-                  const [mStr, aStr] = e.target.value.split('-');
-                  setSeleccion({ mes: Number(mStr), anio: Number(aStr) });
-                }}
-                disabled={accionesDeshabilitadas}
-              >
-                {mesesPeriodo.map((m) => (
-                  <option key={`${m.mes}-${m.anio}`} value={`${m.mes}-${m.anio}`}>
-                    {m.nombre} {m.anio}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-slate-600">Año</label>
-              <input
-                type="text"
-                className="mt-1 w-full border rounded px-3 py-2 bg-slate-50"
-                value={seleccion?.anio ?? ''}
-                disabled
-              />
-            </div>
-            <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-                <input type="checkbox" className="h-4 w-4" checked={actualizarParametrosMora} onChange={(e)=>setActualizarParametrosMora(e.target.checked)} />
-                <span>Actualizar parámetros de mora</span>
-              </label>
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              onClick={async()=>{
-                if (accionesDeshabilitadas) return;
-                await pagosConfigService.congelarMes({ mes: seleccion.mes, anio: seleccion.anio, annoEscolarID: annoEscolarTarget.id });
-                alert('Mes congelado: snapshot aplicado');
-              }}
-              className="px-4 py-2 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              disabled={accionesDeshabilitadas}
-            >
-              Congelar configuración del mes
-            </button>
-            <button
-              onClick={async()=>{
-                if (accionesDeshabilitadas) return;
-                await pagosConfigService.actualizarPrecios({ mes: seleccion.mes, anio: seleccion.anio, annoEscolarID: annoEscolarTarget.id, actualizarParametrosMora });
-                alert('Mes actualizado: precios ' + (actualizarParametrosMora ? 'y parámetros de mora sincronizados' : 'actualizados'));
-              }}
-              className="px-4 py-2 rounded border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50"
-              disabled={accionesDeshabilitadas}
-            >
-              Actualizar mes actual
-            </button>
-            <button
-              onClick={async()=>{
-                if (accionesDeshabilitadas) return;
-                await pagosConfigService.recalcularMoras({ annoEscolarID: annoEscolarTarget.id });
-                alert('Moras recalculadas');
-              }}
-              className="px-4 py-2 rounded border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50"
-              disabled={accionesDeshabilitadas}
-            >
-              Recalcular moras
-            </button>
-          </div>
+        {/* Nota explicativa sobre la mora */}
+        <div className="mt-4 p-3 rounded bg-slate-50 text-xs text-slate-600 border border-slate-200">
+          <p>
+            Nota: La mora no es diaria. Se aplica una sola vez como porcentaje fijo sobre el monto base (VES)
+            a partir del día siguiente a la fecha de corte. La fecha de vencimiento por mensualidad se deriva
+            como: día = min(fecha de corte, 28). Ejemplo: si la fecha de corte es 15, la mora aplica desde el día 16.
+          </p>
         </div>
+        {/* Información: Al guardar, la configuración se aplicará automáticamente a mensualidades no confirmadas (pasadas y futuras). */}
 
         <div className="mt-8 flex justify-end">
           <button onClick={toggleOrSave} disabled={saving} className="px-4 py-2 rounded bg-pink-600 text-white hover:bg-pink-700">

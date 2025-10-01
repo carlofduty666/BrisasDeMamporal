@@ -29,8 +29,7 @@ const configuracionPagosController = {
         ...cfg.toJSON(),
         mora: {
           tasa: Number(cfg.porcentajeMora ?? 0) / 100,
-          diasGracia: Number(cfg.diasGracia ?? 0),
-          topePorcentaje: Number(cfg.topeMoraPorcentaje ?? 0) / 100,
+          diasGracia: Number(cfg.diasGracia ?? 0)
         }
       } : {};
       res.json(normalized);
@@ -40,17 +39,16 @@ const configuracionPagosController = {
     }
   },
 
-  // Guardar configuración global sin efectos colaterales sobre mensualidades
+  // Guardar configuración global y aplicar automáticamente a mensualidades no confirmadas
   async updateConfig(req, res) {
     try {
       const payload = req.body || {};
       const update = { ...payload };
 
-      // Transformar estructura anidada de mora { tasa 0-1, diasGracia, topePorcentaje 0-1 }
+      // Transformar estructura anidada de mora { tasa 0-1, diasGracia }
       if (payload.mora) {
         update.porcentajeMora = Number(payload.mora.tasa ?? 0) * 100;
         update.diasGracia = Number(payload.mora.diasGracia ?? 0);
-        update.topeMoraPorcentaje = Number(payload.mora.topePorcentaje ?? 0) * 100;
         delete update.mora;
       }
 
@@ -58,8 +56,58 @@ const configuracionPagosController = {
       if (!cfg) cfg = await ConfiguracionPagos.create({ ...update, activo: true });
       else await cfg.update(update);
 
-      // No tocar mensualidades aquí. Para aplicar al mes, usar actualizar-precios.
-      res.json({ message: 'Configuración actualizada', config: cfg });
+      // Aplicar automáticamente a mensualidades pendientes o reportadas
+      const precioUSD = Number(cfg.precioMensualidadUSD ?? cfg.precioMensualidad ?? 0);
+      const precioVES = Number(cfg.precioMensualidadVES ?? 0);
+      const tasaMes = precioUSD > 0 ? (precioVES / precioUSD) : null;
+      const fechaCorte = Number(cfg.fechaCorte || 5);
+      const porcentajeMoraPct = Number(cfg.porcentajeMora || 0); // %
+      const porcentajeMora = porcentajeMoraPct / 100; // 0..1
+      const hoy = new Date();
+
+      const pendientes = await Mensualidades.findAll({ where: { estado: ['pendiente','reportado'] } });
+      let afectados = 0;
+      for (const m of pendientes) {
+        // Derivar año si falta
+        let anio = m.anio;
+        if (!anio && m.annoEscolarID) {
+          const ae = await AnnoEscolar.findByPk(m.annoEscolarID);
+          if (ae?.periodo) {
+            const [ini, fin] = String(ae.periodo).split('-').map(Number);
+            anio = (m.mes >= 9) ? ini : fin;
+          }
+        }
+
+        // Derivar fecha de vencimiento
+        let fv = null;
+        if (anio) fv = new Date(anio, (m.mes ?? (hoy.getMonth() + 1)) - 1, Math.min(fechaCorte, 28));
+
+        // Mora fija: se calcula sobre VES una sola vez si hoy > fecha de vencimiento
+        let moraVES = 0;
+        let moraUSD = 0;
+        if (fv && hoy > fv) {
+          moraVES = precioVES * porcentajeMora;
+          moraUSD = tasaMes ? (moraVES / tasaMes) : 0;
+        }
+
+        await m.update({
+          // Compatibilidad histórica
+          montoBase: precioUSD,
+          fechaVencimiento: fv,
+          moraAcumulada: moraUSD,
+          // Snapshot aplicado
+          precioAplicadoUSD: precioUSD,
+          precioAplicadoVES: precioVES,
+          tasaAplicadaMes: tasaMes,
+          porcentajeMoraAplicado: porcentajeMoraPct,
+          fechaCorteAplicada: fechaCorte,
+          moraAplicadaVES: moraVES,
+          moraAplicadaUSD: moraUSD,
+        });
+        afectados++;
+      }
+
+      res.json({ message: 'Configuración actualizada y aplicada a mensualidades no confirmadas', config: cfg, afectados });
     } catch (e) {
       console.error(e);
       res.status(500).json({ message: 'Error al actualizar configuración' });
@@ -108,8 +156,6 @@ const configuracionPagosController = {
             data.tasaAplicadaMes = tasa;
           }
           data.porcentajeMoraAplicado = cfg.porcentajeMora;
-          data.diasGraciaAplicados = cfg.diasGracia;
-          data.topeMoraAplicado = cfg.topeMoraPorcentaje;
           data.fechaCorteAplicada = cfg.fechaCorte;
         }
         await m.update(data);
@@ -157,8 +203,6 @@ const configuracionPagosController = {
           precioAplicadoVES: tasa ? precioVES : null,
           tasaAplicadaMes: tasa,
           porcentajeMoraAplicado: cfg.porcentajeMora,
-          diasGraciaAplicados: cfg.diasGracia,
-          topeMoraAplicado: cfg.topeMoraPorcentaje,
           fechaCorteAplicada: cfg.fechaCorte,
         };
 

@@ -357,11 +357,13 @@ const GestionPagos = ({
               <h3 className="font-medium">Mensualidad seleccionada</h3>
               <div className="mt-2 flex justify-between">
                 <span>{selectedMes.nombre} {annoEscolar?.periodo}</span>
-                <span className="font-semibold">
+                <span className="font-semibold text-right">
                   <div>${Number(selectedMes.montoPagoUSD ?? selectedMes.montoPago).toFixed(2)}</div>
-                  <div className="text-xs text-slate-500">
-                    Bs. {Number(selectedMes.montoPagoVES ?? 0).toFixed(2)}
-                  </div>
+                  <div className="text-xs text-slate-500">Bs. {Number(selectedMes.montoPagoVES ?? 0).toFixed(2)}</div>
+                  {Number(selectedMes.moraAcumuladaVES ?? 0) > 0 && (
+                    <div className="text-xs text-slate-500">Mora Bs.: {Number(selectedMes.moraAcumuladaVES).toFixed(2)}</div>
+                  )}
+                  <div className="text-xs text-slate-700">Total Bs.: {Number(selectedMes.totalVES ?? (Number(selectedMes.montoPagoVES ?? 0) + Number(selectedMes.moraAcumuladaVES ?? 0))).toFixed(2)}</div>
                 </span>
               </div>
             </div>

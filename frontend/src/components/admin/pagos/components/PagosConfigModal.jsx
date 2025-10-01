@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { mensualidadesService } from '../../../../services/mensualidadesService';
 import { annoEscolarService } from '../../../../services/annoEscolar.service';
 import ConfiguracionPagosPanel from './PagosConfigPanel.jsx';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function formatCurrency(value) {
   const n = parseFloat(value || 0);
@@ -32,22 +34,21 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
     ensureAnnoEscolar();
   }, [targetAnnoEscolarID]);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        if (!targetAnnoEscolarID) { setItems([]); return; }
-        setLoading(true);
-        const data = await mensualidadesService.list({ annoEscolarID: targetAnnoEscolarID });
-        setItems(Array.isArray(data) ? data : []);
-        setLoading(false);
-      } catch (e) {
-        console.error(e);
-        setError('Error al cargar mensualidades');
-        setLoading(false);
-      }
-    };
-    load();
+  const loadMensualidades = useCallback(async () => {
+    try {
+      if (!targetAnnoEscolarID) { setItems([]); return; }
+      setLoading(true);
+      const data = await mensualidadesService.list({ annoEscolarID: targetAnnoEscolarID });
+      setItems(Array.isArray(data) ? data : []);
+      setLoading(false);
+    } catch (e) {
+      console.error(e);
+      setError('Error al cargar mensualidades');
+      setLoading(false);
+    }
   }, [targetAnnoEscolarID]);
+
+  useEffect(() => { loadMensualidades(); }, [loadMensualidades]);
 
   useEffect(() => {
     const onKeyDown = (e) => { if (e.key === 'Escape') onClose?.(); };
@@ -62,14 +63,24 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
       const anio = m.anio;
       if (!mes || !anio) continue;
       const key = `${anio}-${mes}`;
-      if (!map.has(key)) map.set(key, { mes, anio, nombreMes: m.mesNombre || m.mes, fechaVencimiento: m.fechaVencimiento, montoUSD: 0, montoVES: 0, moraTasa: m.moraTasa || m.mora?.tasa || 0, recaudadoUSD: 0, pendientes: 0 });
+      if (!map.has(key)) map.set(key, { mes, anio, nombreMes: m.mesNombre || m.mes, fechaVencimiento: m.fechaVencimiento, montoUSD: 0, montoVES: 0, moraTasa: 0, recaudadoUSD: 0, pendientes: 0 });
       const agg = map.get(key);
-      const base = Number(m.montoBase ?? m.monto ?? 0);
-      const mora = Number(m.moraAcumulada ?? 0);
-      const total = base + mora;
-      if (m.estado === 'pagado') agg.recaudadoUSD += total;
+
+      const baseUSD = Number(m.precioAplicadoUSD ?? m.montoBase ?? m.precioUSD ?? 0);
+      const baseVES = Number(m.precioAplicadoVES ?? m.precioVES ?? 0);
+      const moraUSD = Number(m.moraAplicadaUSD ?? m.moraAcumulada ?? 0);
+      const moraVES = Number(m.moraAplicadaVES ?? m.moraAcumuladaVES ?? 0);
+      const totalUSD = baseUSD + moraUSD;
+
+      if (m.estado === 'pagado') agg.recaudadoUSD += totalUSD;
       if (m.estado !== 'pagado') agg.pendientes += 1;
-      agg.montoUSD = Math.max(agg.montoUSD, base);
+
+      agg.montoUSD = Math.max(agg.montoUSD, baseUSD);
+      agg.montoVES = Math.max(agg.montoVES, baseVES);
+
+      const tasa0a1 = m.porcentajeMoraAplicado != null ? (Number(m.porcentajeMoraAplicado) / 100) : (m.mora?.tasa ?? 0);
+      agg.moraTasa = Math.max(agg.moraTasa, Number(tasa0a1 || 0));
+
       if (!agg.fechaVencimiento && m.fechaVencimiento) agg.fechaVencimiento = m.fechaVencimiento;
     }
     return Array.from(map.values()).sort((a, b) => (a.anio - b.anio) || (a.mes - b.mes));
@@ -148,9 +159,9 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
       <div className="min-h-full flex items-center justify-center p-4">
-        <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full max-w-5xl bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
-          <div className="bg-gradient-to-r from-pink-700 to-pink-800 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="bg-gradient-to-r from-pink-700 to-pink-800 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-10 rounded-t-2xl">
             <div>
               <h3 className="text-lg font-semibold">Configuración de Pagos</h3>
               <p className="text-xs text-pink-100/90">Resumen por mes y edición de parámetros</p>
@@ -161,7 +172,7 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
           {/* Body */}
           <div className="px-6 py-5 overflow-y-auto flex-1 space-y-6">
             {/* Formulario de configuración embebido */}
-            <ConfiguracionPagosPanel embedded />
+            <ConfiguracionPagosPanel embedded onSaved={() => { toast.success('Configuración guardada y aplicada', { position: 'top-center' }); loadMensualidades(); }} />
 
             {/* Advertencia si faltan meses del período configurado */}
             {!loading && !error && faltantes.length > 0 && (
@@ -205,7 +216,7 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
                       </div>
                       <div>
                         <div className="text-xs text-slate-500">Mora</div>
-                        <div className="font-semibold text-slate-800">{Number((m.moraTasa ?? 0) * 100).toFixed(2)}% día</div>
+                        <div className="font-semibold text-slate-800">{Number((m.moraTasa ?? 0) * 100).toFixed(2)}% fijo</div>
                       </div>
                       <div>
                         <div className="text-xs text-slate-500">Recaudado</div>
@@ -237,6 +248,8 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
           </div>
         </div>
       </div>
+      {/* Toast fijo en viewport del modal */}
+      <ToastContainer position="top-center" autoClose={2500} newestOnTop closeOnClick pauseOnHover theme="colored" />
     </div>
   );
 }

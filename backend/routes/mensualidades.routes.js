@@ -3,10 +3,10 @@ const router = express.Router();
 const auth = require('../middleware/auth.middleware');
 const ctrl = require('../controllers/mensualidades.controller');
 
-router.get('/mensualidades', auth.verifyToken, ctrl.list);
+router.get('/mensualidades', ctrl.list);
 router.get('/mensualidades/resumen-mensual', auth.verifyToken, ctrl.resumenMensual);
 router.get('/mensualidades/resumen-anual', auth.verifyToken, ctrl.resumenAnual);
-router.get('/mensualidades/estudiante/:estudianteID', auth.verifyToken, ctrl.listByEstudiante);
+router.get('/mensualidades/estudiante/:estudianteID', ctrl.listByEstudiante);
 router.post('/mensualidades/inscripcion/:inscripcionID/generar', auth.verifyToken, ctrl.generarPorInscripcion);
 router.patch('/mensualidades/:id/aprobar', auth.verifyToken, ctrl.aprobar);
 router.patch('/mensualidades/:id/rechazar', auth.verifyToken, ctrl.rechazar);
