@@ -6,7 +6,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 // Rutas para obtener pagos
 router.get('/pagos', authMiddleware.verifyToken, pagoEstudiantesController.getAllPagos);
 router.get('/pagos/:id', authMiddleware.verifyToken, pagoEstudiantesController.getPagoById);
-router.get('/pagos/estudiante/:estudianteID', authMiddleware.verifyToken, pagoEstudiantesController.getPagosByEstudiante);
+router.get('/pagos/estudiante/:estudianteID', pagoEstudiantesController.getPagosByEstudiante);
 router.get('/pagos/representante/:representanteID', authMiddleware.verifyToken, pagoEstudiantesController.getPagosByRepresentante);
 router.get('/pagos/:id/comprobante', authMiddleware.verifyToken, pagoEstudiantesController.getComprobante);
 router.get('/pagos/estudiante/:estudianteID/estado', authMiddleware.verifyToken, pagoEstudiantesController.verificarEstadoPagosEstudiante);

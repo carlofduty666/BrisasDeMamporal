@@ -98,28 +98,68 @@ const mensualidadesController = {
           const [ini, fin] = String(periodo).split('-').map(Number);
           anio = (obj.mes >= 9) ? ini : fin;
         }
-        let fechaVencimiento = obj.fechaVencimiento;
-        if (!fechaVencimiento && anio) {
+
+        // Determinar fecha de vencimiento usando fechaCorteAplicada como día del mes
+        let dueDate = null;
+        if (anio && obj.mes && obj.fechaCorteAplicada) {
+          // fechaCorteAplicada es un entero (1–31)
+          const day = Math.min(Number(obj.fechaCorteAplicada), 28);
+          dueDate = new Date(anio, (obj.mes ?? 1) - 1, day);
+        } else if (obj.fechaVencimiento) {
+          dueDate = new Date(obj.fechaVencimiento);
+        } else if (anio && obj.mes) {
           const fechaCorte = Number(cfg?.fechaCorte || 5);
-          fechaVencimiento = new Date(anio, (obj.mes ?? 1) - 1, Math.min(fechaCorte, 28));
+          dueDate = new Date(anio, (obj.mes ?? 1) - 1, Math.min(fechaCorte, 28));
         }
-        // Calcular mora y total en VES (mora fija segun porcentajeMora si hoy > fechaVencimiento)
-        const venc = fechaVencimiento ? new Date(fechaVencimiento) : null;
-        const vencido = venc ? (new Date() > venc) : false;
-        const baseVES = Number(cfg?.precioMensualidadVES ?? 0);
-        const tasa = Number(cfg?.porcentajeMora ?? 0) / 100;
-        const moraAcumuladaVES = vencido ? (baseVES * tasa) : 0;
-        const totalVES = baseVES + moraAcumuladaVES;
+
+        const today = new Date();
+        const vencido = dueDate ? (today > dueDate) : false;
+
+        // Snapshots primero para bases
+        const snapBaseUSD = Number(obj.precioAplicadoUSD ?? 0);
+        const snapBaseVES = Number(obj.precioAplicadoVES ?? 0);
+        const baseUSD = snapBaseUSD || Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+        const baseVES = snapBaseVES || Number(cfg?.precioMensualidadVES ?? 0);
+
+        // Snapshots para mora si existen; si no, fallback calculado (solo si vencido)
+        const snapMoraUSD = Number(obj.moraAplicadaUSD ?? 0);
+        const snapMoraVES = Number(obj.moraAplicadaVES ?? 0);
+        const porcentajeMoraAplicado = Number(obj.porcentajeMoraAplicado ?? cfg?.porcentajeMora ?? 0) / 100;
+        const moraOriginalVES = (snapMoraVES || snapMoraUSD)
+          ? snapMoraVES
+          : (vencido ? (baseVES * porcentajeMoraAplicado) : 0);
+        const totalOriginalVES = baseVES + (moraOriginalVES || 0);
+
+        // Montos "actualizados al día" con configuración actual
+        const updatedBaseUSD = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+        const updatedBaseVES = Number(cfg?.precioMensualidadVES ?? 0);
+        const porcentajeMoraActual = Number(cfg?.porcentajeMora ?? 0) / 100;
+        const updatedMoraVES = vencido ? (updatedBaseVES * porcentajeMoraActual) : 0;
+        const updatedMoraUSD = vencido ? (updatedBaseUSD * porcentajeMoraActual) : 0;
+        const updatedTotalVES = updatedBaseVES + updatedMoraVES;
+        const updatedTotalUSD = updatedBaseUSD + updatedMoraUSD;
+
+        const hasUpdatedPrice = (updatedBaseVES !== baseVES) || (Math.round(updatedTotalVES * 100) !== Math.round(totalOriginalVES * 100));
+
         return {
           ...obj,
           periodo,
           anio,
-          fechaVencimiento,
+          fechaVencimiento: dueDate,
           mesNombre: nombres[(obj.mes ?? 1) - 1],
-          precioUSD: Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0),
+          // Campos congelados/snapshot
+          precioUSD: baseUSD,
           precioVES: baseVES,
-          moraAcumuladaVES,
-          totalVES
+          moraAcumuladaVES: moraOriginalVES,
+          totalVES: totalOriginalVES,
+          // Campos actualizados al día
+          updatedBaseUSD,
+          updatedBaseVES,
+          updatedMoraUSD,
+          updatedMoraVES,
+          updatedTotalUSD,
+          updatedTotalVES,
+          hasUpdatedPrice
         };
       });
       res.json(withNames);
@@ -149,28 +189,68 @@ const mensualidadesController = {
           const [ini, fin] = String(periodo).split('-').map(Number);
           anio = (obj.mes >= 9) ? ini : fin;
         }
-        let fechaVencimiento = obj.fechaVencimiento;
-        if (!fechaVencimiento && anio) {
+
+        // Determinar fecha de vencimiento usando fechaCorteAplicada como día del mes
+        let dueDate = null;
+        if (anio && obj.mes && obj.fechaCorteAplicada) {
+          // fechaCorteAplicada es un entero (1–31)
+          const day = Math.min(Number(obj.fechaCorteAplicada), 28);
+          dueDate = new Date(anio, (obj.mes ?? 1) - 1, day);
+        } else if (obj.fechaVencimiento) {
+          dueDate = new Date(obj.fechaVencimiento);
+        } else if (anio && obj.mes) {
           const fechaCorte = Number(cfg?.fechaCorte || 5);
-          fechaVencimiento = new Date(anio, (obj.mes ?? 1) - 1, Math.min(fechaCorte, 28));
+          dueDate = new Date(anio, (obj.mes ?? 1) - 1, Math.min(fechaCorte, 28));
         }
-        // Calcular mora y total en VES (mora fija segun porcentajeMora si hoy > fechaVencimiento)
-        const venc = fechaVencimiento ? new Date(fechaVencimiento) : null;
-        const vencido = venc ? (new Date() > venc) : false;
-        const baseVES = Number(cfg?.precioMensualidadVES ?? 0);
-        const tasa = Number(cfg?.porcentajeMora ?? 0) / 100;
-        const moraAcumuladaVES = vencido ? (baseVES * tasa) : 0;
-        const totalVES = baseVES + moraAcumuladaVES;
+
+        const today = new Date();
+        const vencido = dueDate ? (today > dueDate) : false;
+
+        // Snapshots primero para bases
+        const snapBaseUSD = Number(obj.precioAplicadoUSD ?? 0);
+        const snapBaseVES = Number(obj.precioAplicadoVES ?? 0);
+        const baseUSD = snapBaseUSD || Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+        const baseVES = snapBaseVES || Number(cfg?.precioMensualidadVES ?? 0);
+
+        // Snapshots para mora si existen; si no, fallback calculado (solo si vencido)
+        const snapMoraUSD = Number(obj.moraAplicadaUSD ?? 0);
+        const snapMoraVES = Number(obj.moraAplicadaVES ?? 0);
+        const porcentajeMoraAplicado = Number(obj.porcentajeMoraAplicado ?? cfg?.porcentajeMora ?? 0) / 100;
+        const moraOriginalVES = (snapMoraVES || snapMoraUSD)
+          ? snapMoraVES
+          : (vencido ? (baseVES * porcentajeMoraAplicado) : 0);
+        const totalOriginalVES = baseVES + (moraOriginalVES || 0);
+
+        // Montos "actualizados al día" (siempre calculados con config actual)
+        const updatedBaseUSD = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+        const updatedBaseVES = Number(cfg?.precioMensualidadVES ?? 0);
+        const porcentajeMoraActual = Number(cfg?.porcentajeMora ?? 0) / 100;
+        const updatedMoraVES = vencido ? (updatedBaseVES * porcentajeMoraActual) : 0;
+        const updatedMoraUSD = vencido ? (updatedBaseUSD * porcentajeMoraActual) : 0;
+        const updatedTotalVES = updatedBaseVES + updatedMoraVES;
+        const updatedTotalUSD = updatedBaseUSD + updatedMoraUSD;
+
+        const hasUpdatedPrice = (updatedBaseVES !== baseVES) || (Math.round(updatedTotalVES * 100) !== Math.round(totalOriginalVES * 100));
+
         return {
           ...obj,
           periodo,
           anio,
-          fechaVencimiento,
+          fechaVencimiento: dueDate,
           mesNombre: nombres[(obj.mes ?? 1) - 1],
-          precioUSD: Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0),
+          // Campos legacy (congelados): preferir snapshots
+          precioUSD: baseUSD,
           precioVES: baseVES,
-          moraAcumuladaVES,
-          totalVES
+          moraAcumuladaVES: moraOriginalVES,
+          totalVES: totalOriginalVES,
+          // Campos nuevos: montos actualizados al día
+          updatedBaseUSD,
+          updatedBaseVES,
+          updatedMoraUSD,
+          updatedMoraVES,
+          updatedTotalUSD,
+          updatedTotalVES,
+          hasUpdatedPrice
         };
       });
       res.json(withNames);
@@ -244,7 +324,15 @@ const mensualidadesController = {
             montoBase: precio,
             moraAcumulada: 0,
             estado: 'pendiente',
-            fechaVencimiento
+            fechaVencimiento,
+            // Snapshots congelados al momento de creación
+            precioAplicadoUSD: Number(config?.precioMensualidadUSD ?? config?.precioMensualidad ?? 0),
+            precioAplicadoVES: Number(config?.precioMensualidadVES ?? 0),
+            porcentajeMoraAplicado: Number(config?.porcentajeMora ?? 0),
+            fechaCorteAplicada: Number(fechaCorte),
+            configCongelada: true,
+            moraAplicadaUSD: 0,
+            moraAplicadaVES: 0
           }
         });
         created.push(item);

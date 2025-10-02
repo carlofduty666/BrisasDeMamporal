@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { mensualidadesService } from '../../../../services/mensualidadesService';
 import { annoEscolarService } from '../../../../services/annoEscolar.service';
+import { pagosConfigService } from '../../../../services/pagosConfigService';
 import ConfiguracionPagosPanel from './PagosConfigPanel.jsx';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -15,6 +16,7 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
+  const [configPagos, setConfigPagos] = useState(null);
 
   // Resolver año escolar objetivo: usar prop si viene; si no, consultar el activo
   const [targetAnnoEscolarID, setTargetAnnoEscolarID] = useState(annoEscolarID || null);
@@ -38,7 +40,11 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
     try {
       if (!targetAnnoEscolarID) { setItems([]); return; }
       setLoading(true);
-      const data = await mensualidadesService.list({ annoEscolarID: targetAnnoEscolarID });
+      const [data, cfg] = await Promise.all([
+        mensualidadesService.list({ annoEscolarID: targetAnnoEscolarID }),
+        pagosConfigService.getConfig().catch(() => null)
+      ]);
+      setConfigPagos(cfg);
       setItems(Array.isArray(data) ? data : []);
       setLoading(false);
     } catch (e) {
@@ -63,28 +69,59 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
       const anio = m.anio;
       if (!mes || !anio) continue;
       const key = `${anio}-${mes}`;
-      if (!map.has(key)) map.set(key, { mes, anio, nombreMes: m.mesNombre || m.mes, fechaVencimiento: m.fechaVencimiento, montoUSD: 0, montoVES: 0, moraTasa: 0, recaudadoUSD: 0, pendientes: 0 });
+      if (!map.has(key)) {
+        map.set(key, {
+          mes,
+          anio,
+          nombreMes: m.mesNombre || m.mes,
+          fechaVencimiento: m.fechaVencimiento || null,
+          baseUSDOriginal: 0,
+          baseVESOriginal: 0,
+          updatedBaseUSD: 0,
+          updatedBaseVES: 0,
+          hasUpdatedPrice: false,
+          moraTasa: 0,
+          recaudadoUSD: 0,
+          pendientes: 0,
+        });
+      }
       const agg = map.get(key);
 
-      const baseUSD = Number(m.precioAplicadoUSD ?? m.montoBase ?? m.precioUSD ?? 0);
-      const baseVES = Number(m.precioAplicadoVES ?? m.precioVES ?? 0);
+      const baseUSD = Number(m.precioUSD ?? m.precioAplicadoUSD ?? m.montoBase ?? 0);
+      const baseVES = Number(m.precioVES ?? m.precioAplicadoVES ?? 0);
+      const updatedUSD = Number(m.updatedBaseUSD ?? m.precioUSD ?? 0);
+      const updatedVES = Number(m.updatedBaseVES ?? m.precioVES ?? 0);
+
       const moraUSD = Number(m.moraAplicadaUSD ?? m.moraAcumulada ?? 0);
-      const moraVES = Number(m.moraAplicadaVES ?? m.moraAcumuladaVES ?? 0);
       const totalUSD = baseUSD + moraUSD;
 
       if (m.estado === 'pagado') agg.recaudadoUSD += totalUSD;
       if (m.estado !== 'pagado') agg.pendientes += 1;
 
-      agg.montoUSD = Math.max(agg.montoUSD, baseUSD);
-      agg.montoVES = Math.max(agg.montoVES, baseVES);
+      agg.baseUSDOriginal = Math.max(agg.baseUSDOriginal, baseUSD);
+      agg.baseVESOriginal = Math.max(agg.baseVESOriginal, baseVES);
+      agg.updatedBaseUSD = Math.max(agg.updatedBaseUSD, updatedUSD);
+      agg.updatedBaseVES = Math.max(agg.updatedBaseVES, updatedVES);
 
       const tasa0a1 = m.porcentajeMoraAplicado != null ? (Number(m.porcentajeMoraAplicado) / 100) : (m.mora?.tasa ?? 0);
       agg.moraTasa = Math.max(agg.moraTasa, Number(tasa0a1 || 0));
 
       if (!agg.fechaVencimiento && m.fechaVencimiento) agg.fechaVencimiento = m.fechaVencimiento;
+      if (m.hasUpdatedPrice) agg.hasUpdatedPrice = true;
     }
-    return Array.from(map.values()).sort((a, b) => (a.anio - b.anio) || (a.mes - b.mes));
-  }, [items]);
+
+    const arr = Array.from(map.values());
+    for (const it of arr) {
+      if (!it.fechaVencimiento && it.anio && it.mes) {
+        // Fallback al día de corte de configuración si existe, de lo contrario usar 5
+        const corte = Number(configPagos?.fechaCorte ?? 5);
+        const dia = Math.min(isNaN(corte) ? 5 : corte, 28);
+        it.fechaVencimiento = new Date(it.anio, it.mes - 1, dia);
+      }
+    }
+
+    return arr.sort((a, b) => (a.anio - b.anio) || (a.mes - b.mes));
+  }, [items, configPagos]);
 
   // Meses esperados ahora vienen del backend según el año escolar seleccionado
   const [mesesPeriodo, setMesesPeriodo] = useState([]); // [{ mesNumero, nombre, anio }]
@@ -138,17 +175,56 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
       if (!mes || !anio) continue;
       const key = `${anio}-${mes}`;
       const real = map.get(key);
+
+      const baseUSDOriginal = Number(real?.baseUSDOriginal ?? (mp.montoPagoUSD ?? mp.montoPago ?? 0));
+      const baseVESOriginal = Number(real?.baseVESOriginal ?? (mp.montoPagoVES ?? 0));
+      const updatedBaseUSD = Number(real?.updatedBaseUSD ?? baseUSDOriginal);
+      const updatedBaseVES = Number(real?.updatedBaseVES ?? baseVESOriginal);
+      const hasUpdatedPrice = Boolean(real?.hasUpdatedPrice ?? (updatedBaseUSD !== baseUSDOriginal || updatedBaseVES !== baseVESOriginal));
+
+      // Fecha de vencimiento: usa real si existe; si no, fallback por fechaCorte
+      let fechaVencimiento = real?.fechaVencimiento || null;
+      if (!fechaVencimiento && anio && mes) {
+        const corte = Number(configPagos?.fechaCorte ?? 5);
+        const dia = Math.min(isNaN(corte) ? 5 : corte, 28);
+        fechaVencimiento = new Date(anio, mes - 1, dia);
+      }
+      const hoy = new Date();
+      const vencido = fechaVencimiento ? (new Date(fechaVencimiento) < hoy) : false;
+
+      // Porcentaje de mora: snapshot vs config actual
+      const snapshotMoraTasa = Number(real?.moraTasa ?? 0);
+      const currentMoraTasa = Number(configPagos?.porcentajeMora ?? 0) / 100;
+      const moraPctChanged = Number.isFinite(snapshotMoraTasa) && Number.isFinite(currentMoraTasa)
+        ? Math.round(snapshotMoraTasa * 10000) !== Math.round(currentMoraTasa * 10000)
+        : false;
+
+      // Totales actualizados (no se muestran como monto, pero útiles si se requiere)
+      const updatedMoraUSD = vencido ? (updatedBaseUSD * currentMoraTasa) : 0;
+      const updatedMoraVES = vencido ? (updatedBaseVES * currentMoraTasa) : 0;
+      const updatedTotalUSD = updatedBaseUSD + updatedMoraUSD;
+      const updatedTotalVES = updatedBaseVES + updatedMoraVES;
+
       out.push({
         mes,
         anio,
         nombreMes: real?.nombreMes || mp.nombre || nombreMes(mes),
-        fechaVencimiento: real?.fechaVencimiento || null,
-        // Preferir valores reales si existen; si no, usar defaults del backend de meses del período
-        montoUSD: Number(real?.montoUSD ?? (mp.montoPagoUSD ?? mp.montoPago ?? 0)),
-        montoVES: Number(real?.montoVES ?? (mp.montoPagoVES ?? 0)),
-        moraTasa: Number(real?.moraTasa ?? 0),
+        fechaVencimiento,
+        baseUSDOriginal,
+        baseVESOriginal,
+        updatedBaseUSD,
+        updatedBaseVES,
+        updatedMoraUSD,
+        updatedMoraVES,
+        updatedTotalUSD,
+        updatedTotalVES,
+        hasUpdatedPrice,
+        moraTasa: snapshotMoraTasa,
+        moraTasaActual: currentMoraTasa,
+        moraPctChanged,
         recaudadoUSD: Number(real?.recaudadoUSD ?? 0),
         pendientes: Number(real?.pendientes ?? 0),
+        vencido,
       });
     }
 
@@ -206,17 +282,49 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
                       </div>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                      {/* Montos originales vs actualizados */}
                       <div>
                         <div className="text-xs text-slate-500">Monto USD</div>
-                        <div className="font-semibold text-slate-800">{formatCurrency(m.montoUSD)}</div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-slate-500">Original</div>
+                          <div className={`font-medium ${m.hasUpdatedPrice ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                            {formatCurrency(m.baseUSDOriginal)}
+                          </div>
+                          {m.hasUpdatedPrice && (
+                            <>
+                              <div className="text-xs text-slate-500">Actualizado</div>
+                              <div className="font-semibold text-slate-800">{formatCurrency(m.updatedBaseUSD)}</div>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <div className="text-xs text-slate-500">Monto VES</div>
-                        <div className="font-semibold text-slate-800">Bs {Number(m.montoVES ?? 0).toFixed(2)}</div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-slate-500">Original</div>
+                          <div className={`font-medium ${m.hasUpdatedPrice ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                            Bs {Number(m.baseVESOriginal ?? 0).toFixed(2)}
+                          </div>
+                          {m.hasUpdatedPrice && (
+                            <>
+                              <div className="text-xs text-slate-500">Actualizado</div>
+                              <div className="font-semibold text-slate-800">Bs {Number(m.updatedBaseVES ?? 0).toFixed(2)}</div>
+                            </>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Mora: mostrar solo porcentaje; si cambió, indicar porcentaje actualizado */}
                       <div>
                         <div className="text-xs text-slate-500">Mora</div>
-                        <div className="font-semibold text-slate-800">{Number((m.moraTasa ?? 0) * 100).toFixed(2)}% fijo</div>
+                        <div className="font-semibold text-slate-800">
+                          {Number((m.moraTasa ?? 0) * 100).toFixed(2)}%
+                          {m.moraPctChanged && (
+                            <span className="ml-2 text-xs text-slate-500">
+                              Actualizada: {Number((m.moraTasaActual ?? 0) * 100).toFixed(2)}%
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <div className="text-xs text-slate-500">Recaudado</div>

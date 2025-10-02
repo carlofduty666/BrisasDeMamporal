@@ -12,15 +12,22 @@ function badge(estado) {
 }
 
 export default function MensualidadRow({ m, onAprobar, onRechazar, onRecordatorio, loadingId }) {
-  // Usar precios congelados/actuales provenientes del backend (ConfiguracionPagos)
+  // Montos congelados (snapshot) del backend
   const precioUSD = Number(m.precioUSD ?? 0);
   const precioVES = Number(m.precioVES ?? 0);
   const moraUSD = Number(m.moraAcumulada ?? 0);
-  // Tasa implícita del backend a partir de precios USD/VES
-  const tasa = precioUSD > 0 ? (precioVES / precioUSD) : null;
-  const moraVES = (tasa && isFinite(tasa)) ? moraUSD * tasa : undefined;
-  const totalUSD = (precioUSD + moraUSD).toFixed(2);
-  const totalVES = (tasa && isFinite(tasa)) ? (precioVES + (moraVES || 0)) : undefined;
+  const moraVESsnap = typeof m.moraAcumuladaVES === 'number' ? Number(m.moraAcumuladaVES) : null;
+  
+  // Totales "congelados"
+  const totalUSD = Number(precioUSD + moraUSD);
+  const totalVES = (typeof precioVES === 'number' && typeof moraVESsnap === 'number') ? Number(precioVES + moraVESsnap) : null;
+
+  // Montos "actualizados al día" del backend
+  const hasUpdated = Boolean(m.hasUpdatedPrice);
+  const updatedBaseUSD = Number(m.updatedBaseUSD ?? precioUSD ?? 0);
+  const updatedBaseVES = Number(m.updatedBaseVES ?? precioVES ?? 0);
+  const updatedTotalUSD = Number(m.updatedTotalUSD ?? updatedBaseUSD);
+  const updatedTotalVES = Number(m.updatedTotalVES ?? updatedBaseVES);
 
   const fmt = (d) => {
     if (!d) return '';
@@ -38,12 +45,32 @@ export default function MensualidadRow({ m, onAprobar, onRechazar, onRecordatori
       <td className="px-3 py-2 text-sm text-slate-700">{m.anio ?? '-'}</td>
       <td className="px-3 py-2 text-sm text-slate-700">{fmt(m.fechaVencimiento)}</td>
       <td className="px-3 py-2 text-sm text-slate-700">
-        <div>${Number(precioUSD).toFixed(2)}</div>
+        {/* Base congelada vs actualizada */}
+        <div>
+          {hasUpdated ? (
+            <>
+              <div className="line-through text-slate-400">${Number(precioUSD).toFixed(2)}</div>
+              <div>${Number(updatedBaseUSD).toFixed(2)}</div>
+            </>
+          ) : (
+            <div>${Number(precioUSD).toFixed(2)}</div>
+          )}
+        </div>
         {Number.isFinite(precioVES) ? (
-          <div className="text-xs text-slate-500">Bs. {Number(precioVES).toFixed(2)}</div>
+          <div className="text-xs text-slate-500">
+            {hasUpdated ? (
+              <>
+                <span className="line-through text-slate-400">Bs. {Number(precioVES).toFixed(2)}</span>
+                <span className="ml-2">Bs. {Number(updatedBaseVES).toFixed(2)}</span>
+              </>
+            ) : (
+              <span>Bs. {Number(precioVES).toFixed(2)}</span>
+            )}
+          </div>
         ) : null}
       </td>
       <td className="px-3 py-2 text-sm text-slate-700">
+        {/* Mora congelada (UI simple). Para mora actualizada mostrar en detalle si se requiere */}
         <div>${Number(m.moraAcumulada ?? 0).toFixed(2)}</div>
         {typeof m.moraAcumuladaVES === 'number' ? (
           <div className="text-xs text-slate-500">Bs. {Number(m.moraAcumuladaVES).toFixed(2)}</div>
@@ -53,9 +80,28 @@ export default function MensualidadRow({ m, onAprobar, onRechazar, onRecordatori
         <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${badge(m.estado)}`}>{m.estado}</span>
       </td>
       <td className="px-3 py-2 text-sm font-semibold text-slate-800">
-        <div>${totalUSD}</div>
+        {/* Totales congelados vs actualizados */}
+        <div>
+          {hasUpdated ? (
+            <>
+              <div className="line-through text-slate-400">${totalUSD.toFixed(2)}</div>
+              <div>${Number(updatedTotalUSD).toFixed(2)}</div>
+            </>
+          ) : (
+            <div>${totalUSD.toFixed(2)}</div>
+          )}
+        </div>
         {Number.isFinite(totalVES) ? (
-          <div className="text-xs text-slate-500">Bs. {Number(totalVES).toFixed(2)}</div>
+          <div className="text-xs text-slate-500">
+            {hasUpdated ? (
+              <>
+                <span className="line-through text-slate-400">Bs. {Number(totalVES).toFixed(2)}</span>
+                <span className="ml-2">Bs. {Number(updatedTotalVES).toFixed(2)}</span>
+              </>
+            ) : (
+              <span>Bs. {Number(totalVES).toFixed(2)}</span>
+            )}
+          </div>
         ) : null}
       </td>
       <td className="px-3 py-2 text-right">
