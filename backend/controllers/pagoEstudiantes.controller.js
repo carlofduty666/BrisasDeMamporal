@@ -59,28 +59,32 @@ const pagoEstudiantesController = {
         order: [['createdAt', 'DESC']]
       });
 
-      // Obtener tasa implícita USD->VES desde configuración activa
-      const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
-      const usdBase = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
-      const vesBase = Number(cfg?.precioMensualidadVES ?? 0);
-      const tasa = usdBase > 0 ? (vesBase / usdBase) : null;
-
-      const mapWithVES = (pago) => {
-        const plain = pago.toJSON();
-        if (tasa && isFinite(tasa)) {
-          const monto = Number(plain.monto ?? 0);
-          const mora = Number(plain.montoMora ?? 0);
-          const desc = Number(plain.descuento ?? 0);
-          const total = Number(plain.montoTotal ?? (monto + mora - desc));
-          const to2 = (n) => Math.round(n * 100) / 100;
-          plain.montoVES = to2(monto * tasa);
-          plain.montoMoraVES = to2(mora * tasa);
-          plain.montoTotalVES = to2(total * tasa);
+      // Adjuntar snapshot de mensualidad (sin conversiones de moneda)
+      const pagosEnriquecidos = await Promise.all(pagos.map(async (p) => {
+        const plain = p.toJSON();
+        try {
+          const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
+          if (mensualidad) {
+            const m = mensualidad.toJSON();
+            plain.mensualidadSnapshot = {
+              precioAplicadoUSD: m.precioAplicadoUSD,
+              precioAplicadoVES: m.precioAplicadoVES,
+              porcentajeMoraAplicado: m.porcentajeMoraAplicado,
+              fechaCorteAplicada: m.fechaCorteAplicada,
+              configCongelada: m.configCongelada,
+              moraAplicadaUSD: m.moraAplicadaUSD,
+              moraAplicadaVES: m.moraAplicadaVES,
+              mes: m.mes,
+              anio: m.anio,
+              estadoMensualidad: m.estado
+            };
+          }
+        } catch (e) {
+          // si no hay mensualidad vinculada, se omite
         }
         return plain;
-      };
-      
-      res.status(200).json(pagos.map(mapWithVES));
+      }));
+      res.status(200).json(pagosEnriquecidos);
     } catch (err) {
       console.error('Error al obtener pagos:', err);
       res.status(500).json({ 
@@ -129,21 +133,27 @@ const pagoEstudiantesController = {
         return res.status(404).json({ message: 'Pago no encontrado' });
       }
       
-      // Adjuntar campos VES derivados igual que en getAllPagos
-      const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
-      const usdBase = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
-      const vesBase = Number(cfg?.precioMensualidadVES ?? 0);
-      const tasa = usdBase > 0 ? (vesBase / usdBase) : null;
+      // Adjuntar snapshot de mensualidad (sin conversiones de moneda)
       const plain = pago.toJSON();
-      if (tasa && isFinite(tasa)) {
-        const monto = Number(plain.monto ?? 0);
-        const mora = Number(plain.montoMora ?? 0);
-        const desc = Number(plain.descuento ?? 0);
-        const total = Number(plain.montoTotal ?? (monto + mora - desc));
-        const to2 = (n) => Math.round(n * 100) / 100;
-        plain.montoVES = to2(monto * tasa);
-        plain.montoMoraVES = to2(mora * tasa);
-        plain.montoTotalVES = to2(total * tasa);
+      try {
+        const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: pago.id } });
+        if (mensualidad) {
+          const m = mensualidad.toJSON();
+          plain.mensualidadSnapshot = {
+            precioAplicadoUSD: m.precioAplicadoUSD,
+            precioAplicadoVES: m.precioAplicadoVES,
+            porcentajeMoraAplicado: m.porcentajeMoraAplicado,
+            fechaCorteAplicada: m.fechaCorteAplicada,
+            configCongelada: m.configCongelada,
+            moraAplicadaUSD: m.moraAplicadaUSD,
+            moraAplicadaVES: m.moraAplicadaVES,
+            mes: m.mes,
+            anio: m.anio,
+            estadoMensualidad: m.estado
+          };
+        }
+      } catch (e) {
+        // sin mensualidad vinculada
       }
       
       res.status(200).json(plain);
@@ -328,6 +338,40 @@ const pagoEstudiantesController = {
         tamanoArchivo,
         observaciones: observaciones || null
       }, { transaction });
+
+      // Intentar vincular con mensualidad correspondiente (estudiante + annoEscolar + mes)
+      const normalizaMes = (valor) => {
+        if (valor == null) return null;
+        const m = String(valor).trim().toLowerCase();
+        const mapa = {
+          '1':1,'01':1,'enero':1,
+          '2':2,'02':2,'febrero':2,
+          '3':3,'03':3,'marzo':3,
+          '4':4,'04':4,'abril':4,
+          '5':5,'05':5,'mayo':5,
+          '6':6,'06':6,'junio':6,
+          '7':7,'07':7,'julio':7,
+          '8':8,'08':8,'agosto':8,
+          '9':9,'09':9,'septiembre':9,'setiembre':9,
+          '10':10,'octubre':10,
+          '11':11,'noviembre':11,
+          '12':12,'diciembre':12
+        };
+        return mapa[m] ?? (Number.isFinite(Number(m)) ? Number(m) : null);
+      };
+
+      const mesNumerico = normalizaMes(mesPago);
+      if (mesNumerico) {
+        const mensualidad = await db.Mensualidades.findOne({
+          where: { estudianteID, annoEscolarID, mes: mesNumerico },
+          transaction
+        });
+        if (mensualidad) {
+          // Estado reportado al existir comprobante o instrucción creada
+          const nuevoEstado = nuevoPago.estado === 'pagado' ? 'pagado' : 'reportado';
+          await mensualidad.update({ pagoID: nuevoPago.id, estado: nuevoEstado }, { transaction });
+        }
+      }
       
       // Si el pago es para una inscripción, actualizar el estado de la inscripción
       if (inscripcionID) {
@@ -378,6 +422,18 @@ const pagoEstudiantesController = {
       }
       
       await pago.update({ estado }, { transaction });
+
+      // Sincronizar mensualidad vinculada (si existe)
+      const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: pago.id }, transaction });
+      if (mensualidad) {
+        if (estado === 'pagado') {
+          await mensualidad.update({ estado: 'pagado' }, { transaction });
+        } else if (estado === 'anulado') {
+          await mensualidad.update({ estado: 'pendiente', pagoID: null }, { transaction });
+        } else if (estado === 'pendiente') {
+          await mensualidad.update({ estado: 'pendiente' }, { transaction });
+        }
+      }
       
       // Si el pago es para una inscripción y el estado cambia a pagado o anulado
       if (pago.inscripcionID) {
@@ -505,27 +561,33 @@ const pagoEstudiantesController = {
         order: [['createdAt', 'DESC']]
       });
       
-      // Adjuntar campos VES derivados igual que en getAllPagos
-      const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
-      const usdBase = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
-      const vesBase = Number(cfg?.precioMensualidadVES ?? 0);
-      const tasa = usdBase > 0 ? (vesBase / usdBase) : null;
-      const to2 = (n) => Math.round(n * 100) / 100;
-      const pagosWithVES = pagos.map(p => {
+      // Adjuntar snapshot de mensualidad (sin conversiones de moneda)
+      const pagosEnriquecidos = await Promise.all(pagos.map(async (p) => {
         const plain = p.toJSON();
-        if (tasa && isFinite(tasa)) {
-          const monto = Number(plain.monto ?? 0);
-          const mora = Number(plain.montoMora ?? 0);
-          const desc = Number(plain.descuento ?? 0);
-          const total = Number(plain.montoTotal ?? (monto + mora - desc));
-          plain.montoVES = to2(monto * tasa);
-          plain.montoMoraVES = to2(mora * tasa);
-          plain.montoTotalVES = to2(total * tasa);
+        try {
+          const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
+          if (mensualidad) {
+            const m = mensualidad.toJSON();
+            plain.mensualidadSnapshot = {
+              precioAplicadoUSD: m.precioAplicadoUSD,
+              precioAplicadoVES: m.precioAplicadoVES,
+              porcentajeMoraAplicado: m.porcentajeMoraAplicado,
+              fechaCorteAplicada: m.fechaCorteAplicada,
+              configCongelada: m.configCongelada,
+              moraAplicadaUSD: m.moraAplicadaUSD,
+              moraAplicadaVES: m.moraAplicadaVES,
+              mes: m.mes,
+              anio: m.anio,
+              estadoMensualidad: m.estado
+            };
+          }
+        } catch (e) {
+          // si no hay mensualidad vinculada, se omite
         }
         return plain;
-      });
+      }));
       
-      res.status(200).json(pagosWithVES);
+      res.status(200).json(pagosEnriquecidos);
     } catch (err) {
       console.error('Error al obtener pagos del estudiante:', err);
       res.status(500).json({ 
@@ -572,27 +634,33 @@ const pagoEstudiantesController = {
         order: [['createdAt', 'DESC']]
       });
       
-      // Adjuntar campos VES derivados igual que en getAllPagos
-      const cfg = await ConfiguracionPagos.findOne({ where: { activo: true }, order: [['updatedAt','DESC']] });
-      const usdBase = Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
-      const vesBase = Number(cfg?.precioMensualidadVES ?? 0);
-      const tasa = usdBase > 0 ? (vesBase / usdBase) : null;
-      const to2 = (n) => Math.round(n * 100) / 100;
-      const pagosWithVES = pagos.map(p => {
+      // Adjuntar snapshot de mensualidad (sin conversiones de moneda)
+      const pagosEnriquecidos = await Promise.all(pagos.map(async (p) => {
         const plain = p.toJSON();
-        if (tasa && isFinite(tasa)) {
-          const monto = Number(plain.monto ?? 0);
-          const mora = Number(plain.montoMora ?? 0);
-          const desc = Number(plain.descuento ?? 0);
-          const total = Number(plain.montoTotal ?? (monto + mora - desc));
-          plain.montoVES = to2(monto * tasa);
-          plain.montoMoraVES = to2(mora * tasa);
-          plain.montoTotalVES = to2(total * tasa);
+        try {
+          const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
+          if (mensualidad) {
+            const m = mensualidad.toJSON();
+            plain.mensualidadSnapshot = {
+              precioAplicadoUSD: m.precioAplicadoUSD,
+              precioAplicadoVES: m.precioAplicadoVES,
+              porcentajeMoraAplicado: m.porcentajeMoraAplicado,
+              fechaCorteAplicada: m.fechaCorteAplicada,
+              configCongelada: m.configCongelada,
+              moraAplicadaUSD: m.moraAplicadaUSD,
+              moraAplicadaVES: m.moraAplicadaVES,
+              mes: m.mes,
+              anio: m.anio,
+              estadoMensualidad: m.estado
+            };
+          }
+        } catch (e) {
+          // si no hay mensualidad vinculada, se omite
         }
         return plain;
-      });
+      }));
       
-      res.status(200).json(pagosWithVES);
+      res.status(200).json(pagosEnriquecidos);
     } catch (err) {
       console.error('Error al obtener pagos del representante:', err);
       res.status(500).json({ 
@@ -666,6 +734,50 @@ const pagoEstudiantesController = {
     } catch (err) {
       console.error('Error al verificar estado de pagos del estudiante:', err);
       res.status(500).json({ message: err.message });
+    }
+  },
+
+  // Resetear TODOS los pagos del sistema (requiere owner/admin y confirmar = "BORRAR")
+  resetPagos: async (req, res) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+      const { confirmar } = req.body || {};
+      if (confirmar !== 'BORRAR') {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'Confirmación inválida. Envía confirmar = "BORRAR"' });
+      }
+
+      // Eliminar archivos de comprobantes existentes antes del borrado
+      const pagosConArchivos = await PagoEstudiantes.findAll({
+        where: { urlComprobante: { [db.Sequelize.Op.ne]: null } },
+        transaction
+      });
+      let archivosEliminados = 0;
+      for (const p of pagosConArchivos) {
+        const filePath = path.join(__dirname, '..', p.urlComprobante);
+        try {
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            archivosEliminados++;
+          }
+        } catch (e) {
+          // Continuar aunque no se pueda borrar algún archivo
+        }
+      }
+
+      // Borrar todos los pagos (FK en Mensualidades.pagoID con onDelete: SET NULL)
+      const pagosEliminados = await PagoEstudiantes.destroy({ where: {}, transaction });
+
+      await transaction.commit();
+      return res.status(200).json({
+        message: 'Pagos reseteados correctamente',
+        pagosEliminados,
+        archivosEliminados
+      });
+    } catch (err) {
+      await transaction.rollback();
+      console.error('Error al resetear pagos:', err);
+      return res.status(500).json({ message: 'Error al resetear pagos', error: err.message });
     }
   }
 };

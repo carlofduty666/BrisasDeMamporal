@@ -40,6 +40,17 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
           const mora = parseFloat(p.montoMora || 0) || 0;
           const desc = parseFloat(p.descuento || 0) || 0;
           const montoReportado = monto + mora - desc;
+          const m = p.mensualidadSnapshot || {};
+          const precioAplicadoUSD = m.precioAplicadoUSD || '0.00';
+          const precioAplicadoVES = m.precioAplicadoVES || '0.00';
+          const moraAplicadaUSD = m.moraAplicadaUSD || '0.00';
+          const moraAplicadaVES = m.moraAplicadaVES || '0.00';
+          const porcentajeMora = m.porcentajeMoraAplicado || '0.00';
+          const fechaCorte = m.fechaCorteAplicada || '—';
+          const mesSnapshot = m.mes || '—';
+          const anioSnapshot = m.anio || '—';
+          const estadoMensualidad = m.estadoMensualidad || '—';
+
 
           return (
             <li key={p.id} className="px-4 py-3 hover:bg-slate-50 transition-colors">
@@ -59,8 +70,14 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
                 <div className="col-span-1 text-slate-700">{fechaRep ? fechaRep.toLocaleDateString('es-VE') : '—'}</div>
                 <div className="col-span-1 text-slate-700">{fechaVenc ? new Date(fechaVenc).toLocaleDateString('es-VE') : '—'}</div>
                 <div className="col-span-1 font-semibold text-slate-800">
-                  <div>$ {montoReportado.toFixed(2)}</div>
-                  <div className="text-xs text-slate-500">Bs. {Number((p.montoTotalVES ?? p.montoVES ?? 0)).toFixed(2)}</div>
+                  <div>Bs. {Number((precioAplicadoVES ?? 0)).toFixed(2)}</div>
+                  <div className="text-xs text-slate-500">$ {Number((precioAplicadoUSD ?? 0)).toFixed(2)}</div>
+                  {/* ✅ MOSTRAR DATOS DEL SNAPSHOT */}
+                  {/* {snapshot.precioAplicadoUSD && (
+                    <div className="text-xs text-blue-600 mt-1" title="Precio aplicado según configuración">
+                      Config: ${precioAplicadoUSD}
+                    </div>
+                  )} */}
                 </div>
                 <div className="col-span-1 text-slate-700">
                   {mora ? (
@@ -69,6 +86,12 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
                       {typeof p.montoMoraVES === 'number' ? (
                         <div className="text-xs text-slate-500">Bs. {Number(p.montoMoraVES).toFixed(2)}</div>
                       ) : null}
+                      {/* ✅ MOSTRAR MORA DEL SNAPSHOT */}
+                      {snapshot.moraAplicadaUSD && (
+                        <div className="text-xs text-orange-600" title={`Mora aplicada: ${porcentajeMora}%`}>
+                          Mora config: ${moraAplicadaUSD}
+                        </div>
+                      )}
                     </>
                   ) : '—'}
                 </div>
@@ -96,7 +119,7 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
                   <div className="flex items-center gap-1"><FaMoneyBill /> <span>Monto:</span> 
                     <span className="text-slate-800">
                       <div>${montoReportado.toFixed(2)}</div>
-                      <div className="text-xs text-slate-500">Bs. {Number((p.montoTotalVES ?? p.montoVES ?? 0)).toFixed(2)}</div>
+                      <div className="text-xs text-slate-500">Bs. {Number((precioAplicadoVES ?? 0)).toFixed(2)}</div>
                     </span>
                   </div>
                   <div className="flex items-center gap-1"><FaMoneyCheckAlt /> <span>Mora:</span> 

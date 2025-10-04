@@ -90,7 +90,27 @@ const mensualidadesController = {
       const nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
       const annoEscolares = await AnnoEscolar.findAll({ attributes: ['id','periodo'] });
       const mapPeriodo = new Map(annoEscolares.map(ae => [ae.id, ae.periodo]));
-      const withNames = items.map(it => {
+
+      // Helper: obtener base original desde el primer pago del mes (si existe)
+      async function getOriginalFromFirstPago(estID, mes, aeID) {
+        const pagos = await PagoEstudiantes.findAll({
+          where: { estudianteID: estID, annoEscolarID: aeID },
+          attributes: ['id','createdAt'],
+          order: [['createdAt','ASC']]
+        });
+        for (const p of pagos) {
+          const m = await db.Mensualidades.findOne({ where: { pagoID: p.id, mes } });
+          if (m && (m.precioAplicadoUSD != null || m.precioAplicadoVES != null)) {
+            return {
+              baseUSDOriginal: Number(m.precioAplicadoUSD ?? 0),
+              baseVESOriginal: Number(m.precioAplicadoVES ?? 0)
+            };
+          }
+        }
+        return null;
+      }
+
+      const withNames = await Promise.all(items.map(async (it) => {
         const obj = it.toJSON();
         const periodo = mapPeriodo.get(obj.annoEscolarID) || null;
         let anio = obj.anio;
@@ -115,11 +135,12 @@ const mensualidadesController = {
         const today = new Date();
         const vencido = dueDate ? (today > dueDate) : false;
 
-        // Snapshots primero para bases
+        // Original: priorizar primer pago del mes (si existe), si no, snapshot de mensualidad
+        const fromFirstPago = await getOriginalFromFirstPago(obj.estudianteID, obj.mes, obj.annoEscolarID);
         const snapBaseUSD = Number(obj.precioAplicadoUSD ?? 0);
         const snapBaseVES = Number(obj.precioAplicadoVES ?? 0);
-        const baseUSD = snapBaseUSD || Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
-        const baseVES = snapBaseVES || Number(cfg?.precioMensualidadVES ?? 0);
+        const baseUSD = (fromFirstPago?.baseUSDOriginal ?? snapBaseUSD) || Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+        const baseVES = (fromFirstPago?.baseVESOriginal ?? snapBaseVES) || Number(cfg?.precioMensualidadVES ?? 0);
 
         // Snapshots para mora si existen; si no, fallback calculado (solo si vencido)
         const snapMoraUSD = Number(obj.moraAplicadaUSD ?? 0);
@@ -147,12 +168,12 @@ const mensualidadesController = {
           anio,
           fechaVencimiento: dueDate,
           mesNombre: nombres[(obj.mes ?? 1) - 1],
-          // Campos congelados/snapshot
+          // Campos congelados/snapshot (Original)
           precioUSD: baseUSD,
           precioVES: baseVES,
           moraAcumuladaVES: moraOriginalVES,
           totalVES: totalOriginalVES,
-          // Campos actualizados al día
+          // Campos actualizados al día (Actualizado)
           updatedBaseUSD,
           updatedBaseVES,
           updatedMoraUSD,
@@ -161,7 +182,7 @@ const mensualidadesController = {
           updatedTotalVES,
           hasUpdatedPrice
         };
-      });
+      }));
       res.json(withNames);
     } catch (e) {
       console.error(e);
@@ -181,7 +202,27 @@ const mensualidadesController = {
       const nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
       const annoEscolares = await AnnoEscolar.findAll({ attributes: ['id','periodo'] });
       const mapPeriodo = new Map(annoEscolares.map(ae => [ae.id, ae.periodo]));
-      const withNames = items.map(it => {
+
+      // Helper local: primer pago del mes para "Original"
+      async function getOriginalFromFirstPago(estID, mes, aeID) {
+        const pagos = await PagoEstudiantes.findAll({
+          where: { estudianteID: estID, annoEscolarID: aeID },
+          attributes: ['id','createdAt'],
+          order: [['createdAt','ASC']]
+        });
+        for (const p of pagos) {
+          const m = await db.Mensualidades.findOne({ where: { pagoID: p.id, mes } });
+          if (m && (m.precioAplicadoUSD != null || m.precioAplicadoVES != null)) {
+            return {
+              baseUSDOriginal: Number(m.precioAplicadoUSD ?? 0),
+              baseVESOriginal: Number(m.precioAplicadoVES ?? 0)
+            };
+          }
+        }
+        return null;
+      }
+
+      const withNames = await Promise.all(items.map(async (it) => {
         const obj = it.toJSON();
         const periodo = mapPeriodo.get(obj.annoEscolarID) || null;
         let anio = obj.anio;
@@ -206,11 +247,12 @@ const mensualidadesController = {
         const today = new Date();
         const vencido = dueDate ? (today > dueDate) : false;
 
-        // Snapshots primero para bases
+        // Original: priorizar primer pago del mes (si existe), si no, snapshot de mensualidad
+        const fromFirstPago = await getOriginalFromFirstPago(obj.estudianteID, obj.mes, obj.annoEscolarID);
         const snapBaseUSD = Number(obj.precioAplicadoUSD ?? 0);
         const snapBaseVES = Number(obj.precioAplicadoVES ?? 0);
-        const baseUSD = snapBaseUSD || Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
-        const baseVES = snapBaseVES || Number(cfg?.precioMensualidadVES ?? 0);
+        const baseUSD = (fromFirstPago?.baseUSDOriginal ?? snapBaseUSD) || Number(cfg?.precioMensualidadUSD ?? cfg?.precioMensualidad ?? 0);
+        const baseVES = (fromFirstPago?.baseVESOriginal ?? snapBaseVES) || Number(cfg?.precioMensualidadVES ?? 0);
 
         // Snapshots para mora si existen; si no, fallback calculado (solo si vencido)
         const snapMoraUSD = Number(obj.moraAplicadaUSD ?? 0);
@@ -238,7 +280,7 @@ const mensualidadesController = {
           anio,
           fechaVencimiento: dueDate,
           mesNombre: nombres[(obj.mes ?? 1) - 1],
-          // Campos legacy (congelados): preferir snapshots
+          // Campos legacy (congelados): preferir snapshots/primer pago
           precioUSD: baseUSD,
           precioVES: baseVES,
           moraAcumuladaVES: moraOriginalVES,
@@ -252,7 +294,7 @@ const mensualidadesController = {
           updatedTotalVES,
           hasUpdatedPrice
         };
-      });
+      }));
       res.json(withNames);
     } catch (e) {
       console.error(e);

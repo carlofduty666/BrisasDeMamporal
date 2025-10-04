@@ -4,7 +4,7 @@ const pagoEstudiantesController = require('../controllers/pagoEstudiantes.contro
 const authMiddleware = require('../middleware/auth.middleware');
 
 // Rutas para obtener pagos
-router.get('/pagos', authMiddleware.verifyToken, pagoEstudiantesController.getAllPagos);
+router.get('/pagos', pagoEstudiantesController.getAllPagos);
 router.get('/pagos/:id', authMiddleware.verifyToken, pagoEstudiantesController.getPagoById);
 router.get('/pagos/estudiante/:estudianteID', pagoEstudiantesController.getPagosByEstudiante);
 router.get('/pagos/representante/:representanteID', authMiddleware.verifyToken, pagoEstudiantesController.getPagosByRepresentante);
@@ -15,5 +15,8 @@ router.get('/pagos/estudiante/:estudianteID/estado', authMiddleware.verifyToken,
 router.post('/pagos', authMiddleware.verifyToken, pagoEstudiantesController.createPago);
 router.put('/pagos/:id/estado', authMiddleware.verifyToken, pagoEstudiantesController.updateEstadoPago);
 router.delete('/pagos/:id', authMiddleware.verifyToken, pagoEstudiantesController.deletePago);
+
+// Reset de pagos (solo admin/owner y requiere confirmar = "BORRAR")
+router.post('/pagos/reset', authMiddleware.verifyToken, authMiddleware.isAdmin, pagoEstudiantesController.resetPagos);
 
 module.exports = router;

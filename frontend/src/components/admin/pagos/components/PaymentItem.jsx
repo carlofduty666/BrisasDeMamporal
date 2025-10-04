@@ -17,6 +17,11 @@ export default function PaymentItem({ pago, onClick }) {
   const representante = pago.representante || pago.representantes;
   const metodo = pago.metodoPago || pago.metodoPagos;
   const arancel = pago.arancel || pago.aranceles;
+  const m = pago.mensualidadSnapshot || {};
+  const precioAplicadoUSD = m.precioAplicadoUSD || '0.00';
+  const precioAplicadoVES = m.precioAplicadoVES || '0.00';
+  const moraAplicadaUSD = m.moraAplicadaUSD || '0.00';
+  const moraAplicadaVES = m.moraAplicadaVES || '0.00';
 
   const montoTotal = (parseFloat(pago.monto || 0) + parseFloat(pago.montoMora || 0) - parseFloat(pago.descuento || 0)).toFixed(2);
 
@@ -57,8 +62,8 @@ export default function PaymentItem({ pago, onClick }) {
         <div className="mt-4 flex items-center justify-between">
           <div>
             <p className="text-xs text-slate-500">Monto total</p>
-            <p className="text-lg font-bold text-slate-800">{formatCurrency(montoTotal)}</p>
-            <p className="text-xs text-slate-500">Bs. {Number((pago.montoTotalVES ?? pago.montoVES ?? 0)).toFixed(2)}</p>
+            <p className="text-lg font-bold text-slate-800">Bs. {Number((precioAplicadoVES ?? 0)).toFixed(2)}</p>
+            <p className="text-xs text-slate-500">$ {Number((precioAplicadoUSD ?? 0)).toFixed(2)}</p>
           </div>
           <button
             onClick={onClick}

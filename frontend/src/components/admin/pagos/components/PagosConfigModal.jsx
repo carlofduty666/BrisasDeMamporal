@@ -3,6 +3,7 @@ import { FaTimes } from 'react-icons/fa';
 import { mensualidadesService } from '../../../../services/mensualidadesService';
 import { annoEscolarService } from '../../../../services/annoEscolar.service';
 import { pagosConfigService } from '../../../../services/pagosConfigService';
+import { pagosService } from '../../../../services/pagos.service';
 import ConfiguracionPagosPanel from './PagosConfigPanel.jsx';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -40,12 +41,44 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
     try {
       if (!targetAnnoEscolarID) { setItems([]); return; }
       setLoading(true);
-      const [data, cfg] = await Promise.all([
+      const [data, cfg, pagos] = await Promise.all([
         mensualidadesService.list({ annoEscolarID: targetAnnoEscolarID }),
-        pagosConfigService.getConfig().catch(() => null)
+        pagosConfigService.getConfig().catch(() => null),
+        pagosService.list().catch(() => [])
       ]);
       setConfigPagos(cfg);
-      setItems(Array.isArray(data) ? data : []);
+
+      // Construir mapa de "original por mes" tomando el primer pago del mes (createdAt más antiguo) por annoEscolar
+      const originalesPorMes = new Map(); // key: `${anio}-${mes}` -> { usd, ves }
+      try {
+        // Filtrar pagos del anno escolar objetivo
+        const pagosAE = (pagos || []).filter(p => Number(p.annoEscolar?.id ?? p.annoEscolarID) === Number(targetAnnoEscolarID));
+        // Agrupar por estudiante+mes o solo por mes? Para el resumen mensual usamos el primer pago del mes (sin distinguir estudiante)
+        const pagosPorClave = new Map(); // key: `${mes}-${createdAt}` temporal para ordenar
+        for (const p of pagosAE) {
+          const ms = p.mensualidadSnapshot;
+          const mes = Number(ms?.mes);
+          if (!mes) continue;
+          const createdAt = new Date(p.createdAt);
+          const key = `${mes}`;
+          const arr = pagosPorClave.get(key) || [];
+          arr.push({ createdAt, usd: Number(ms?.precioAplicadoUSD ?? 0), ves: Number(ms?.precioAplicadoVES ?? 0), anio: ms?.anio ?? null });
+          pagosPorClave.set(key, arr);
+        }
+        for (const [k, arr] of pagosPorClave.entries()) {
+          arr.sort((a,b) => a.createdAt - b.createdAt); // más antiguo primero
+          const first = arr[0];
+          // anio puede venir null en snapshot, usaremos anio derivado luego al fusionar con mensualidades
+          originalesPorMes.set(Number(k), { usd: first?.usd ?? 0, ves: first?.ves ?? 0 });
+        }
+      } catch {}
+
+      // Adjuntar data al estado original
+      const dataWithOriginals = Array.isArray(data) ? data.map(m => ({ ...m })) : [];
+      // Guardamos en state para usar dentro del useMemo de tarjetas
+      dataWithOriginals.__originalesPorMes = originalesPorMes;
+
+      setItems(dataWithOriginals);
       setLoading(false);
     } catch (e) {
       console.error(e);
@@ -87,10 +120,14 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
       }
       const agg = map.get(key);
 
-      const baseUSD = Number(m.precioUSD ?? m.precioAplicadoUSD ?? m.montoBase ?? 0);
-      const baseVES = Number(m.precioVES ?? m.precioAplicadoVES ?? 0);
-      const updatedUSD = Number(m.updatedBaseUSD ?? m.precioUSD ?? 0);
-      const updatedVES = Number(m.updatedBaseVES ?? m.precioVES ?? 0);
+      // Original: si existe un "primer pago" de ese mes en el año escolar, úsalo; si no, usa precioUSD/precioVES del backend
+      const originalesPorMes = items.__originalesPorMes instanceof Map ? items.__originalesPorMes : null;
+      const overrideOriginal = originalesPorMes?.get(Number(mes));
+      const baseUSD = Number((overrideOriginal?.usd != null ? overrideOriginal.usd : (m.precioUSD ?? m.precioAplicadoUSD ?? 0)));
+      const baseVES = Number((overrideOriginal?.ves != null ? overrideOriginal.ves : (m.precioVES ?? m.precioAplicadoVES ?? 0)));
+      // Actualizado al día: proviene de updatedBaseUSD/updatedBaseVES calculado en backend
+      const updatedUSD = Number(m.updatedBaseUSD ?? 0);
+      const updatedVES = Number(m.updatedBaseVES ?? 0);
 
       const moraUSD = Number(m.moraAplicadaUSD ?? m.moraAcumulada ?? 0);
       const totalUSD = baseUSD + moraUSD;
@@ -286,7 +323,7 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
                       <div>
                         <div className="text-xs text-slate-500">Monto USD</div>
                         <div className="space-y-1">
-                          <div className="text-xs text-slate-500">Original</div>
+                          <div className="text-xs text-slate-500"></div>
                           <div className={`font-medium ${m.hasUpdatedPrice ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                             {formatCurrency(m.baseUSDOriginal)}
                           </div>
@@ -301,7 +338,7 @@ export default function PagosConfigModal({ onClose, onVerPendientesMes, annoEsco
                       <div>
                         <div className="text-xs text-slate-500">Monto VES</div>
                         <div className="space-y-1">
-                          <div className="text-xs text-slate-500">Original</div>
+                          <div className="text-xs text-slate-500"></div>
                           <div className={`font-medium ${m.hasUpdatedPrice ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                             Bs {Number(m.baseVESOriginal ?? 0).toFixed(2)}
                           </div>
