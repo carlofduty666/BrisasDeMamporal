@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaCalendarAlt, FaUserGraduate, FaUserTie, FaHashtag, FaMoneyBill, FaMoneyCheckAlt } from 'react-icons/fa';
-import { formatearNombreGrado, formatearMetodoPago } from '../../../../utils/formatters'
+import { formatearNombreGrado, formatearMetodoPago, formatearFecha } from '../../../../utils/formatters'
 
 function chipEstado(estado) {
   if (estado === 'pagado') return 'bg-green-100 text-green-800 border-green-200';
@@ -34,8 +34,8 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
           const seccion = insc.Secciones?.nombre_seccion || '—';
           const metodo = p.metodoPagos || p.metodoPago || {};
           const mes = p.mesPago || '—';
-          const fechaRep = p.fechaPago ? new Date(p.fechaPago) : null;
-          const fechaVenc = p.fechaVencimiento ? new Date(p.fechaVencimiento) : (p.fechaVencimiento || null);
+          const fechaRepISO = p.fechaPago || null;
+          const fechaVencISO = p.fechaVencimiento || null;
           const monto = parseFloat(p.monto || 0) || 0;
           const mora = parseFloat(p.montoMora || 0) || 0;
           const desc = parseFloat(p.descuento || 0) || 0;
@@ -67,8 +67,8 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
                 <div className="col-span-2 text-slate-700">{formatearNombreGrado(grado)} / {seccion}</div>
                 <div className="col-span-1"><span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${chipEstado(p.estado)}`}>{p.estado}</span></div>
                 <div className="col-span-1 text-slate-700">{mes}</div>
-                <div className="col-span-1 text-slate-700">{fechaRep ? fechaRep.toLocaleDateString('es-VE') : '—'}</div>
-                <div className="col-span-1 text-slate-700">{fechaVenc ? new Date(fechaVenc).toLocaleDateString('es-VE') : '—'}</div>
+                <div className="col-span-1 text-slate-700">{fechaRepISO ? formatearFecha(fechaRepISO) : '—'}</div>
+                <div className="col-span-1 text-slate-700">{fechaVencISO ? formatearFecha(fechaVencISO) : '—'}</div>
                 <div className="col-span-1 font-semibold text-slate-800">
                   <div>Bs. {Number((precioAplicadoVES ?? 0)).toFixed(2)}</div>
                   <div className="text-xs text-slate-500">$ {Number((precioAplicadoUSD ?? 0)).toFixed(2)}</div>
@@ -87,7 +87,7 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
                         <div className="text-xs text-slate-500">Bs. {Number(p.montoMoraVES).toFixed(2)}</div>
                       ) : null}
                       {/* ✅ MOSTRAR MORA DEL SNAPSHOT */}
-                      {snapshot.moraAplicadaUSD && (
+                      {m.moraAplicadaUSD && (
                         <div className="text-xs text-orange-600" title={`Mora aplicada: ${porcentajeMora}%`}>
                           Mora config: ${moraAplicadaUSD}
                         </div>
@@ -114,8 +114,8 @@ export default function PaymentsList({ items = [], onOpenDetail }) {
                   <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${chipEstado(p.estado)}`}>{p.estado}</span>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                  <div className="flex items-center gap-1"><FaCalendarAlt /> <span>Reporte:</span> <span className="text-slate-800">{fechaRep ? fechaRep.toLocaleDateString('es-VE') : '—'}</span></div>
-                  <div className="flex items-center gap-1"><FaCalendarAlt /> <span>Vence:</span> <span className="text-slate-800">{fechaVenc ? new Date(fechaVenc).toLocaleDateString('es-VE') : '—'}</span></div>
+                  <div className="flex items-center gap-1"><FaCalendarAlt /> <span>Reporte:</span> <span className="text-slate-800">{fechaRepISO ? formatearFecha(fechaRepISO) : '—'}</span></div>
+                  <div className="flex items-center gap-1"><FaCalendarAlt /> <span>Vence:</span> <span className="text-slate-800">{fechaVencISO ? formatearFecha(fechaVencISO) : '—'}</span></div>
                   <div className="flex items-center gap-1"><FaMoneyBill /> <span>Monto:</span> 
                     <span className="text-slate-800">
                       <div>${montoReportado.toFixed(2)}</div>

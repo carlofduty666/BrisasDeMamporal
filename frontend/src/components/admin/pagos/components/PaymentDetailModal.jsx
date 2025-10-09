@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { FaTimes, FaCheck, FaUserGraduate, FaUserTie, FaMoneyBill, FaPercentage, FaExclamationCircle, FaCalendarAlt, FaCreditCard, FaFileAlt, FaImage } from 'react-icons/fa';
+import { formatearFecha, formatearFechaHoraLocal } from '../../../../utils/formatters';
 
 function formatCurrency(value) {
   const n = parseFloat(value || 0);
@@ -109,16 +110,16 @@ export default function PaymentDetailModal({ pago, onClose, onPreview, onApprove
 
               <div className="p-3 rounded-lg bg-white border">
                 <p className="text-xs text-slate-500 flex items-center"><FaCalendarAlt className="mr-1 text-pink-700" /> Fecha de Pago</p>
-                <p className="font-semibold text-slate-800">{pago.fechaPago ? new Date(pago.fechaPago).toLocaleDateString() : '-'}</p>
+                <p className="font-semibold text-slate-800">{pago.fechaPago ? formatearFecha(pago.fechaPago) : '-'}</p>
               </div>
               <div className="p-3 rounded-lg bg-white border">
                 <p className="text-xs text-slate-500"><FaCalendarAlt className="inline mr-1 text-pink-700" /> Registrado</p>
-                <p className="font-semibold text-slate-800">{pago.createdAt ? new Date(pago.createdAt).toLocaleDateString() : '-'}</p>
+                <p className="font-semibold text-slate-800">{pago.createdAt ? formatearFechaHoraLocal(pago.createdAt) : '-'}</p>
               </div>
               {pago.updatedAt && pago.updatedAt !== pago.createdAt && (
                 <div className="p-3 rounded-lg bg-white border">
                   <p className="text-xs text-slate-500">Actualizado</p>
-                  <p className="font-semibold text-slate-800">{new Date(pago.updatedAt).toLocaleDateString()}</p>
+                  <p className="font-semibold text-slate-800">{formatearFechaHoraLocal(pago.updatedAt)}</p>
                 </div>
               )}
             </div>

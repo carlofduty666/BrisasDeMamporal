@@ -14,6 +14,7 @@ import {
   FaCheckCircle,
   FaExclamationCircle,
 } from 'react-icons/fa';
+import { formatearCedula } from '../../../utils/formatters';
 
 const RepresentanteList = () => {
   const [representantes, setRepresentantes] = useState([]);
@@ -503,7 +504,7 @@ const RepresentanteList = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentItems.map((representante) => (
                   <tr key={representante.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{representante.cedula}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">V - {formatearCedula(representante.cedula)}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {representante.nombre} {representante.apellido}
@@ -562,7 +563,7 @@ const RepresentanteList = () => {
                   <h3 className="text-lg font-semibold text-gray-900">
                     {rep.nombre} {rep.apellido}
                   </h3>
-                  <p className="text-sm text-gray-500">C.I.: {rep.cedula}</p>
+                  <p className="text-sm text-gray-500">C.I.: V - {formatearCedula(rep.cedula)}</p>
                 </div>
                 <span
                   className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${

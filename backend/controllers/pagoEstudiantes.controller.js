@@ -19,7 +19,16 @@ const pagoEstudiantesController = {
   // Obtener todos los pagos
   getAllPagos: async (req, res) => {
     try {
+      // Construir filtros desde query params
+      const { mesPago, annoEscolarID, estado } = req.query;
+      const where = {};
+      
+      if (mesPago) where.mesPago = mesPago;
+      if (annoEscolarID) where.annoEscolarID = Number(annoEscolarID);
+      if (estado) where.estado = estado;
+
       const pagos = await PagoEstudiantes.findAll({
+        where,
         include: [
           {
             model: Personas,
@@ -49,6 +58,7 @@ const pagoEstudiantesController = {
           {
             model: Inscripciones,
             as: 'inscripciones',
+            required: false,
             attributes: ['id', 'gradoID', 'seccionID'],
             include: [
               { model: Grados, as: 'grado', attributes: ['id','nombre_grado'] },
@@ -59,9 +69,65 @@ const pagoEstudiantesController = {
         order: [['createdAt', 'DESC']]
       });
 
-      // Adjuntar snapshot de mensualidad (sin conversiones de moneda)
+      // Adjuntar snapshot de mensualidad y buscar grado/sección del estudiante
       const pagosEnriquecidos = await Promise.all(pagos.map(async (p) => {
         const plain = p.toJSON();
+        
+        // Buscar grado del estudiante para el año escolar del pago
+        try {
+          const gradoPersona = await db.Grado_Personas.findOne({
+            where: { 
+              personaID: p.estudianteID, 
+              annoEscolarID: p.annoEscolarID 
+            },
+            include: [
+              {
+                model: db.Grados,
+                as: 'grado',
+                attributes: ['id', 'nombre_grado'],
+                include: [
+                  {
+                    model: db.Niveles,
+                    as: 'Niveles',
+                    attributes: ['id', 'nombre_nivel']
+                  }
+                ]
+              }
+            ]
+          });
+          
+          if (gradoPersona && gradoPersona.grado) {
+            plain.grado = gradoPersona.grado;
+          }
+        } catch (e) {
+          console.error('Error al buscar grado del estudiante:', e);
+        }
+        
+        // Buscar sección del estudiante para el año escolar del pago
+        try {
+          const seccionPersona = await db.Seccion_Personas.findOne({
+            where: { 
+              personaID: p.estudianteID, 
+              annoEscolarID: p.annoEscolarID,
+              rol: 'estudiante'
+            },
+            include: [
+              {
+                model: db.Secciones,
+                as: 'secciones',
+                attributes: ['id', 'nombre_seccion']
+              }
+            ]
+          });
+          
+          if (seccionPersona && seccionPersona.secciones) {
+            plain.seccion = seccionPersona.secciones;
+          }
+        } catch (e) {
+          console.error('Error al buscar sección del estudiante:', e);
+        }
+        
+        // Adjuntar snapshot de mensualidad
         try {
           const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
           if (mensualidad) {
@@ -125,6 +191,16 @@ const pagoEstudiantesController = {
             model: AnnoEscolar,
             as: 'annoEscolar',
             attributes: ['id', 'periodo']
+          },
+          {
+            model: Inscripciones,
+            as: 'inscripciones',
+            required: false,
+            attributes: ['id', 'gradoID', 'seccionID'],
+            include: [
+              { model: Grados, as: 'grado', attributes: ['id','nombre_grado'] },
+              { model: Secciones, as: 'Secciones', attributes: ['id','nombre_seccion'] }
+            ]
           }
         ]
       });
@@ -133,8 +209,64 @@ const pagoEstudiantesController = {
         return res.status(404).json({ message: 'Pago no encontrado' });
       }
       
-      // Adjuntar snapshot de mensualidad (sin conversiones de moneda)
+      // Adjuntar snapshot de mensualidad y buscar grado/sección del estudiante
       const plain = pago.toJSON();
+      
+      // Buscar grado del estudiante para el año escolar del pago
+      try {
+        const gradoPersona = await db.Grado_Personas.findOne({
+          where: { 
+            personaID: pago.estudianteID, 
+            annoEscolarID: pago.annoEscolarID 
+          },
+          include: [
+            {
+              model: db.Grados,
+              as: 'grado',
+              attributes: ['id', 'nombre_grado'],
+              include: [
+                {
+                  model: db.Niveles,
+                  as: 'Niveles',
+                  attributes: ['id', 'nombre_nivel']
+                }
+              ]
+            }
+          ]
+        });
+        
+        if (gradoPersona && gradoPersona.grado) {
+          plain.grado = gradoPersona.grado;
+        }
+      } catch (e) {
+        console.error('Error al buscar grado del estudiante:', e);
+      }
+      
+      // Buscar sección del estudiante para el año escolar del pago
+      try {
+        const seccionPersona = await db.Seccion_Personas.findOne({
+          where: { 
+            personaID: pago.estudianteID, 
+            annoEscolarID: pago.annoEscolarID,
+            rol: 'estudiante'
+          },
+          include: [
+            {
+              model: db.Secciones,
+              as: 'secciones',
+              attributes: ['id', 'nombre_seccion']
+            }
+          ]
+        });
+        
+        if (seccionPersona && seccionPersona.secciones) {
+          plain.seccion = seccionPersona.secciones;
+        }
+      } catch (e) {
+        console.error('Error al buscar sección del estudiante:', e);
+      }
+      
+      // Adjuntar snapshot de mensualidad
       try {
         const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: pago.id } });
         if (mensualidad) {
@@ -556,14 +688,80 @@ const pagoEstudiantesController = {
             model: AnnoEscolar,
             as: 'annoEscolar',
             attributes: ['id', 'periodo']
+          },
+          {
+            model: Inscripciones,
+            as: 'inscripciones',
+            required: false,
+            attributes: ['id', 'gradoID', 'seccionID'],
+            include: [
+              { model: Grados, as: 'grado', attributes: ['id','nombre_grado'] },
+              { model: Secciones, as: 'Secciones', attributes: ['id','nombre_seccion'] }
+            ]
           }
         ],
         order: [['createdAt', 'DESC']]
       });
       
-      // Adjuntar snapshot de mensualidad (sin conversiones de moneda)
+      // Adjuntar snapshot de mensualidad y buscar grado/sección del estudiante
       const pagosEnriquecidos = await Promise.all(pagos.map(async (p) => {
         const plain = p.toJSON();
+        
+        // Buscar grado del estudiante para el año escolar del pago
+        try {
+          const gradoPersona = await db.Grado_Personas.findOne({
+            where: { 
+              personaID: p.estudianteID, 
+              annoEscolarID: p.annoEscolarID 
+            },
+            include: [
+              {
+                model: db.Grados,
+                as: 'grado',
+                attributes: ['id', 'nombre_grado'],
+                include: [
+                  {
+                    model: db.Niveles,
+                    as: 'Niveles',
+                    attributes: ['id', 'nombre_nivel']
+                  }
+                ]
+              }
+            ]
+          });
+          
+          if (gradoPersona && gradoPersona.grado) {
+            plain.grado = gradoPersona.grado;
+          }
+        } catch (e) {
+          console.error('Error al buscar grado del estudiante:', e);
+        }
+        
+        // Buscar sección del estudiante para el año escolar del pago
+        try {
+          const seccionPersona = await db.Seccion_Personas.findOne({
+            where: { 
+              personaID: p.estudianteID, 
+              annoEscolarID: p.annoEscolarID,
+              rol: 'estudiante'
+            },
+            include: [
+              {
+                model: db.Secciones,
+                as: 'secciones',
+                attributes: ['id', 'nombre_seccion']
+              }
+            ]
+          });
+          
+          if (seccionPersona && seccionPersona.secciones) {
+            plain.seccion = seccionPersona.secciones;
+          }
+        } catch (e) {
+          console.error('Error al buscar sección del estudiante:', e);
+        }
+        
+        // Adjuntar snapshot de mensualidad
         try {
           const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
           if (mensualidad) {
@@ -629,14 +827,80 @@ const pagoEstudiantesController = {
             model: AnnoEscolar,
             as: 'annoEscolar',
             attributes: ['id', 'periodo']
+          },
+          {
+            model: Inscripciones,
+            as: 'inscripciones',
+            required: false,
+            attributes: ['id', 'gradoID', 'seccionID'],
+            include: [
+              { model: Grados, as: 'grado', attributes: ['id','nombre_grado'] },
+              { model: Secciones, as: 'Secciones', attributes: ['id','nombre_seccion'] }
+            ]
           }
         ],
         order: [['createdAt', 'DESC']]
       });
       
-      // Adjuntar snapshot de mensualidad (sin conversiones de moneda)
+      // Adjuntar snapshot de mensualidad y buscar grado/sección del estudiante
       const pagosEnriquecidos = await Promise.all(pagos.map(async (p) => {
         const plain = p.toJSON();
+        
+        // Buscar grado del estudiante para el año escolar del pago
+        try {
+          const gradoPersona = await db.Grado_Personas.findOne({
+            where: { 
+              personaID: p.estudianteID, 
+              annoEscolarID: p.annoEscolarID 
+            },
+            include: [
+              {
+                model: db.Grados,
+                as: 'grado',
+                attributes: ['id', 'nombre_grado'],
+                include: [
+                  {
+                    model: db.Niveles,
+                    as: 'Niveles',
+                    attributes: ['id', 'nombre_nivel']
+                  }
+                ]
+              }
+            ]
+          });
+          
+          if (gradoPersona && gradoPersona.grado) {
+            plain.grado = gradoPersona.grado;
+          }
+        } catch (e) {
+          console.error('Error al buscar grado del estudiante:', e);
+        }
+        
+        // Buscar sección del estudiante para el año escolar del pago
+        try {
+          const seccionPersona = await db.Seccion_Personas.findOne({
+            where: { 
+              personaID: p.estudianteID, 
+              annoEscolarID: p.annoEscolarID,
+              rol: 'estudiante'
+            },
+            include: [
+              {
+                model: db.Secciones,
+                as: 'secciones',
+                attributes: ['id', 'nombre_seccion']
+              }
+            ]
+          });
+          
+          if (seccionPersona && seccionPersona.secciones) {
+            plain.seccion = seccionPersona.secciones;
+          }
+        } catch (e) {
+          console.error('Error al buscar sección del estudiante:', e);
+        }
+        
+        // Adjuntar snapshot de mensualidad
         try {
           const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
           if (mensualidad) {

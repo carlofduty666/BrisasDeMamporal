@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { FaArrowLeft, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice, FaBook, FaGraduationCap, FaChalkboardTeacher, FaUser, FaIdCard, FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaStickyNote, FaChartLine, FaAward, FaTimes, FaCheck, FaPlus } from 'react-icons/fa';
-import { formatearFecha, parsearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado } from '../../../utils/formatters';
+import { formatearFecha, parsearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
 
 const EstudianteDetail = () => {
   const { id } = useParams();
@@ -872,7 +872,7 @@ const EstudianteDetail = () => {
                     {estudiante?.nombre} {estudiante?.apellido}
                   </h1>
                   <p className="text-blue-100 mt-1">
-                    Cédula: {estudiante?.cedula} • {grado ? formatearNombreGrado(grado.nombre_grado) : 'Sin grado asignado'} {seccion ? `- Sección ${seccion.nombre_seccion}` : ''}
+                    Cédula: {estudiante?.cedula ? `V - ${formatearCedula(estudiante.cedula)}` : 'No registrada'} • {grado ? formatearNombreGrado(grado.nombre_grado) : 'Sin grado asignado'} {seccion ? `- Sección ${seccion.nombre_seccion}` : ''}
                   </p>
                 </div>
               </div>
@@ -985,7 +985,7 @@ const EstudianteDetail = () => {
                               <FaIdCard className="w-5 h-5 text-gray-400" />
                               <div>
                                 <p className="text-sm font-medium text-gray-500">Cédula</p>
-                                <p className="text-gray-900">{estudiante?.cedula}</p>
+                                <p className="text-gray-900">{estudiante?.cedula ? `V - ${formatearCedula(estudiante.cedula)}` : 'No registrada'}</p>
                               </div>
                             </div>
                             
@@ -1143,7 +1143,7 @@ const EstudianteDetail = () => {
                             <FaIdCard className="w-5 h-5 text-gray-400" />
                             <div>
                               <p className="text-sm font-medium text-gray-500">Cédula</p>
-                              <p className="text-gray-900">{representante.cedula}</p>
+                              <p className="text-gray-900">{representante.cedula ? `V - ${formatearCedula(representante.cedula)}` : 'No registrada'}</p>
                             </div>
                           </div>
                           
@@ -2200,7 +2200,7 @@ const EstudianteDetail = () => {
                     </div>
                     <div>
                       <span className="text-blue-600">Cédula:</span>
-                      <span className="ml-2 font-medium">{estudiante?.cedula}</span>
+                      <span className="ml-2 font-medium">{estudiante?.cedula ? `V - ${formatearCedula(estudiante.cedula)}` : 'No registrada'}</span>
                     </div>
                     <div>
                       <span className="text-blue-600">Grado:</span>

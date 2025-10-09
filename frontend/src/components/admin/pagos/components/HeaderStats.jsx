@@ -35,6 +35,49 @@ export default function HeaderStats({
 
   const pagosMes = useMemo(() => {
     return filteredPagos.filter(p => {
+      // Preferir el mes/año de la mensualidad (objetivo del pago), no la fecha de reporte
+      const snap = p.mensualidadSnapshot || p.mensualidad || null;
+      if (snap && (snap.mes != null) && (snap.anio != null)) {
+        const mesNum = Number(snap.mes);
+        const anioNum = Number(snap.anio);
+        const key = `${anioNum}-${String(mesNum).padStart(2, '0')}`;
+        return key === ym;
+      }
+
+      // Segundo intento: usar mesPago y annoEscolar.periodo para derivar año
+      const normalizeMes = (valor) => {
+        if (valor == null) return null;
+        const m = String(valor).trim().toLowerCase();
+        const mapa = {
+          '1':1,'01':1,'enero':1,
+          '2':2,'02':2,'febrero':2,
+          '3':3,'03':3,'marzo':3,
+          '4':4,'04':4,'abril':4,
+          '5':5,'05':5,'mayo':5,
+          '6':6,'06':6,'junio':6,
+          '7':7,'07':7,'julio':7,
+          '8':8,'08':8,'agosto':8,
+          '9':9,'09':9,'septiembre':9,'setiembre':9,
+          '10':10,'octubre':10,
+          '11':11,'noviembre':11,
+          '12':12,'diciembre':12
+        };
+        return mapa[m] ?? (Number.isFinite(Number(m)) ? Number(m) : null);
+      };
+      const anioFromPeriodo = (periodo, mesNum) => {
+        if (!periodo || !mesNum) return null;
+        const [ini, fin] = String(periodo).split('-').map(Number);
+        if (!Number.isFinite(ini) || !Number.isFinite(fin)) return null;
+        return mesNum >= 9 ? ini : fin;
+      };
+      const mesNumAlt = normalizeMes(p?.mesPago);
+      const anioNumAlt = anioFromPeriodo(p?.annoEscolar?.periodo, mesNumAlt);
+      if (mesNumAlt && anioNumAlt) {
+        const key = `${anioNumAlt}-${String(mesNumAlt).padStart(2, '0')}`;
+        return key === ym;
+      }
+
+      // Último fallback: usar fechaPago solo si no hay datos de mensualidad
       const d = p.fechaPago ? new Date(p.fechaPago) : null;
       if (!d || isNaN(d)) return false;
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -42,8 +85,25 @@ export default function HeaderStats({
     });
   }, [filteredPagos, ym]);
 
-  const totalMes = useMemo(() => pagosMes.reduce((acc, p) => acc + calcPagoTotal(p), 0), [pagosMes]);
-  const countMes = pagosMes.length;
+  // Total solo con pagos aprobados
+  const totalMes = useMemo(
+    () => pagosMes.filter(p => p.estado === 'pagado').reduce((acc, p) => acc + calcPagoTotal(p), 0),
+    [pagosMes]
+  );
+  // Cantidad de pagos aprobados del mes
+  const countMes = useMemo(() => pagosMes.filter(p => p.estado === 'pagado').length, [pagosMes]);
+  
+  // Total en VES del mes (solo pagos aprobados)
+  const totalMesVES = useMemo(() => {
+    return pagosMes
+      .filter(p => p.estado === 'pagado')
+      .reduce((acc, pago) => {
+        const snapshot = pago.mensualidadSnapshot;
+        const montoVES = snapshot?.precioAplicadoVES != null ? Number(snapshot.precioAplicadoVES) : 0;
+        const moraVES = snapshot?.moraAplicadaVES != null ? Number(snapshot.moraAplicadaVES) : 0;
+        return acc + montoVES + moraVES;
+      }, 0);
+  }, [pagosMes]);
 
   // Totales por estado del mes vigente
   const pendientesMes = useMemo(() => pagosMes.filter(p => p.estado === 'pendiente' && !p.urlComprobante).length, [pagosMes]);
@@ -116,9 +176,18 @@ export default function HeaderStats({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-pink-100 text-sm font-medium">Total del Mes</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(totalMes)} <span className="text-sm">({countMes})</span></p>
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-2xl font-bold text-white">
+                        {formatCurrency(totalMes)} <span className="text-sm">({countMes})</span>
+                      </p>
+                      {totalMesVES > 0 && (
+                        <p className="text-lg font-semibold text-pink-100">
+                          Bs. {totalMesVES.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                        </p>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-2">
-                      <select
+                      {/* <select
                         className="text-xs bg-white/10 border border-white/30 text-white rounded px-2 py-1"
                         value={mesVal}
                         onChange={(e) => onChangeMes && onChangeMes(Number(e.target.value))}
@@ -134,7 +203,7 @@ export default function HeaderStats({
                         value={anioVal}
                         onChange={(e) => onChangeAnio && onChangeAnio(Number(e.target.value))}
                         title="Año para el resumen"
-                      />
+                      /> */}
                       {onOpenMonthlySummary && (
                         <button onClick={onOpenMonthlySummary} className="text-xs px-2 py-1 rounded bg-white/20 border border-white/30 text-white hover:bg-white/30">Ver resumen</button>
                       )}

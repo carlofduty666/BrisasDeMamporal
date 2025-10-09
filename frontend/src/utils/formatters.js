@@ -189,6 +189,51 @@ export const tipoDocumentoFormateado = {
     });
   };
 
+  // Formateador de cédula
+  // Convierte '29501851' a '29 501 851' separando por columnas posicionales
+  export const formatearCedula = (cedula) => {
+    if (!cedula) return '';
+    
+    // Convertir a string y eliminar espacios y caracteres no numéricos
+    const cedulaStr = String(cedula).replace(/\D/g, '');
+    
+    if (cedulaStr.length === 0) return '';
+    
+    // Separar en grupos de 3 dígitos desde la derecha
+    const grupos = [];
+    let temp = cedulaStr;
+    
+    while (temp.length > 0) {
+      if (temp.length <= 3) {
+        grupos.unshift(temp);
+        break;
+      } else {
+        grupos.unshift(temp.slice(-3));
+        temp = temp.slice(0, -3);
+      }
+    }
+    
+    return grupos.join(' ');
+  };
+
+  // === Formateadores de fecha y hora adicionales ===
+  // Fecha + hora local en la zona de Caracas (o configurable), útil para createdAt/updatedAt
+  export const formatearFechaHoraLocal = (fecha, { timeZone = 'America/Caracas', includeSeconds = false } = {}) => {
+    if (!fecha) return 'No disponible';
+    const dateObj = new Date(fecha);
+    if (isNaN(dateObj.getTime())) return 'No disponible';
+    return dateObj.toLocaleString('es-VE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: includeSeconds ? '2-digit' : undefined,
+      hour12: true,
+      timeZone
+    });
+  };
+
   // const formatDate = (dateString) => {
   //   if (!dateString) return 'N/A';
   //   const date = new Date(dateString);
@@ -204,5 +249,5 @@ export const tipoDocumentoFormateado = {
   //   if (monto === null || monto === undefined) return 'N/A';
   //   return `$${parseFloat(monto).toFixed(2)}`;
   // };
-
+  
   

@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaUserGraduate, FaTag, FaMoneyCheckAlt, FaFileInvoiceDollar, FaEye, FaCalendarAlt } from 'react-icons/fa';
+import { formatearFecha } from '../../../../utils/formatters';
 
 function classEstado(estado) {
   if (estado === 'pagado') return 'bg-green-100 text-green-800';

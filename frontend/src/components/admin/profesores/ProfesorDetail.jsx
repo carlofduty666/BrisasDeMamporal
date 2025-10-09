@@ -38,7 +38,7 @@ import {
   FaStickyNote,
   FaUser
 } from 'react-icons/fa';
-import { formatearFecha, formatearNombreGrado } from '../../../utils/formatters';
+import { formatearFecha, formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
 
 const ProfesorDetail = () => {
   const { id } = useParams();
@@ -812,7 +812,7 @@ useEffect(() => {
                   <div className="flex flex-wrap items-center gap-4 text-emerald-200">
                     <div className="flex items-center">
                       <FaIdCard className="w-4 h-4 mr-2" />
-                      <span>C.I: {profesor?.cedula}</span>
+                      <span>C.I: V - {formatearCedula(profesor?.cedula)}</span>
                     </div>
                     <div className="flex items-center">
                       <FaChalkboardTeacher className="w-4 h-4 mr-2" />
@@ -1051,7 +1051,7 @@ useEffect(() => {
                     <div className="space-y-4">
                       <div className="flex items-center">
                         <div className="w-24 text-sm font-medium text-emerald-700">Cédula:</div>
-                        <div className="text-sm text-gray-900 font-semibold">{profesor.cedula}</div>
+                        <div className="text-sm text-gray-900 font-semibold">V - {formatearCedula(profesor.cedula)}</div>
                       </div>
                       <div className="flex items-center">
                         <div className="w-24 text-sm font-medium text-emerald-700">Nombre:</div>
@@ -1586,7 +1586,7 @@ useEffect(() => {
                                       {calificacion.Personas?.nombre} {calificacion.Personas?.apellido}
                                     </div>
                                     <div className="text-sm text-gray-500">
-                                      C.I: {calificacion.Personas?.cedula}
+                                      C.I: V - {formatearCedula(calificacion.Personas?.cedula)}
                                     </div>
                                   </div>
                                 </div>
@@ -1701,7 +1701,7 @@ useEffect(() => {
                               <h4 className="text-lg font-semibold text-gray-900">
                                 {estudiante.nombre} {estudiante.apellido}
                               </h4>
-                              <p className="text-sm text-gray-600">C.I: {estudiante.cedula}</p>
+                              <p className="text-sm text-gray-600">C.I: V - {formatearCedula(estudiante.cedula)}</p>
                             </div>
                           </div>
                           

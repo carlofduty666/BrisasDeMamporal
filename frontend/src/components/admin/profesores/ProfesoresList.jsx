@@ -18,7 +18,7 @@ import {
   FaDownload,
   FaChartLine
 } from 'react-icons/fa';
-import { formatearNombreGrado } from '../../../utils/formatters';
+import { formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
 
 const ProfesoresList = () => {
   const [profesores, setProfesores] = useState([]);
@@ -455,7 +455,7 @@ const ProfesoresList = () => {
                               {profesor.nombre} {profesor.apellido}
                             </div>
                             <div className="text-sm text-gray-500">
-                              C.I: {profesor.cedula}
+                              C.I: V - {formatearCedula(profesor.cedula)}
                             </div>
                           </div>
                         </div>
@@ -575,7 +575,7 @@ const ProfesoresList = () => {
                       <h3 className="text-lg font-semibold text-gray-900 truncate">
                         {profesor.nombre} {profesor.apellido}
                       </h3>
-                      <p className="text-sm text-gray-500">C.I: {profesor.cedula}</p>
+                      <p className="text-sm text-gray-500">C.I: V - {formatearCedula(profesor.cedula)}</p>
                     </div>
                   </div>
 

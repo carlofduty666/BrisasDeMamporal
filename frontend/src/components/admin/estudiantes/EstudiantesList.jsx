@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaSearch, FaEye, FaTrash, FaPlus, FaFilter, FaDownload, FaUserGraduate, FaChartLine, FaUsers } from 'react-icons/fa';
 import axios from 'axios';
-import { formatearNombreGrado } from '../../../utils/formatters';
+import { formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
 
 const EstudiantesList = () => {
   const [estudiantes, setEstudiantes] = useState([]);
@@ -532,7 +532,7 @@ const EstudiantesList = () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-700">
-                            {estudiante.cedula || 'No registrada'}
+                            {estudiante.cedula ? `V - ${formatearCedula(estudiante.cedula)}` : 'No registrada'}
                           </div>
                         </td>
                         <td className="px-6 py-4">

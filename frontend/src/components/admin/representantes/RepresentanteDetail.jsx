@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { FaArrowLeft, FaPlus, FaTimes, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice, FaFileAlt, FaCheck, FaUser, FaIdCard, FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaBriefcase, FaCommentDots } from 'react-icons/fa';
-import { formatearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado } from '../../../utils/formatters';
+import { formatearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
 
 const RepresentanteDetail = () => {
   const { id } = useParams();
@@ -872,7 +872,7 @@ const RepresentanteDetail = () => {
                       />
                     </div>
                   ) : (
-                    <p className="text-sm font-medium text-gray-900">{representante?.cedula || 'No disponible'}</p>
+                    <p className="text-sm font-medium text-gray-900">V - {formatearCedula(representante?.cedula) || 'No disponible'}</p>
                   )}
                 </div>
 
@@ -1052,7 +1052,7 @@ const RepresentanteDetail = () => {
               <tbody className="bg-white divide-y divide-gray-100">
                 {estudiantes.map((estudiante) => (
                   <tr key={estudiante.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{estudiante.cedula}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">V - {formatearCedula(estudiante.cedula)}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{estudiante.nombre} {estudiante.apellido}</div>
                     </td>
@@ -1546,7 +1546,7 @@ const RepresentanteDetail = () => {
                         <span className="ml-2 font-medium">
                           {(() => {
                             const est = estudiantes.find(e => String(e.id) === String(formPago.estudianteID));
-                            return est?.cedula || '-';
+                            return est?.cedula ? `V - ${formatearCedula(est.cedula)}` : '-';
                           })()}
                         </span>
                       </div>
