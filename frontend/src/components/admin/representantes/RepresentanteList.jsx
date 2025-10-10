@@ -320,7 +320,7 @@ const RepresentanteList = () => {
             {/* Botón acción */}
             <div className="mt-8 lg:mt-0 lg:ml-8">
               <Link
-                to="/inscripcion/nuevo-estudiante"
+                to="/inscripcion/nuevo-estudiante?from=representantes"
                 className="inline-flex items-center px-8 py-4 bg-white/20 backdrop-blur-md text-white font-semibold rounded-2xl border border-white/30 hover:bg-white/30 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
                 <FaUserPlus className="w-5 h-5 mr-3" />

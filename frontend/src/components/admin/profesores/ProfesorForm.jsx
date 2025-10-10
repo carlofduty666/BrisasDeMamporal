@@ -1,7 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { FaArrowLeft, FaUpload, FaSave, FaUserPlus } from 'react-icons/fa';
+import { 
+  FaArrowLeft, 
+  FaUpload, 
+  FaSave, 
+  FaUserPlus, 
+  FaChalkboardTeacher,
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaFileAlt,
+  FaTimes,
+  FaSpinner,
+  FaIdCard,
+  FaUser,
+  FaPhone,
+  FaEnvelope,
+  FaMapMarkerAlt,
+  FaCalendarAlt,
+  FaVenusMars,
+  FaGlobeAmericas,
+  FaGraduationCap,
+  FaStickyNote
+} from 'react-icons/fa';
 import AdminLayout from '../layout/AdminLayout';
 
 const ProfesorForm = () => {
@@ -48,9 +69,16 @@ const ProfesorForm = () => {
           const token = localStorage.getItem('token');
           
           const response = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/tipo/profesor/${id}`,
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/${id}`,
             { headers: { 'Authorization': `Bearer ${token}` } }
           );
+          
+          // Verificar que sea un profesor
+          if (response.data.tipo !== 'profesor') {
+            setError('La persona seleccionada no es un profesor');
+            setLoading(false);
+            return;
+          }
           
           setFormData({
             cedula: response.data.cedula || '',
@@ -337,45 +365,95 @@ const ProfesorForm = () => {
     navigate('/admin/profesores');
   };
   
+  if (loading && isEditing && !profesorCreado) {
+    return (
+      <div className="min-h-screen bg-emerald-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-200 border-t-emerald-600 mx-auto"></div>
+            <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-pulse"></div>
+          </div>
+          <p className="mt-4 text-emerald-600 font-medium">Cargando datos del profesor...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-     
+    <div className="min-h-screen bg-emerald-50">
       <div className="container mx-auto px-4 py-8">
-        {/* Botón de regreso */}
-        <div className="mb-6">
-          <button
-            onClick={() => navigate('/admin/profesores')}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            <FaArrowLeft className="mr-2" /> Volver a la lista
-          </button>
+        {/* Header Hero Section */}
+        <div className="relative overflow-hidden bg-emerald-800 shadow-2xl rounded-2xl mb-8">
+          <div className="absolute inset-0 bg-black/10"></div>
+
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-700/20 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-emerald-700/10 rounded-full blur-2xl"></div>
+          
+          <div className="relative px-6 py-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-emerald-500/20 rounded-xl backdrop-blur-sm border border-emerald-400/30">
+                  <FaChalkboardTeacher className="w-8 h-8 text-emerald-200" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-white mb-1">
+                    {isEditing ? 'Editar Profesor' : 'Registrar Nuevo Profesor'}
+                  </h1>
+                  <p className="text-emerald-200">
+                    {isEditing ? 'Actualiza la información del profesor' : 'Complete los datos del nuevo profesor'}
+                  </p>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => navigate('/admin/profesores')}
+                className="inline-flex items-center px-6 py-3 bg-white/20 backdrop-blur-md text-white font-semibold rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+              >
+                <FaArrowLeft className="mr-2" /> Volver
+              </button>
+            </div>
+          </div>
         </div>
         
         {/* Mensajes de error o éxito */}
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
+          <div className="mb-6 animate-fade-in-down">
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-r-xl shadow-lg p-4">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <FaExclamationCircle className="h-5 w-5 text-red-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-red-800">{error}</p>
+                </div>
+                <button
+                  onClick={() => setError('')}
+                  className="ml-auto flex-shrink-0 text-red-400 hover:text-red-600 transition-colors duration-200"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
               </div>
             </div>
           </div>
         )}
         
         {success && (
-          <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-green-700">{success}</p>
+          <div className="mb-6 animate-fade-in-down">
+            <div className="bg-emerald-50 border-l-4 border-emerald-500 rounded-r-xl shadow-lg p-4">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <FaCheckCircle className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-emerald-800">{success}</p>
+                </div>
+                <button
+                  onClick={() => setSuccess('')}
+                  className="ml-auto flex-shrink-0 text-emerald-400 hover:text-emerald-600 transition-colors duration-200"
+                >
+                  <FaTimes className="h-5 w-5" />
+                </button>
               </div>
             </div>
           </div>
@@ -383,279 +461,342 @@ const ProfesorForm = () => {
         
         {/* Formulario de datos del profesor - Solo visible si no se ha creado o estamos editando */}
         {mostrarFormularioProfesor && (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {isEditing ? 'Editar Profesor' : 'Registrar Nuevo Profesor'}
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Complete la información del profesor.
-              </p>
+          <div className="bg-white shadow-xl rounded-2xl overflow-hidden mb-8 transform transition-all duration-300 hover:shadow-2xl">
+            <div className="bg-emerald-600 px-6 py-5">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <FaUserPlus className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Información del Profesor
+                  </h3>
+                  <p className="text-emerald-100 text-sm">
+                    Los campos marcados con <span className="text-red-300">*</span> son obligatorios
+                  </p>
+                </div>
+              </div>
             </div>
             
-            <div className="border-t border-gray-200">
-              <form ref={formRef} onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
-                <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                  <div className="sm:col-span-3">
-                    <label htmlFor="cedula" className="block text-sm font-medium text-gray-700">
-                      Cédula/Documento <span className="text-red-500">*</span>
+            <div className="p-6">
+              <form ref={formRef} onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {/* Cédula */}
+                  <div className="group">
+                    <label htmlFor="cedula" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaIdCard className="mr-2 text-emerald-600" />
+                      Cédula/Documento <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        name="cedula"
-                        id="cedula"
-                        value={formData.cedula}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        required
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      name="cedula"
+                      id="cedula"
+                      value={formData.cedula}
+                      onChange={handleChange}
+                      placeholder="Ej: V-12345678"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                      required
+                    />
                   </div>
                   
-                  <div className="sm:col-span-3">
-                    <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">
-                      Nombre <span className="text-red-500">*</span>
+                  {/* Nombre */}
+                  <div className="group">
+                    <label htmlFor="nombre" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaUser className="mr-2 text-emerald-600" />
+                      Nombre <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        name="nombre"
-                        id="nombre"
-                        value={formData.nombre}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        required
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      name="nombre"
+                      id="nombre"
+                      value={formData.nombre}
+                      onChange={handleChange}
+                      placeholder="Ingrese el nombre"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                      required
+                    />
                   </div>
                   
-                  <div className="sm:col-span-3">
-                    <label htmlFor="apellido" className="block text-sm font-medium text-gray-700">
-                      Apellido <span className="text-red-500">*</span>
+                  {/* Apellido */}
+                  <div className="group">
+                    <label htmlFor="apellido" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaUser className="mr-2 text-emerald-600" />
+                      Apellido <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        name="apellido"
-                        id="apellido"
-                        value={formData.apellido}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        required
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      name="apellido"
+                      id="apellido"
+                      value={formData.apellido}
+                      onChange={handleChange}
+                      placeholder="Ingrese el apellido"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                      required
+                    />
                   </div>
                   
-                  <div className="sm:col-span-3">
-                    <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">
-                      Teléfono <span className="text-red-500">*</span>
+                  {/* Teléfono */}
+                  <div className="group">
+                    <label htmlFor="telefono" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaPhone className="mr-2 text-emerald-600" />
+                      Teléfono <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <div className="mt-1">
-                      <input
-                        type="tel"
-                        name="telefono"
-                        id="telefono"
-                        value={formData.telefono}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        required
-                      />
-                    </div>
+                    <input
+                      type="tel"
+                      name="telefono"
+                      id="telefono"
+                      value={formData.telefono}
+                      onChange={handleChange}
+                      placeholder="Ej: 0412-1234567"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                      required
+                    />
                   </div>
                   
-                  <div className="sm:col-span-3">
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                      Email <span className="text-red-500">*</span>
+                  {/* Email */}
+                  <div className="group">
+                    <label htmlFor="email" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaEnvelope className="mr-2 text-emerald-600" />
+                      Email <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <div className="mt-1">
-                      <input
-                        type="email"
-                        name="email"
-                        id="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        required
-                      />
-                    </div>
+                    <input
+                      type="email"
+                      name="email"
+                      id="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="ejemplo@correo.com"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                      required
+                    />
                   </div>
                   
-                  <div className="sm:col-span-3">
-                    <label htmlFor="fechaNacimiento" className="block text-sm font-medium text-gray-700">
+                  {/* Fecha de Nacimiento */}
+                  <div className="group">
+                    <label htmlFor="fechaNacimiento" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaCalendarAlt className="mr-2 text-emerald-600" />
                       Fecha de Nacimiento
                     </label>
-                    <div className="mt-1">
-                      <input
-                        type="date"
-                        name="fechaNacimiento"
-                        id="fechaNacimiento"
-                        value={formData.fechaNacimiento}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      />
-                    </div>
+                    <input
+                      type="date"
+                      name="fechaNacimiento"
+                      id="fechaNacimiento"
+                      value={formData.fechaNacimiento}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                    />
                   </div>
                   
-                  <div className="sm:col-span-3">
-                    <label htmlFor="genero" className="block text-sm font-medium text-gray-700">
+                  {/* Género */}
+                  <div className="group">
+                    <label htmlFor="genero" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaVenusMars className="mr-2 text-emerald-600" />
                       Género
                     </label>
-                    <div className="mt-1">
-                      <select
-                        id="genero"
-                        name="genero"
-                        value={formData.genero}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      >
-                        <option value="">Seleccione</option>
-                        <option value="M">Masculino</option>
-                        <option value="F">Femenino</option>
-                      </select>
-                    </div>
+                    <select
+                      id="genero"
+                      name="genero"
+                      value={formData.genero}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                    >
+                      <option value="">Seleccione el género</option>
+                      <option value="M">Masculino</option>
+                      <option value="F">Femenino</option>
+                    </select>
                   </div>
                   
-                  <div className="sm:col-span-3">
-                    <label htmlFor="lugarNacimiento" className="block text-sm font-medium text-gray-700">
+                  {/* Lugar de Nacimiento */}
+                  <div className="group">
+                    <label htmlFor="lugarNacimiento" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaGlobeAmericas className="mr-2 text-emerald-600" />
                       Lugar de Nacimiento
                     </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        name="lugarNacimiento"
-                        id="lugarNacimiento"
-                        value={formData.lugarNacimiento}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      name="lugarNacimiento"
+                      id="lugarNacimiento"
+                      value={formData.lugarNacimiento}
+                      onChange={handleChange}
+                      placeholder="Ciudad, Estado, País"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                    />
                   </div>
                   
-                  <div className="sm:col-span-3">
-                    <label htmlFor="profesion" className="block text-sm font-medium text-gray-700">
+                  {/* Profesión */}
+                  <div className="group">
+                    <label htmlFor="profesion" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaGraduationCap className="mr-2 text-emerald-600" />
                       Profesión
                     </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        name="profesion"
-                        id="profesion"
-                        value={formData.profesion}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      name="profesion"
+                      id="profesion"
+                      value={formData.profesion}
+                      onChange={handleChange}
+                      placeholder="Ej: Licenciado en Educación"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                    />
                   </div>
                   
-                  <div className="sm:col-span-6">
-                    <label htmlFor="direccion" className="block text-sm font-medium text-gray-700">
-                      Dirección <span className="text-red-500">*</span>
+                  {/* Dirección - Full width */}
+                  <div className="group sm:col-span-2 lg:col-span-3">
+                    <label htmlFor="direccion" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaMapMarkerAlt className="mr-2 text-emerald-600" />
+                      Dirección <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        name="direccion"
-                        id="direccion"
-                        value={formData.direccion}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        required
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      name="direccion"
+                      id="direccion"
+                      value={formData.direccion}
+                      onChange={handleChange}
+                      placeholder="Ingrese la dirección completa de residencia"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400"
+                      required
+                    />
                   </div>
                   
-                  <div className="sm:col-span-6">
-                    <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700">
+                  {/* Observaciones - Full width */}
+                  <div className="group sm:col-span-2 lg:col-span-3">
+                    <label htmlFor="observaciones" className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                      <FaStickyNote className="mr-2 text-emerald-600" />
                       Observaciones
                     </label>
-                    <div className="mt-1">
-                      <textarea
-                        id="observaciones"
-                        name="observaciones"
-                        rows="3"
-                        value={formData.observaciones}
-                        onChange={handleChange}
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      ></textarea>
-                    </div>
+                    <textarea
+                      id="observaciones"
+                      name="observaciones"
+                      rows="4"
+                      value={formData.observaciones}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-emerald-400 resize-none"
+                      placeholder="Información adicional sobre el profesor (especialidades, experiencia, horarios disponibles, etc.)"
+                    ></textarea>
                   </div>
                 </div>
                 
-                <div className="pt-5 mt-6 border-t border-gray-200">
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => navigate('/admin/profesores')}
-                      className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                    >
-                      {loading ? (
-                        <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Guardando...
-                        </span>
-                      ) : (
-                        <span className="flex items-center">
-                          <FaSave className="mr-2" /> Guardar
-                        </span>
-                      )}
-                    </button>
-                  </div>
+                {/* Botones de acción */}
+                <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/admin/profesores')}
+                    className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-200 transform hover:scale-105"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  >
+                    {loading ? (
+                      <span className="flex items-center">
+                        <FaSpinner className="animate-spin mr-2" />
+                        Guardando...
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        <FaSave className="mr-2" /> 
+                        {isEditing ? 'Actualizar Profesor' : 'Guardar Profesor'}
+                      </span>
+                    )}
+                  </button>
                 </div>
               </form>
             </div>
           </div>
         )}
         
-         {/* Sección de documentos (solo visible después de crear el profesor) */}
-         {(isEditing || profesorCreado) && (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg mt-6">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Documentos del Profesor
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Documentos requeridos para el profesor.
-              </p>
+        {/* Sección de documentos (solo visible después de crear el profesor) */}
+        {(isEditing || profesorCreado) && (
+          <div className="bg-white shadow-xl rounded-2xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl">
+            <div className="bg-emerald-600 px-6 py-5">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <FaFileAlt className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Documentos del Profesor
+                  </h3>
+                  <p className="text-emerald-100 text-sm">
+                    Gestiona los documentos requeridos
+                  </p>
+                </div>
+              </div>
             </div>
             
-            <div className="border-t border-gray-200">
+            <div className="p-6">
               {loadingDocumentos ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-200 border-t-emerald-600"></div>
+                    <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-pulse"></div>
+                  </div>
+                  <p className="mt-4 text-emerald-600 font-medium">Cargando documentos...</p>
                 </div>
               ) : (
-                <div className="px-4 py-5 sm:p-6">
+                <>
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {documentosRequeridos.map((doc) => (
-                      <div key={doc.id} className="border rounded-lg overflow-hidden">
-                        <div className={`p-4 ${doc.subido ? 'bg-green-50' : 'bg-gray-50'}`}>
-                          <div className="flex justify-between items-start">
-                            <h4 className="text-sm font-medium text-gray-900">
-                              {doc.nombre} {doc.obligatorio && <span className="text-red-500">*</span>}
-                            </h4>
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${doc.subido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                              {doc.subido ? 'Subido' : 'Pendiente'}
-                            </span>
-                          </div>
+                      <div 
+                        key={doc.id} 
+                        className={`relative rounded-2xl overflow-hidden border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl ${
+                          doc.subido 
+                            ? 'border-emerald-300 bg-emerald-50' 
+                            : 'border-amber-300 bg-amber-50'
+                        }`}
+                      >
+                        {/* Badge de estado */}
+                        <div className={`absolute top-3 right-3 z-10`}>
+                          <span className={`px-3 py-1 inline-flex items-center text-xs font-bold rounded-full shadow-lg ${
+                            doc.subido 
+                              ? 'bg-emerald-500 text-white' 
+                              : 'bg-amber-500 text-white'
+                          }`}>
+                            {doc.subido ? (
+                              <>
+                                <FaCheckCircle className="mr-1" /> Subido
+                              </>
+                            ) : (
+                              <>
+                                <FaExclamationCircle className="mr-1" /> Pendiente
+                              </>
+                            )}
+                          </span>
                         </div>
                         
-                        <div className="p-4">
+                        <div className="p-6">
+                          <div className="flex items-start space-x-3 mb-4">
+                            <div className={`p-3 rounded-xl ${
+                              doc.subido ? 'bg-emerald-200' : 'bg-amber-200'
+                            }`}>
+                              <FaFileAlt className={`w-6 h-6 ${
+                                doc.subido ? 'text-emerald-700' : 'text-amber-700'
+                              }`} />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-base font-bold text-gray-900 mb-1">
+                                {doc.nombre}
+                                {doc.obligatorio && <span className="text-red-500 ml-1">*</span>}
+                              </h4>
+                              <p className="text-xs text-gray-600">
+                                {doc.obligatorio ? 'Documento obligatorio' : 'Documento opcional'}
+                              </p>
+                            </div>
+                          </div>
+                          
                           <button
                             onClick={() => handleOpenUploadModal(doc)}
-                            className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center ${
+                              doc.subido
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-amber-600 text-white hover:bg-amber-700'
+                            }`}
                           >
-                            <FaUpload className="mr-2" /> {doc.subido ? 'Actualizar' : 'Subir'}
+                            <FaUpload className="mr-2" /> 
+                            {doc.subido ? 'Actualizar' : 'Subir Documento'}
                           </button>
                         </div>
                       </div>
@@ -663,31 +804,26 @@ const ProfesorForm = () => {
                   </div>
                   
                   {errorDocumentos && (
-                    <div className="mt-4 bg-red-50 border-l-4 border-red-400 p-4">
-                      <div className="flex">
-                        <div className="flex-shrink-0">
-                          <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm text-red-700">{errorDocumentos}</p>
-                        </div>
+                    <div className="mt-6 bg-red-50 border-l-4 border-red-500 rounded-r-xl shadow-lg p-4">
+                      <div className="flex items-center">
+                        <FaExclamationCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+                        <p className="ml-3 text-sm font-medium text-red-800">{errorDocumentos}</p>
                       </div>
                     </div>
                   )}
                   
                   {/* Botón para finalizar */}
-                  <div className="mt-6 flex justify-end">
+                  <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
                     <button
                       type="button"
                       onClick={handleFinish}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center"
                     >
+                      <FaCheckCircle className="mr-2" />
                       Finalizar y Volver a la Lista
                     </button>
                   </div>
-                </div>
+                </>
               )}
             </div>
           </div>
@@ -695,72 +831,117 @@ const ProfesorForm = () => {
         
         {/* Modal para subir documentos */}
         {showModal && (
-          <div className="fixed z-10 inset-0 overflow-y-auto">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-                <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-              </div>
+          <div className="fixed z-50 inset-0 overflow-y-auto animate-fade-in">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              {/* Overlay */}
+              <div 
+                className="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm"
+                onClick={handleCloseModal}
+              ></div>
               
               <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
               
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <div className="sm:flex sm:items-start">
-                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                        {documentoSeleccionado?.subido ? 'Actualizar documento' : 'Subir documento'}
+              {/* Modal */}
+              <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full animate-scale-in">
+                {/* Header */}
+                <div className="bg-emerald-600 px-6 py-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-white/20 rounded-lg">
+                        <FaUpload className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white">
+                        {documentoSeleccionado?.subido ? 'Actualizar Documento' : 'Subir Documento'}
                       </h3>
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-500">
-                          {documentoSeleccionado?.nombre} {documentoSeleccionado?.obligatorio && <span className="text-red-500">*</span>}
+                    </div>
+                    <button
+                      onClick={handleCloseModal}
+                      className="text-white/80 hover:text-white transition-colors duration-200"
+                    >
+                      <FaTimes className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Body */}
+                <div className="bg-white px-6 py-6">
+                  <div className="mb-6">
+                    <div className="flex items-center space-x-3 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                      <FaFileAlt className="w-6 h-6 text-emerald-600" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {documentoSeleccionado?.nombre}
+                          {documentoSeleccionado?.obligatorio && <span className="text-red-500 ml-1">*</span>}
                         </p>
-                        
-                        <div className="mt-4">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Seleccione un archivo
-                          </label>
-                          <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="mt-1 block w-full text-sm text-gray-500
-                              file:mr-4 file:py-2 file:px-4
-                              file:rounded-full file:border-0
-                              file:text-sm file:font-semibold
-                              file:bg-indigo-50 file:text-indigo-700
-                              hover:file:bg-indigo-100"
-                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                          />
-                        </div>
+                        <p className="text-xs text-gray-600">
+                          {documentoSeleccionado?.obligatorio ? 'Documento obligatorio' : 'Documento opcional'}
+                        </p>
                       </div>
                     </div>
                   </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Seleccione un archivo
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-600
+                          file:mr-4 file:py-3 file:px-6
+                          file:rounded-xl file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-emerald-50 file:text-emerald-700
+                          hover:file:bg-emerald-100
+                          file:transition-all file:duration-200
+                          file:cursor-pointer
+                          cursor-pointer
+                          border-2 border-dashed border-gray-300 rounded-xl
+                          hover:border-emerald-400
+                          transition-all duration-200
+                          p-4"
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                      />
+                    </div>
+                    {archivoSeleccionado && (
+                      <div className="mt-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                        <p className="text-sm text-emerald-700 font-medium flex items-center">
+                          <FaCheckCircle className="mr-2" />
+                          Archivo seleccionado: {archivoSeleccionado.name}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                
+                {/* Footer */}
+                <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-200"
+                  >
+                    Cancelar
+                  </button>
                   <button
                     type="button"
                     onClick={handleUploadDocument}
                     disabled={subiendoDocumento || !archivoSeleccionado}
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                    className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
                   >
                     {subiendoDocumento ? (
                       <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                        <FaSpinner className="animate-spin mr-2" />
                         Subiendo...
                       </span>
                     ) : (
-                      'Subir'
+                      <span className="flex items-center">
+                        <FaUpload className="mr-2" />
+                        Subir Documento
+                      </span>
                     )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  >
-                    Cancelar
                   </button>
                 </div>
               </div>
@@ -768,7 +949,7 @@ const ProfesorForm = () => {
           </div>
         )}
       </div>
-     
+    </div>
   );
 };
 

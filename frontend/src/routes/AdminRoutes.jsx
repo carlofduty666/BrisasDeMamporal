@@ -26,9 +26,9 @@ import ArancelesManager from '../components/admin/pagos/ArancelesManager';
 import PagosList from '../components/admin/pagos/PagosList';
 import MensualidadesAdmin from '../pages/admin/pagos/MensualidadesAdmin';
 import ConfiguracionPagosAdmin from '../pages/admin/pagos/ConfiguracionPagosAdmin';
-// import EmpleadosList from '../components/admin/empleados/EmpleadosList';
-// import EmpleadoDetail from '../components/admin/empleados/EmpleadoDetail';
-// import EmpleadoForm from '../components/admin/empleados/EmpleadoForm';
+import EmpleadosList from '../components/admin/empleados/EmpleadosList';
+import EmpleadoDetail from '../components/admin/empleados/EmpleadoDetail';
+import EmpleadoForm from '../components/admin/empleados/EmpleadoForm';
 // import ConfiguracionSistema from '../components/admin/configuracion/ConfiguracionSistema';
 import AnnoEscolarManager from '../components/admin/configuracion/AnnoEscolarManager.jsx';
 
@@ -112,6 +112,7 @@ const AdminRoutes = () => {
           <Route path="profesores" element={<ProfesoresList />} />
           <Route path="profesores/:id" element={<ProfesorDetail />} />
           <Route path="profesores/nuevo" element={<ProfesorForm />} />
+          <Route path="profesores/editar/:id" element={<ProfesorForm />} />
           
           {/* Pagos y aranceles */}
           <Route path="aranceles" element={<ArancelesManager />} />
@@ -120,9 +121,10 @@ const AdminRoutes = () => {
           <Route path="pagos/configuracion" element={<ConfiguracionPagosAdmin />} /> */}
           
           {/* Empleados */}
-          {/* <Route path="empleados" element={<EmpleadosList />} />
+          <Route path="empleados" element={<EmpleadosList />} />
           <Route path="empleados/:id" element={<EmpleadoDetail />} />
-          <Route path="empleados/nuevo" element={<EmpleadoForm />} /> */}
+          <Route path="empleados/nuevo" element={<EmpleadoForm />} />
+          <Route path="empleados/editar/:id" element={<EmpleadoForm />} />
           
           {/* Configuración del sistema */}
           <Route path="configuracion" element={<div className="space-y-6">

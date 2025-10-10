@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
@@ -17,7 +17,14 @@ import {
   FaEye,
   FaUserGraduate,
   FaClipboardList,
-  FaDownload
+  FaDownload,
+  FaEdit,
+  FaSave,
+  FaTimes,
+  FaUpload,
+  FaSpinner,
+  FaCheckCircle,
+  FaExclamationCircle
 } from 'react-icons/fa';
 import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha, calcularEdad } from '../../utils/formatters.js';
 
@@ -35,6 +42,22 @@ const DetallesEstudiante = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('informacion');
+  
+  // Estados para edición
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
+  const [savingInfo, setSavingInfo] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Estados para documentos
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [documentoSeleccionado, setDocumentoSeleccionado] = useState(null);
+  const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
+  const [subiendoDocumento, setSubiendoDocumento] = useState(false);
+  const [documentosRequeridos, setDocumentosRequeridos] = useState([]);
+  const [loadingDocumentos, setLoadingDocumentos] = useState(false);
+  
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -165,6 +188,190 @@ const DetallesEstudiante = () => {
     
     fetchData();
   }, [estudianteId]);
+  
+  // Cargar documentos requeridos
+  useEffect(() => {
+    const cargarDocumentosRequeridos = async () => {
+      try {
+        setLoadingDocumentos(true);
+        const token = localStorage.getItem('token');
+        
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/documentos/verificar/${estudianteId}/estudiante`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        
+        setDocumentosRequeridos(response.data.documentosRequeridos);
+        setLoadingDocumentos(false);
+      } catch (err) {
+        console.error('Error al cargar documentos requeridos:', err);
+        setLoadingDocumentos(false);
+      }
+    };
+    
+    if (estudianteId) {
+      cargarDocumentosRequeridos();
+    }
+  }, [estudianteId, documentos]);
+  
+  // Funciones de edición
+  const handleEditClick = () => {
+    setEditFormData({
+      cedula: estudiante.cedula || '',
+      nombre: estudiante.nombre || '',
+      apellido: estudiante.apellido || '',
+      telefono: estudiante.telefono || '',
+      email: estudiante.email || '',
+      direccion: estudiante.direccion || '',
+      fechaNacimiento: estudiante.fechaNacimiento || '',
+      genero: estudiante.genero || '',
+      lugarNacimiento: estudiante.lugarNacimiento || ''
+    });
+    setIsEditingInfo(true);
+    setSuccessMessage('');
+  };
+  
+  const handleCancelEdit = () => {
+    setIsEditingInfo(false);
+    setEditFormData({});
+    setError('');
+  };
+  
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData({
+      ...editFormData,
+      [name]: value
+    });
+  };
+  
+  const handleSaveEdit = async () => {
+    try {
+      setSavingInfo(true);
+      setError('');
+      
+      const token = localStorage.getItem('token');
+      
+      const dataToSend = {
+        ...editFormData,
+        tipo: 'estudiante'
+      };
+      
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/personas/${estudianteId}`,
+        dataToSend,
+        { 
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
+      );
+      
+      setEstudiante(response.data);
+      setIsEditingInfo(false);
+      setSuccessMessage('Información actualizada correctamente');
+      
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
+      
+      setSavingInfo(false);
+    } catch (err) {
+      console.error('Error al actualizar información:', err);
+      setError('Error al actualizar la información. Por favor, intente nuevamente.');
+      setSavingInfo(false);
+    }
+  };
+  
+  // Funciones para documentos
+  const handleOpenUploadModal = (documento) => {
+    setDocumentoSeleccionado(documento);
+    setShowUploadModal(true);
+    setArchivoSeleccionado(null);
+  };
+  
+  const handleCloseUploadModal = () => {
+    setShowUploadModal(false);
+    setDocumentoSeleccionado(null);
+    setArchivoSeleccionado(null);
+  };
+  
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setArchivoSeleccionado(file);
+    }
+  };
+  
+  const handleUploadDocument = async () => {
+    if (!archivoSeleccionado) {
+      setError('Por favor, seleccione un archivo');
+      return;
+    }
+    
+    try {
+      setSubiendoDocumento(true);
+      setError('');
+      
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('documento', archivoSeleccionado);
+      formData.append('tipoDocumento', documentoSeleccionado.tipo);
+      formData.append('personaID', estudianteId);
+      
+      // Verificar si ya existe el documento
+      const documentoExistente = documentos.find(
+        doc => doc.tipoDocumento === documentoSeleccionado.tipo
+      );
+      
+      let response;
+      if (documentoExistente) {
+        // Actualizar documento existente
+        response = await axios.put(
+          `${import.meta.env.VITE_API_URL}/documentos/${documentoExistente.id}`,
+          formData,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+      } else {
+        // Crear nuevo documento
+        response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/documentos`,
+          formData,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+      }
+      
+      // Recargar documentos
+      const documentosResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/documentos/persona/${estudianteId}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      setDocumentos(documentosResponse.data);
+      
+      setSubiendoDocumento(false);
+      handleCloseUploadModal();
+      setSuccessMessage('Documento subido correctamente');
+      
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
+    } catch (err) {
+      console.error('Error al subir documento:', err);
+      setError('Error al subir el documento. Por favor, intente nuevamente.');
+      setSubiendoDocumento(false);
+    }
+  };
 
   // Añade este objeto de mapeo al inicio de tu componente
   const tipoDocumentoFormateado = {
@@ -316,38 +523,201 @@ const DetallesEstudiante = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Información Personal */}
               <div className="bg-white shadow-lg rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl">
-                <div className="bg-slate-700 px-6 py-4 rounded-t-xl">
+                <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-4 rounded-t-xl flex justify-between items-center">
                   <h2 className="text-xl font-bold text-white flex items-center">
                     <FaUser className="mr-2 h-5 w-5" />
-                    Datos Personales
+                    Datos Personales del Estudiante
                   </h2>
+                  {!isEditingInfo && (
+                    <button
+                      onClick={handleEditClick}
+                      className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2 backdrop-blur-md"
+                    >
+                      <FaEdit className="h-4 w-4" />
+                      <span>Editar</span>
+                    </button>
+                  )}
                 </div>
                 <div className="px-6 py-6">
-                  <div className="space-y-4">
-                    {[
-                      { label: 'Nombre completo', value: `${estudiante.nombre} ${estudiante.apellido}`, icon: FaUser },
-                      { label: 'Cédula/Documento', value: estudiante.cedula, icon: FaIdCard },
-                      { label: 'Fecha de nacimiento', value: formatearFecha(estudiante?.fechaNacimiento), icon: FaCalendarAlt },
-                      { label: 'Edad', value: estudiante?.fechaNacimiento ? `${calcularEdad(estudiante.fechaNacimiento)} años` : 'No disponible', icon: FaBirthdayCake },
-                      { label: 'Género', value: estudiante.genero === 'M' ? 'Masculino' : 'Femenino', icon: FaVenusMars },
-                      { label: 'Dirección', value: estudiante.direccion, icon: FaHome }
-                    ].map((item, index) => (
-                      <div 
-                        key={index} 
-                        className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300"
-                        style={{
-                          animationDelay: `${index * 100}ms`,
-                          animation: 'fadeInUp 0.6s ease-out forwards'
-                        }}
-                      >
-                        <item.icon className="h-6 w-6 text-gray-600" />
-                        <div className="flex-1">
-                          <dt className="text-sm font-medium text-gray-600">{item.label}</dt>
-                          <dd className="text-base font-semibold text-gray-900 mt-1">{item.value}</dd>
+                  {successMessage && (
+                    <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
+                      <FaCheckCircle className="h-5 w-5 mr-2" />
+                      {successMessage}
+                    </div>
+                  )}
+                  
+                  {error && (
+                    <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+                      <FaExclamationCircle className="h-5 w-5 mr-2" />
+                      {error}
+                    </div>
+                  )}
+                  
+                  {!isEditingInfo ? (
+                    <div className="space-y-4">
+                      {[
+                        { label: 'Nombre completo', value: `${estudiante.nombre} ${estudiante.apellido}`, icon: FaUser },
+                        { label: 'Cédula/Documento', value: estudiante.cedula, icon: FaIdCard },
+                        { label: 'Fecha de nacimiento', value: formatearFecha(estudiante?.fechaNacimiento), icon: FaCalendarAlt },
+                        { label: 'Edad', value: estudiante?.fechaNacimiento ? `${calcularEdad(estudiante.fechaNacimiento)} años` : 'No disponible', icon: FaBirthdayCake },
+                        { label: 'Género', value: estudiante.genero === 'M' ? 'Masculino' : 'Femenino', icon: FaVenusMars },
+                        { label: 'Dirección', value: estudiante.direccion, icon: FaHome }
+                      ].map((item, index) => (
+                        <div 
+                          key={index} 
+                          className="flex items-start space-x-4 p-4 bg-blue-50/50 rounded-lg border border-blue-100 hover:shadow-md transition-all duration-300"
+                          style={{
+                            animationDelay: `${index * 100}ms`,
+                            animation: 'fadeInUp 0.6s ease-out forwards'
+                          }}
+                        >
+                          <item.icon className="h-6 w-6 text-blue-600" />
+                          <div className="flex-1">
+                            <dt className="text-sm font-medium text-blue-600">{item.label}</dt>
+                            <dd className="text-base font-semibold text-gray-900 mt-1">{item.value}</dd>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <FaIdCard className="inline mr-2 text-blue-600" />
+                            Cédula/Documento *
+                          </label>
+                          <input
+                            type="text"
+                            name="cedula"
+                            value={editFormData.cedula}
+                            onChange={handleEditChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <FaUser className="inline mr-2 text-blue-600" />
+                            Nombre *
+                          </label>
+                          <input
+                            type="text"
+                            name="nombre"
+                            value={editFormData.nombre}
+                            onChange={handleEditChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <FaUser className="inline mr-2 text-blue-600" />
+                            Apellido *
+                          </label>
+                          <input
+                            type="text"
+                            name="apellido"
+                            value={editFormData.apellido}
+                            onChange={handleEditChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <FaCalendarAlt className="inline mr-2 text-blue-600" />
+                            Fecha de Nacimiento
+                          </label>
+                          <input
+                            type="date"
+                            name="fechaNacimiento"
+                            value={editFormData.fechaNacimiento ? editFormData.fechaNacimiento.split('T')[0] : ''}
+                            onChange={handleEditChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <FaVenusMars className="inline mr-2 text-blue-600" />
+                            Género
+                          </label>
+                          <select
+                            name="genero"
+                            value={editFormData.genero}
+                            onChange={handleEditChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">Seleccione...</option>
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <FaHome className="inline mr-2 text-blue-600" />
+                            Lugar de Nacimiento
+                          </label>
+                          <input
+                            type="text"
+                            name="lugarNacimiento"
+                            value={editFormData.lugarNacimiento}
+                            onChange={handleEditChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
                         </div>
                       </div>
-                    ))}
-                  </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <FaHome className="inline mr-2 text-blue-600" />
+                          Dirección *
+                        </label>
+                        <textarea
+                          name="direccion"
+                          value={editFormData.direccion}
+                          onChange={handleEditChange}
+                          rows="3"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="flex space-x-3 pt-4">
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={savingInfo}
+                          className="flex-1 bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 text-white py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50"
+                        >
+                          {savingInfo ? (
+                            <>
+                              <FaSpinner className="h-5 w-5 animate-spin" />
+                              <span>Guardando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <FaSave className="h-5 w-5" />
+                              <span>Guardar Cambios</span>
+                            </>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={handleCancelEdit}
+                          disabled={savingInfo}
+                          className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50"
+                        >
+                          <FaTimes className="h-5 w-5" />
+                          <span>Cancelar</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -753,20 +1123,111 @@ const DetallesEstudiante = () => {
           {/* Pestaña de Documentos */}
           {activeTab === 'documentos' && (
             <div className="space-y-6">
+              {/* Documentos Requeridos */}
               <div className="bg-white shadow-lg rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl">
-                <div className="bg-slate-700 px-6 py-4 rounded-t-xl">
+                <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-4 rounded-t-xl">
                   <h2 className="text-xl font-bold text-white flex items-center">
                     <FaFileAlt className="mr-2 h-5 w-5" />
-                    Documentos del Estudiante
+                    Documentos Requeridos
+                  </h2>
+                </div>
+                <div className="px-6 py-6">
+                  {successMessage && (
+                    <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
+                      <FaCheckCircle className="h-5 w-5 mr-2" />
+                      {successMessage}
+                    </div>
+                  )}
+                  
+                  {error && (
+                    <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+                      <FaExclamationCircle className="h-5 w-5 mr-2" />
+                      {error}
+                    </div>
+                  )}
+                  
+                  {loadingDocumentos ? (
+                    <div className="text-center py-8">
+                      <FaSpinner className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-spin" />
+                      <p className="text-gray-600">Cargando documentos...</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {documentosRequeridos.map((doc, index) => (
+                        <div
+                          key={index}
+                          className={`p-4 rounded-lg border-2 transition-all duration-300 hover:shadow-md ${
+                            doc.subido
+                              ? 'bg-emerald-50 border-emerald-200'
+                              : doc.requerido
+                              ? 'bg-amber-50 border-amber-200'
+                              : 'bg-gray-50 border-gray-200'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                                {tipoDocumentoFormateado[doc.tipo] || doc.tipo}
+                              </h3>
+                              <span
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  doc.subido
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : doc.requerido
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
+                              >
+                                {doc.subido ? (
+                                  <>
+                                    <FaCheckCircle className="mr-1 h-3 w-3" />
+                                    Subido
+                                  </>
+                                ) : doc.requerido ? (
+                                  <>
+                                    <FaExclamationCircle className="mr-1 h-3 w-3" />
+                                    Requerido
+                                  </>
+                                ) : (
+                                  'Opcional'
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => handleOpenUploadModal(doc)}
+                            className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 ${
+                              doc.subido
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 text-white'
+                            }`}
+                          >
+                            <FaUpload className="h-4 w-4" />
+                            <span>{doc.subido ? 'Actualizar' : 'Subir'}</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Documentos Subidos */}
+              <div className="bg-white shadow-lg rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl">
+                <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-4 rounded-t-xl">
+                  <h2 className="text-xl font-bold text-white flex items-center">
+                    <FaFileAlt className="mr-2 h-5 w-5" />
+                    Documentos Subidos
                   </h2>
                 </div>
                 <div className="px-6 py-6">
                   {documentos.length === 0 ? (
                     <div className="text-center py-8">
-                      <div className="p-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-                        <FaFileAlt className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 text-lg font-medium">No hay documentos registrados</p>
-                        <p className="text-gray-500 mt-2">Los documentos aparecerán aquí cuando se suban</p>
+                      <div className="p-6 bg-blue-50 rounded-xl border-2 border-dashed border-blue-200">
+                        <FaFileAlt className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+                        <p className="text-blue-600 text-lg font-medium">No hay documentos registrados</p>
+                        <p className="text-blue-500 mt-2">Los documentos aparecerán aquí cuando se suban</p>
                       </div>
                     </div>
                   ) : (
@@ -869,6 +1330,81 @@ const DetallesEstudiante = () => {
           )}
         </div>
       </main>
+      
+      {/* Modal de Subida de Documentos */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-4 rounded-t-xl">
+              <h3 className="text-xl font-bold text-white flex items-center">
+                <FaUpload className="mr-2 h-5 w-5" />
+                {documentoSeleccionado?.subido ? 'Actualizar Documento' : 'Subir Documento'}
+              </h3>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Documento
+                </label>
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="font-semibold text-gray-900">
+                    {tipoDocumentoFormateado[documentoSeleccionado?.tipo] || documentoSeleccionado?.tipo}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Seleccionar Archivo
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileSelect}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {archivoSeleccionado && (
+                  <p className="mt-2 text-sm text-gray-600 flex items-center">
+                    <FaCheckCircle className="mr-2 text-green-600" />
+                    {archivoSeleccionado.name}
+                  </p>
+                )}
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleUploadDocument}
+                  disabled={subiendoDocumento || !archivoSeleccionado}
+                  className="flex-1 bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 text-white py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {subiendoDocumento ? (
+                    <>
+                      <FaSpinner className="h-5 w-5 animate-spin" />
+                      <span>Subiendo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaUpload className="h-5 w-5" />
+                      <span>{documentoSeleccionado?.subido ? 'Actualizar' : 'Subir'}</span>
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={handleCloseUploadModal}
+                  disabled={subiendoDocumento}
+                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  <FaTimes className="h-5 w-5" />
+                  <span>Cancelar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -115,15 +115,6 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           accent: 'rose',
           gradient: 'from-rose-700 to-rose-800'
         };
-      case '/admin/academico/horarios': 
-        return { 
-          main: 'bg-gradient-to-br from-rose-800 to-rose-900', 
-          active: 'bg-rose-700/90 backdrop-blur-md', 
-          hover: 'hover:bg-rose-700/60 hover:backdrop-blur-md', 
-          text: 'text-rose-600',
-          accent: 'rose',
-          gradient: 'from-rose-700 to-rose-800'
-        };
       case '/admin/cupos': 
         return { 
           main: 'bg-gradient-to-br from-red-800 to-red-900', 

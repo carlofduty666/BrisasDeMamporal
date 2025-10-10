@@ -350,7 +350,7 @@ const EstudiantesList = () => {
             <div className="mt-8 lg:mt-0 lg:ml-8">
               <div className="flex flex-col sm:flex-row lg:flex-col space-y-3 sm:space-y-0 sm:space-x-3 lg:space-x-0 lg:space-y-3">
                 <Link
-                  to="/inscripcion/nuevo-estudiante"
+                  to="/inscripcion/nuevo-estudiante?from=estudiantes"
                   className="group relative overflow-hidden bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

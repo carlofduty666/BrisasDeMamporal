@@ -721,7 +721,7 @@ const handleVerProgreso = (estudiante) => {
                   </div>
                 </div>
                 <Link
-                  to="/inscripcion/nuevo-estudiante"
+                  to="/inscripcion/nuevo-estudiante?from=representantes"
                   className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg border border-white/20 transition-all duration-300 hover:scale-105 flex items-center space-x-2"
                 >
                   <FaPlus className="h-4 w-4" />
