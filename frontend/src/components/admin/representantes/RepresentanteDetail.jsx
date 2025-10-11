@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FaArrowLeft, FaPlus, FaTimes, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice, FaFileAlt, FaCheck, FaUser, FaIdCard, FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaBriefcase, FaCommentDots } from 'react-icons/fa';
-import { formatearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
+import { FaArrowLeft, FaPlus, FaTimes, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice, FaFileAlt, FaCheck, FaUser, FaIdCard, FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaBriefcase, FaCommentDots, FaFilter, FaChevronLeft, FaChevronRight, FaCheckCircle, FaTimesCircle, FaClock, FaDollarSign, FaExclamationTriangle } from 'react-icons/fa';
+import { formatearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado, formatearCedula, formatearFechaHoraLocal } from '../../../utils/formatters';
+import PaymentDetailModalThemed from '../pagos/components/PaymentDetailModalThemed';
 
 const RepresentanteDetail = () => {
   const { id } = useParams();
@@ -24,10 +25,10 @@ const RepresentanteDetail = () => {
   // UI adicionales
   const [showPagosModal, setShowPagosModal] = useState(false);
   const [selectedPagosEstudianteId, setSelectedPagosEstudianteId] = useState(null);
-  const [pagosFiltro, setPagosFiltro] = useState({ desde: '', hasta: '', arancelID: '' });
+  const [pagosFiltro, setPagosFiltro] = useState({ desde: '', hasta: '', arancelID: '', estudianteID: '' });
   const [pagosPaginados, setPagosPaginados] = useState([]);
   const [pagosPage, setPagosPage] = useState(1);
-  const pagosPageSize = 5;
+  const pagosPageSize = 10;
 
   // Estados para registrar pagos
   const [showPagoModal, setShowPagoModal] = useState(false);
@@ -59,6 +60,10 @@ const RepresentanteDetail = () => {
   const [subiendoDocumento, setSubiendoDocumento] = useState(false);
   const [descargandoTodos, setDescargandoTodos] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // Estado para el modal de detalle de pago
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showPaymentDetailModal, setShowPaymentDetailModal] = useState(false);
   
   // Cargar datos del representante
   useEffect(() => {
@@ -186,6 +191,38 @@ const RepresentanteDetail = () => {
     fetchRepresentanteData();
   }, [id]);
   
+  // Helper: Convertir número de mes a nombre
+  const obtenerNombreMes = (numeroMes) => {
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return meses[parseInt(numeroMes) - 1] || numeroMes;
+  };
+
+  // Helper: Obtener estilo e icono según el estado del pago
+  const obtenerEstadoPago = (estado) => {
+    const estados = {
+      'pagado': {
+        icono: <FaCheckCircle className="inline mr-1" />,
+        color: 'bg-green-100 text-green-800',
+        texto: 'Pagado'
+      },
+      'reportado': {
+        icono: <FaClock className="inline mr-1" />,
+        color: 'bg-yellow-100 text-yellow-800',
+        texto: 'Reportado'
+      },
+      'anulado': {
+        icono: <FaTimesCircle className="inline mr-1" />,
+        color: 'bg-red-100 text-red-800',
+        texto: 'Anulado'
+      },
+      'pendiente': {
+        icono: <FaExclamationTriangle className="inline mr-1" />,
+        color: 'bg-orange-100 text-orange-800',
+        texto: 'Pendiente'
+      }
+    };
+    return estados[estado?.toLowerCase()] || estados['pendiente'];
+  };
   
   // Manejar cambios en el formulario de edición
   const handleEditChange = (e) => {
@@ -332,6 +369,26 @@ const RepresentanteDetail = () => {
     }
     setErrorPago('');
     setSuccessPago('');
+  };
+
+  // Función para abrir el modal de detalle de pago
+  const handleViewPaymentDetail = (pago) => {
+    setSelectedPayment(pago);
+    setShowPaymentDetailModal(true);
+  };
+
+  // Función para cerrar el modal de detalle de pago
+  const handleClosePaymentDetailModal = () => {
+    setShowPaymentDetailModal(false);
+    setSelectedPayment(null);
+  };
+
+  // Función para previsualizar comprobante
+  const handlePreviewComprobante = (pago) => {
+    if (pago.urlComprobante) {
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${pago.urlComprobante}`;
+      window.open(url, '_blank');
+    }
   };
 
   // Función para enviar el formulario de pago
@@ -1156,10 +1213,13 @@ const RepresentanteDetail = () => {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Estado
                       </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Acciones
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {pagos.slice(0, 5).map((pago) => (
+                    {pagos.slice(0, 6).map((pago) => (
                       <tr key={pago.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatearFecha(pago.fechaPago || pago.fecha)}
@@ -1189,6 +1249,15 @@ const RepresentanteDetail = () => {
                           }`}>
                             {pago.estado?.charAt(0).toUpperCase() + pago.estado?.slice(1)}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <button
+                            onClick={() => handleViewPaymentDetail(pago)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+                            title="Ver detalles del pago"
+                          >
+                            <FaEye className="w-3 h-3" /> Ver
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1334,47 +1403,179 @@ const RepresentanteDetail = () => {
 
         </div>
 
-        {/* Modal de historial de pagos */}
+        {/* Modal de historial de pagos - Modernizado */}
         {showPagosModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPagosModal(false)} />
-            <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-5xl mx-4">
-              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Histórico de pagos del representante</h3>
-                <button className="text-gray-400 hover:text-gray-600" onClick={() => setShowPagosModal(false)}>✕</button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn">
+            <div 
+              className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300" 
+              onClick={() => setShowPagosModal(false)} 
+            />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] max-h-[90vh] flex flex-col animate-slideUp">
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-violet-100 bg-violet-50 rounded-t-2xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-violet-600 rounded-lg">
+                    <FaMoneyBillWave className="text-white text-xl" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-violet-900">Histórico de Pagos</h3>
+                    <p className="text-sm text-violet-600">Registro completo de transacciones</p>
+                  </div>
+                </div>
+                <button 
+                  className="p-2 text-violet-400 hover:text-violet-600 hover:bg-violet-100 rounded-lg transition-all duration-200" 
+                  onClick={() => setShowPagosModal(false)}
+                >
+                  <FaTimes className="text-xl" />
+                </button>
               </div>
 
-              <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Desde</label>
-                  <input type="date" value={pagosFiltro.desde} onChange={e => setPagosFiltro({ ...pagosFiltro, desde: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-300 focus:ring-violet-500 focus:border-violet-500" />
+              {/* Filtros */}
+              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <FaFilter className="text-violet-600" />
+                  <span className="text-sm font-semibold text-gray-700">Filtros de búsqueda</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Hasta</label>
-                  <input type="date" value={pagosFiltro.hasta} onChange={e => setPagosFiltro({ ...pagosFiltro, hasta: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-300 focus:ring-violet-500 focus:border-violet-500" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">Concepto</label>
-                  <select value={pagosFiltro.arancelID} onChange={e => setPagosFiltro({ ...pagosFiltro, arancelID: e.target.value })} className="mt-1 block w-full rounded-lg border-gray-300 focus:ring-violet-500 focus:border-violet-500">
-                    <option value="">Todos</option>
-                    {aranceles.map(a => (
-                      <option key={a.id} value={a.id}>{a.nombre}</option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      <FaCalendarAlt className="inline mr-1 text-violet-500" />
+                      Desde
+                    </label>
+                    <input 
+                      type="date" 
+                      value={pagosFiltro.desde} 
+                      onChange={e => setPagosFiltro({ ...pagosFiltro, desde: e.target.value })} 
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      <FaCalendarAlt className="inline mr-1 text-violet-500" />
+                      Hasta
+                    </label>
+                    <input 
+                      type="date" 
+                      value={pagosFiltro.hasta} 
+                      onChange={e => setPagosFiltro({ ...pagosFiltro, hasta: e.target.value })} 
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      <FaUserGraduate className="inline mr-1 text-violet-500" />
+                      Estudiante
+                    </label>
+                    <select 
+                      value={pagosFiltro.estudianteID} 
+                      onChange={e => setPagosFiltro({ ...pagosFiltro, estudianteID: e.target.value })} 
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200"
+                    >
+                      <option value="">Todos los estudiantes</option>
+                      {estudiantes.map(est => (
+                        <option key={est.id} value={est.id}>
+                          {est.nombre} {est.apellido}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      <FaFileInvoice className="inline mr-1 text-violet-500" />
+                      Concepto
+                    </label>
+                    <select 
+                      value={pagosFiltro.arancelID} 
+                      onChange={e => setPagosFiltro({ ...pagosFiltro, arancelID: e.target.value })} 
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200"
+                    >
+                      <option value="">Todos los conceptos</option>
+                      {aranceles.map(a => (
+                        <option key={a.id} value={a.id}>{a.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="px-6 pb-4">
-                <div className="overflow-x-auto border border-gray-100 rounded-xl">
+              {/* Tabla de pagos */}
+              <div className="flex-1 overflow-auto px-6 py-4">
+                <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
                   <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-violet-600 sticky top-0">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estudiante</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referencia</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <FaCalendarAlt />
+                            <span>Fecha</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <FaUserGraduate />
+                            <span>Estudiante</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <FaIdCard />
+                            <span>Cédula</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <FaUserGraduate />
+                            <span>Grado/Sección</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <FaFileInvoice />
+                            <span>Concepto</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <FaCalendarAlt />
+                            <span>Mensualidad</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-right text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <FaDollarSign />
+                            <span>Monto USD</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-right text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <FaMoneyBillWave />
+                            <span>Monto VES</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-right text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <FaExclamationTriangle />
+                            <span>Mora</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-right text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <FaDollarSign />
+                            <span>Total</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-center text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-2">
+                            <FaCheckCircle />
+                            <span>Estado</span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-4 text-center text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-2">
+                            <FaEye />
+                            <span>Acciones</span>
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -1383,35 +1584,165 @@ const RepresentanteDetail = () => {
                           const okDesde = pagosFiltro.desde ? new Date(p.fechaPago) >= new Date(pagosFiltro.desde) : true;
                           const okHasta = pagosFiltro.hasta ? new Date(p.fechaPago) <= new Date(pagosFiltro.hasta) : true;
                           const okArancel = pagosFiltro.arancelID ? String(p.arancelID) === String(pagosFiltro.arancelID) : true;
-                          const okEst = selectedPagosEstudianteId ? String(p.estudianteID) === String(selectedPagosEstudianteId) : true;
+                          const okEst = pagosFiltro.estudianteID ? String(p.estudianteID) === String(pagosFiltro.estudianteID) : true;
                           return okDesde && okHasta && okArancel && okEst;
                         })
                         .slice((pagosPage - 1) * pagosPageSize, pagosPage * pagosPageSize)
-                        .map(pago => (
-                          <tr key={pago.id}>
-                            <td className="px-6 py-3 text-sm text-gray-700">{new Date(pago.fechaPago).toLocaleDateString()}</td>
-                            <td className="px-6 py-3 text-sm text-gray-700">{pago.estudiante?.nombre} {pago.estudiante?.apellido}</td>
-                            <td className="px-6 py-3 text-sm text-gray-700">{pago.arancel?.nombre || pago.concepto}</td>
-                            <td className="px-6 py-3 text-sm text-gray-700">{pago.metodoPago?.nombre}</td>
-                            <td className="px-6 py-3 text-sm text-gray-700">{pago.referencia || '-'}</td>
-                            <td className="px-6 py-3 text-sm text-right font-semibold text-gray-900">${Number(pago.montoTotal || pago.monto || 0).toFixed(2)}</td>
-                          </tr>
-                        ))}
+                        .map((pago, index) => {
+                          const mensualidad = pago.mensualidadSnapshot;
+                          const montoUSD = mensualidad?.precioAplicadoUSD || pago.monto || 0;
+                          const montoVES = mensualidad?.precioAplicadoVES || 0;
+                          const moraUSD = mensualidad?.moraAplicadaUSD || pago.montoMora || 0;
+                          const moraVES = mensualidad?.moraAplicadaVES || 0;
+                          const totalUSD = (parseFloat(montoUSD) + parseFloat(moraUSD) - parseFloat(pago.descuento || 0)).toFixed(2);
+                          const totalVES = (parseFloat(montoVES) + parseFloat(moraVES)).toFixed(2);
+                          const estadoPago = obtenerEstadoPago(pago.estado);
+                          const esAnulado = pago.estado?.toLowerCase() === 'anulado';
+                          
+                          return (
+                            <tr 
+                              key={pago.id} 
+                              className={`hover:bg-violet-50 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${esAnulado ? 'opacity-75' : ''}`}
+                            >
+                              <td className="px-5 py-4 text-xs text-gray-700 whitespace-nowrap">
+                                {formatearFechaHoraLocal(pago.fechaPago)}
+                              </td>
+                              <td className="px-5 py-4 text-xs font-medium text-gray-900">
+                                {pago.estudiante?.nombre} {pago.estudiante?.apellido}
+                              </td>
+                              <td className="px-5 py-4 text-xs text-gray-600">
+                                {formatearCedula(pago.estudiante?.cedula) || '-'}
+                              </td>
+                              <td className="px-5 py-4 text-xs text-gray-700">
+                                {pago.grado ? (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-800">
+                                    {formatearNombreGrado(pago.grado.nombre_grado)}
+                                    {pago.seccion && ` - ${pago.seccion.nombre_seccion}`}
+                                  </span>
+                                ) : '-'}
+                              </td>
+                              <td className="px-5 py-4 text-xs text-gray-700">
+                                {pago.arancel?.nombre || pago.concepto || '-'}
+                              </td>
+                              <td className="px-5 py-4 text-xs text-gray-700">
+                                {mensualidad ? (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {obtenerNombreMes(mensualidad.mes)} {mensualidad.anio}
+                                  </span>
+                                ) : '-'}
+                              </td>
+                              <td className={`px-5 py-4 text-xs text-right font-semibold text-green-700 ${esAnulado ? 'line-through' : ''}`}>
+                                ${parseFloat(montoUSD).toFixed(2)}
+                              </td>
+                              <td className={`px-5 py-4 text-xs text-right font-semibold text-orange-700 ${esAnulado ? 'line-through' : ''}`}>
+                                Bs. {parseFloat(montoVES).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td className={`px-5 py-4 text-xs text-right font-semibold text-red-600 ${esAnulado ? 'line-through' : ''}`}>
+                                {parseFloat(moraUSD) > 0 ? `$${parseFloat(moraUSD).toFixed(2)}` : '-'}
+                              </td>
+                              <td className={`px-5 py-4 text-xs text-right font-bold text-violet-900 ${esAnulado ? 'line-through' : ''}`}>
+                                <div>${totalUSD}</div>
+                                <div className="text-orange-700">Bs. {parseFloat(totalVES).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                              </td>
+                              <td className="px-5 py-4 text-center">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${estadoPago.color}`}>
+                                  {estadoPago.icono}
+                                  {estadoPago.texto}
+                                </span>
+                              </td>
+                              <td className="px-5 py-4 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    onClick={() => handleViewPaymentDetail(pago)}
+                                    className="p-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm"
+                                    title="Ver detalles"
+                                  >
+                                    <FaEye className="text-sm" />
+                                  </button>
+                                  {pago.comprobante && (
+                                    <button
+                                      onClick={() => handlePreviewComprobante(pago)}
+                                      className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm"
+                                      title="Ver comprobante"
+                                    >
+                                      <FaFileAlt className="text-sm" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
+                  
+                  {/* Mensaje cuando no hay resultados */}
+                  {pagos.filter(p => {
+                    const okDesde = pagosFiltro.desde ? new Date(p.fechaPago) >= new Date(pagosFiltro.desde) : true;
+                    const okHasta = pagosFiltro.hasta ? new Date(p.fechaPago) <= new Date(pagosFiltro.hasta) : true;
+                    const okArancel = pagosFiltro.arancelID ? String(p.arancelID) === String(pagosFiltro.arancelID) : true;
+                    const okEst = pagosFiltro.estudianteID ? String(p.estudianteID) === String(pagosFiltro.estudianteID) : true;
+                    return okDesde && okHasta && okArancel && okEst;
+                  }).length === 0 && (
+                    <div className="text-center py-12">
+                      <FaFileInvoice className="mx-auto text-5xl text-gray-300 mb-3" />
+                      <p className="text-gray-500 font-medium">No se encontraron pagos con los filtros aplicados</p>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                {/* Paginación simple */}
-                <div className="flex justify-between items-center mt-4">
-                  <button
-                    onClick={() => setPagosPage(p => Math.max(1, p - 1))}
-                    className="px-3 py-1 text-sm rounded-lg border hover:bg-gray-50"
-                  >Anterior</button>
-                  <span className="text-sm text-gray-500">Página {pagosPage}</span>
-                  <button
-                    onClick={() => setPagosPage(p => p + 1)}
-                    className="px-3 py-1 text-sm rounded-lg border hover:bg-gray-50"
-                  >Siguiente</button>
+              {/* Paginación mejorada */}
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Mostrando {Math.min((pagosPage - 1) * pagosPageSize + 1, pagos.filter(p => {
+                      const okDesde = pagosFiltro.desde ? new Date(p.fechaPago) >= new Date(pagosFiltro.desde) : true;
+                      const okHasta = pagosFiltro.hasta ? new Date(p.fechaPago) <= new Date(pagosFiltro.hasta) : true;
+                      const okArancel = pagosFiltro.arancelID ? String(p.arancelID) === String(pagosFiltro.arancelID) : true;
+                      const okEst = pagosFiltro.estudianteID ? String(p.estudianteID) === String(pagosFiltro.estudianteID) : true;
+                      return okDesde && okHasta && okArancel && okEst;
+                    }).length)} - {Math.min(pagosPage * pagosPageSize, pagos.filter(p => {
+                      const okDesde = pagosFiltro.desde ? new Date(p.fechaPago) >= new Date(pagosFiltro.desde) : true;
+                      const okHasta = pagosFiltro.hasta ? new Date(p.fechaPago) <= new Date(pagosFiltro.hasta) : true;
+                      const okArancel = pagosFiltro.arancelID ? String(p.arancelID) === String(pagosFiltro.arancelID) : true;
+                      const okEst = pagosFiltro.estudianteID ? String(p.estudianteID) === String(pagosFiltro.estudianteID) : true;
+                      return okDesde && okHasta && okArancel && okEst;
+                    }).length)} de {pagos.filter(p => {
+                      const okDesde = pagosFiltro.desde ? new Date(p.fechaPago) >= new Date(pagosFiltro.desde) : true;
+                      const okHasta = pagosFiltro.hasta ? new Date(p.fechaPago) <= new Date(pagosFiltro.hasta) : true;
+                      const okArancel = pagosFiltro.arancelID ? String(p.arancelID) === String(pagosFiltro.arancelID) : true;
+                      const okEst = pagosFiltro.estudianteID ? String(p.estudianteID) === String(pagosFiltro.estudianteID) : true;
+                      return okDesde && okHasta && okArancel && okEst;
+                    }).length} registros
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPagosPage(p => Math.max(1, p - 1))}
+                      disabled={pagosPage === 1}
+                      className="px-4 py-2 text-sm font-medium text-violet-700 bg-white border border-violet-300 rounded-lg hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+                    >
+                      <FaChevronLeft />
+                      Anterior
+                    </button>
+                    <span className="px-4 py-2 text-sm font-semibold text-violet-900 bg-violet-100 rounded-lg">
+                      Página {pagosPage}
+                    </span>
+                    <button
+                      onClick={() => setPagosPage(p => p + 1)}
+                      disabled={pagosPage * pagosPageSize >= pagos.filter(p => {
+                        const okDesde = pagosFiltro.desde ? new Date(p.fechaPago) >= new Date(pagosFiltro.desde) : true;
+                        const okHasta = pagosFiltro.hasta ? new Date(p.fechaPago) <= new Date(pagosFiltro.hasta) : true;
+                        const okArancel = pagosFiltro.arancelID ? String(p.arancelID) === String(pagosFiltro.arancelID) : true;
+                        const okEst = pagosFiltro.estudianteID ? String(p.estudianteID) === String(pagosFiltro.estudianteID) : true;
+                        return okDesde && okHasta && okArancel && okEst;
+                      }).length}
+                      className="px-4 py-2 text-sm font-medium text-violet-700 bg-white border border-violet-300 rounded-lg hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+                    >
+                      Siguiente
+                      <FaChevronRight />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1900,6 +2231,16 @@ const RepresentanteDetail = () => {
               </button>
             </div>
           </div>
+        )}
+
+        {/* Modal de detalle de pago */}
+        {showPaymentDetailModal && selectedPayment && (
+          <PaymentDetailModalThemed
+            pago={selectedPayment}
+            onClose={handleClosePaymentDetailModal}
+            onPreview={handlePreviewComprobante}
+            theme="violet"
+          />
         )}
       </div>
   );
