@@ -23,7 +23,32 @@ const pagoEstudiantesController = {
       const { mesPago, annoEscolarID, estado } = req.query;
       const where = {};
       
-      if (mesPago) where.mesPago = mesPago;
+      // Normalizar mesPago para aceptar tanto números como nombres de mes
+      if (mesPago) {
+        const normalizaMes = (valor) => {
+          if (valor == null) return null;
+          const m = String(valor).trim().toLowerCase();
+          const mapa = {
+            '1':'1','01':'1','enero':'1',
+            '2':'2','02':'2','febrero':'2',
+            '3':'3','03':'3','marzo':'3',
+            '4':'4','04':'4','abril':'4',
+            '5':'5','05':'5','mayo':'5',
+            '6':'6','06':'6','junio':'6',
+            '7':'7','07':'7','julio':'7',
+            '8':'8','08':'8','agosto':'8',
+            '9':'9','09':'9','septiembre':'9','setiembre':'9',
+            '10':'10','octubre':'10',
+            '11':'11','noviembre':'11',
+            '12':'12','diciembre':'12'
+          };
+          return mapa[m] || valor;
+        };
+        
+        const mesNormalizado = normalizaMes(mesPago);
+        // Buscar por el valor normalizado (número del mes como string)
+        where.mesPago = mesNormalizado;
+      }
       if (annoEscolarID) where.annoEscolarID = Number(annoEscolarID);
       if (estado) where.estado = estado;
 
@@ -132,15 +157,19 @@ const pagoEstudiantesController = {
           const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
           if (mensualidad) {
             const m = mensualidad.toJSON();
+            const nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            const mesNombre = m.mes ? nombres[m.mes - 1] : null;
             plain.mensualidadSnapshot = {
               precioAplicadoUSD: m.precioAplicadoUSD,
               precioAplicadoVES: m.precioAplicadoVES,
+              tasaAplicadaMes: m.tasaAplicadaMes,
               porcentajeMoraAplicado: m.porcentajeMoraAplicado,
               fechaCorteAplicada: m.fechaCorteAplicada,
               configCongelada: m.configCongelada,
               moraAplicadaUSD: m.moraAplicadaUSD,
               moraAplicadaVES: m.moraAplicadaVES,
               mes: m.mes,
+              mesNombre: mesNombre,
               anio: m.anio,
               estadoMensualidad: m.estado
             };
@@ -766,15 +795,19 @@ const pagoEstudiantesController = {
           const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
           if (mensualidad) {
             const m = mensualidad.toJSON();
+            const nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            const mesNombre = m.mes ? nombres[m.mes - 1] : null;
             plain.mensualidadSnapshot = {
               precioAplicadoUSD: m.precioAplicadoUSD,
               precioAplicadoVES: m.precioAplicadoVES,
+              tasaAplicadaMes: m.tasaAplicadaMes,
               porcentajeMoraAplicado: m.porcentajeMoraAplicado,
               fechaCorteAplicada: m.fechaCorteAplicada,
               configCongelada: m.configCongelada,
               moraAplicadaUSD: m.moraAplicadaUSD,
               moraAplicadaVES: m.moraAplicadaVES,
               mes: m.mes,
+              mesNombre: mesNombre,
               anio: m.anio,
               estadoMensualidad: m.estado
             };
@@ -905,15 +938,19 @@ const pagoEstudiantesController = {
           const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
           if (mensualidad) {
             const m = mensualidad.toJSON();
+            const nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            const mesNombre = m.mes ? nombres[m.mes - 1] : null;
             plain.mensualidadSnapshot = {
               precioAplicadoUSD: m.precioAplicadoUSD,
               precioAplicadoVES: m.precioAplicadoVES,
+              tasaAplicadaMes: m.tasaAplicadaMes,
               porcentajeMoraAplicado: m.porcentajeMoraAplicado,
               fechaCorteAplicada: m.fechaCorteAplicada,
               configCongelada: m.configCongelada,
               moraAplicadaUSD: m.moraAplicadaUSD,
               moraAplicadaVES: m.moraAplicadaVES,
               mes: m.mes,
+              mesNombre: mesNombre,
               anio: m.anio,
               estadoMensualidad: m.estado
             };

@@ -2,9 +2,17 @@ const db = require('../models');
 const { Sequelize } = db;
 
 // Helper: calcular total aprobado por mes usando la mensualidad (obligacion)
-function calcTotalPagoUSD(p) {
-  const monto = Number(p.monto || 0);
-  const mora = Number(p.montoMora || 0);
+async function calcTotalPagoUSD(p) {
+  // Intentar obtener valores del snapshot de mensualidad
+  const mensualidad = await db.Mensualidades.findOne({ where: { pagoID: p.id } });
+  let monto = Number(p.monto || 0);
+  let mora = Number(p.montoMora || 0);
+  
+  if (mensualidad) {
+    monto = mensualidad.precioAplicadoUSD != null ? Number(mensualidad.precioAplicadoUSD) : monto;
+    mora = mensualidad.moraAplicadaUSD != null ? Number(mensualidad.moraAplicadaUSD) : mora;
+  }
+  
   const desc = Number(p.descuento || 0);
   return monto + mora - desc;
 }
@@ -74,7 +82,7 @@ module.exports = {
         if (Number(mesNum) !== Number(mes)) continue;
         if (anio && Number(anioNum) !== Number(anio)) continue;
 
-        totalUSD += calcTotalPagoUSD(p);
+        totalUSD += await calcTotalPagoUSD(p);
         cantidad += 1;
       }
 
@@ -141,7 +149,7 @@ module.exports = {
           }
           if (!targetMes || !targetAnio) continue;
           if (targetMes !== mesNum) continue;
-          totalUSD += calcTotalPagoUSD(p);
+          totalUSD += await calcTotalPagoUSD(p);
           cantidad += 1;
         }
         result.push({ mes: mesNum, anio: mesNum >= 9 ? ini : fin, totalUSD, cantidad });

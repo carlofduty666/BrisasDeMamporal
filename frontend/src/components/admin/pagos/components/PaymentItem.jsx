@@ -23,6 +23,7 @@ export default function PaymentItem({ pago, onClick }) {
   const precioAplicadoVES = m.precioAplicadoVES || '0.00';
   const moraAplicadaUSD = m.moraAplicadaUSD || '0.00';
   const moraAplicadaVES = m.moraAplicadaVES || '0.00';
+  const mes = m.mesNombre || pago.mesPago;
 
   const montoTotal = (parseFloat(pago.monto || 0) + parseFloat(pago.montoMora || 0) - parseFloat(pago.descuento || 0)).toFixed(2);
 
@@ -53,9 +54,9 @@ export default function PaymentItem({ pago, onClick }) {
           <span className="inline-flex items-center text-xs px-2 py-1 rounded-md bg-slate-100 text-slate-700">
             <FaMoneyCheckAlt className="mr-1" /> {metodo?.nombre || 'Método'}
           </span>
-          {pago.mesPago && (
+          {mes && (
             <span className="inline-flex items-center text-xs px-2 py-1 rounded-md bg-slate-100 text-slate-700">
-              <FaCalendarAlt className="mr-1" /> {pago.mesPago}
+              <FaCalendarAlt className="mr-1" /> {mes}
             </span>
           )}
         </div>

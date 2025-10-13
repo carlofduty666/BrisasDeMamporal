@@ -193,10 +193,13 @@ export default function MonthlySummaryModal({ open, onClose, mes, anio, annoEsco
     return data.items
       .filter(p => p.estado === 'pagado')
       .reduce((acc, pago) => {
-        const snapshot = pago.mensualidadSnapshot;
-        const montoVES = snapshot?.precioAplicadoVES != null ? Number(snapshot.precioAplicadoVES) : 0;
-        const moraVES = snapshot?.moraAplicadaVES != null ? Number(snapshot.moraAplicadaVES) : 0;
-        return acc + montoVES + moraVES;
+        const snapshot = pago.mensualidadSnapshot || {};
+        const montoVES = snapshot.precioAplicadoVES != null ? Number(snapshot.precioAplicadoVES) : 0;
+        const moraVES = snapshot.moraAplicadaVES != null ? Number(snapshot.moraAplicadaVES) : 0;
+        const desc = parseFloat(pago.descuento || 0) || 0;
+        const tasaCambio = parseFloat(snapshot.tasaAplicadaMes || 0) || 0;
+        const descVES = tasaCambio > 0 ? desc * tasaCambio : parseFloat(pago.descuentoVES || 0) || 0;
+        return acc + montoVES + moraVES - descVES;
       }, 0);
   }, [data]);
 

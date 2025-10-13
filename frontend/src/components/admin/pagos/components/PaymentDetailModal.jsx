@@ -21,12 +21,13 @@ export default function PaymentDetailModal({ pago, onClose, onPreview, onApprove
 
   // Usar valores de mensualidadSnapshot si están disponibles
   const snapshot = pago.mensualidadSnapshot || {};
-  const monto = parseFloat(pago.monto || 0) || 0;
+  const monto = snapshot.precioAplicadoUSD != null ? parseFloat(snapshot.precioAplicadoUSD) : parseFloat(pago.monto || 0);
   const montoVES = parseFloat(snapshot.precioAplicadoVES || pago.montoVES || 0) || 0;
-  const mora = parseFloat(snapshot.moraAplicadaUSD || pago.montoMora || 0) || 0;
+  const mora = snapshot.moraAplicadaUSD != null ? parseFloat(snapshot.moraAplicadaUSD) : parseFloat(pago.montoMora || 0);
   const moraVES = parseFloat(snapshot.moraAplicadaVES || pago.montoMoraVES || 0) || 0;
   const desc = parseFloat(pago.descuento || 0) || 0;
-  const descVES = parseFloat(pago.descuentoVES || 0) || 0;
+  const tasaCambio = parseFloat(snapshot.tasaAplicadaMes || 0) || 0;
+  const descVES = tasaCambio > 0 ? desc * tasaCambio : parseFloat(pago.descuentoVES || 0) || 0;
   const total = monto + mora - desc;
   const totalVES = montoVES + moraVES - descVES;
   
@@ -107,6 +108,7 @@ export default function PaymentDetailModal({ pago, onClose, onPreview, onApprove
               <div className="p-3 rounded-lg bg-white border">
                 <p className="text-xs text-slate-500 flex items-center"><FaPercentage className="mr-1 text-pink-700" /> Descuento</p>
                 <p className="font-semibold text-slate-800">{formatCurrency(desc)}</p>
+                <p className="text-xs text-slate-500">Bs. {descVES.toFixed(2)}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-pink-50 border border-pink-200 md:col-span-3">

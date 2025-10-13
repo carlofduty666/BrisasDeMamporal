@@ -7,8 +7,10 @@ function formatCurrency(value) {
 }
 
 function calcPagoTotal(p) {
-  const monto = parseFloat(p.monto || 0) || 0;
-  const mora = parseFloat(p.montoMora || 0) || 0;
+  // Usar valores del snapshot si están disponibles, sino usar los valores directos del pago
+  const snapshot = p.mensualidadSnapshot || {};
+  const monto = snapshot.precioAplicadoUSD != null ? parseFloat(snapshot.precioAplicadoUSD) : parseFloat(p.monto || 0);
+  const mora = snapshot.moraAplicadaUSD != null ? parseFloat(snapshot.moraAplicadaUSD) : parseFloat(p.montoMora || 0);
   const desc = parseFloat(p.descuento || 0) || 0;
   return monto + mora - desc;
 }
@@ -98,10 +100,13 @@ export default function HeaderStats({
     return pagosMes
       .filter(p => p.estado === 'pagado')
       .reduce((acc, pago) => {
-        const snapshot = pago.mensualidadSnapshot;
-        const montoVES = snapshot?.precioAplicadoVES != null ? Number(snapshot.precioAplicadoVES) : 0;
-        const moraVES = snapshot?.moraAplicadaVES != null ? Number(snapshot.moraAplicadaVES) : 0;
-        return acc + montoVES + moraVES;
+        const snapshot = pago.mensualidadSnapshot || {};
+        const montoVES = snapshot.precioAplicadoVES != null ? Number(snapshot.precioAplicadoVES) : 0;
+        const moraVES = snapshot.moraAplicadaVES != null ? Number(snapshot.moraAplicadaVES) : 0;
+        const desc = parseFloat(pago.descuento || 0) || 0;
+        const tasaCambio = parseFloat(snapshot.tasaAplicadaMes || 0) || 0;
+        const descVES = tasaCambio > 0 ? desc * tasaCambio : parseFloat(pago.descuentoVES || 0) || 0;
+        return acc + montoVES + moraVES - descVES;
       }, 0);
   }, [pagosMes]);
 
