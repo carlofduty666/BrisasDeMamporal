@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FaArrowLeft, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice, FaBook, FaGraduationCap, FaChalkboardTeacher, FaUser, FaIdCard, FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaStickyNote, FaChartLine, FaAward, FaTimes, FaCheck, FaPlus } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaEye, FaFileDownload, FaUpload, FaUserGraduate, FaMoneyBillWave, FaFileInvoice, FaBook, FaGraduationCap, FaChalkboardTeacher, FaUser, FaIdCard, FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaStickyNote, FaChartLine, FaAward, FaTimes, FaCheck, FaPlus, FaDollarSign } from 'react-icons/fa';
 import { formatearFecha, parsearFecha, formatearFechaParaInput, tipoDocumentoFormateado, formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
+import AdminPaymentModal from '../pagos/components/AdminPaymentModal';
 
 const EstudianteDetail = () => {
   const { id } = useParams();
@@ -51,6 +52,7 @@ const EstudianteDetail = () => {
 
   // Estados para registrar pagos
   const [showPagoModal, setShowPagoModal] = useState(false);
+  const [showAdminPaymentModal, setShowAdminPaymentModal] = useState(false);
   const [formPago, setFormPago] = useState({
     estudianteID: '',
     representanteID: '',
@@ -1835,13 +1837,15 @@ const EstudianteDetail = () => {
                   </div>
                   <h2 className="text-2xl font-bold text-gray-800">Historial de Pagos</h2>
                 </div>
-                <button
-                  onClick={handleOpenPagoModal}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-colors"
-                >
-                  <FaPlus />
-                  <span>Registrar Pago</span>
-                </button>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setShowAdminPaymentModal(true)}
+                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    <FaDollarSign />
+                    <span>Pago Administrativo</span>
+                  </button>
+                </div>
               </div>
 
               {/* Resumen de pagos */}
@@ -2176,278 +2180,7 @@ const EstudianteDetail = () => {
         )}
 
         {/* Modal para registrar pagos */}
-        {showPagoModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-800">Registrar Pago</h3>
-                <button
-                  onClick={handleClosePagoModal}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <FaTimes className="w-6 h-6" />
-                </button>
-              </div>
 
-              <form onSubmit={handleSubmitPago} className="space-y-4">
-                {/* Información del estudiante */}
-                <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                  <h4 className="font-semibold text-blue-800 mb-2">Información del Estudiante</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-blue-600">Estudiante:</span>
-                      <span className="ml-2 font-medium">{estudiante?.nombre} {estudiante?.apellido}</span>
-                    </div>
-                    <div>
-                      <span className="text-blue-600">Cédula:</span>
-                      <span className="ml-2 font-medium">{estudiante?.cedula ? `V - ${formatearCedula(estudiante.cedula)}` : 'No registrada'}</span>
-                    </div>
-                    <div>
-                      <span className="text-blue-600">Grado:</span>
-                      <span className="ml-2 font-medium">{grado ? formatearNombreGrado(grado.nombre_grado) : 'Sin grado'}</span>
-                    </div>
-                    <div>
-                      <span className="text-blue-600">Representante:</span>
-                      <span className="ml-2 font-medium">{representante ? `${representante.nombre} ${representante.apellido}` : 'Sin representante'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Arancel */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Arancel *
-                    </label>
-                    <select
-                      value={formPago.arancelID}
-                      onChange={(e) => setFormPago({...formPago, arancelID: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="">Seleccionar arancel</option>
-                      {aranceles.map(arancel => (
-                        <option key={arancel.id} value={arancel.id}>
-                          {arancel.nombre} - ${arancel.monto}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Método de Pago */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Método de Pago *
-                    </label>
-                    <select
-                      value={formPago.metodoPagoID}
-                      onChange={(e) => setFormPago({...formPago, metodoPagoID: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="">Seleccionar método</option>
-                      {metodosPago.map(metodo => (
-                        <option key={metodo.id} value={metodo.id}>
-                          {metodo.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Monto */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Monto *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formPago.monto}
-                      onChange={(e) => setFormPago({...formPago, monto: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-
-                  {/* Monto Mora */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Monto Mora
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formPago.montoMora}
-                      onChange={(e) => setFormPago({...formPago, montoMora: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  {/* Descuento */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Descuento
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formPago.descuento}
-                      onChange={(e) => setFormPago({...formPago, descuento: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Fecha de Pago */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha de Pago *
-                    </label>
-                    <input
-                      type="date"
-                      value={formPago.fechaPago}
-                      onChange={(e) => setFormPago({...formPago, fechaPago: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-
-                  {/* Mes de Pago */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Mes de Pago
-                    </label>
-                    <select
-                      value={formPago.mesPago}
-                      onChange={(e) => setFormPago({...formPago, mesPago: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Seleccionar mes</option>
-                      <option value="enero">Enero</option>
-                      <option value="febrero">Febrero</option>
-                      <option value="marzo">Marzo</option>
-                      <option value="abril">Abril</option>
-                      <option value="mayo">Mayo</option>
-                      <option value="junio">Junio</option>
-                      <option value="julio">Julio</option>
-                      <option value="agosto">Agosto</option>
-                      <option value="septiembre">Septiembre</option>
-                      <option value="octubre">Octubre</option>
-                      <option value="noviembre">Noviembre</option>
-                      <option value="diciembre">Diciembre</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Referencia */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Número de Referencia
-                  </label>
-                  <input
-                    type="text"
-                    value={formPago.referencia}
-                    onChange={(e) => setFormPago({...formPago, referencia: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Número de referencia del pago"
-                  />
-                </div>
-
-                {/* Comprobante */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Comprobante de Pago
-                  </label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    onChange={(e) => setArchivoSeleccionado(e.target.files[0])}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Formatos permitidos: PDF, JPG, PNG
-                  </p>
-                </div>
-
-                {/* Observaciones */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Observaciones
-                  </label>
-                  <textarea
-                    value={formPago.observaciones}
-                    onChange={(e) => setFormPago({...formPago, observaciones: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Observaciones adicionales..."
-                  />
-                </div>
-
-                {/* Resumen del pago */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-800 mb-2">Resumen del Pago</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>Monto Base: ${parseFloat(formPago.monto || 0).toFixed(2)}</div>
-                    <div>Monto Mora: ${parseFloat(formPago.montoMora || 0).toFixed(2)}</div>
-                    <div>Descuento: ${parseFloat(formPago.descuento || 0).toFixed(2)}</div>
-                    <div className="font-bold text-lg">Total: ${montoTotal}</div>
-                  </div>
-                </div>
-
-                {/* Mensajes de error y éxito */}
-                {errorPago && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <div className="flex items-center text-red-700">
-                      <FaTimes className="mr-2" />
-                      {errorPago}
-                    </div>
-                  </div>
-                )}
-
-                {successPago && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="flex items-center text-green-700">
-                      <FaCheck className="mr-2" />
-                      {successPago}
-                    </div>
-                  </div>
-                )}
-
-                {/* Botones */}
-                <div className="flex space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleClosePagoModal}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loadingPago}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                  >
-                    {loadingPago ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                        Registrando...
-                      </>
-                    ) : (
-                      <>
-                        <FaMoneyBillWave className="mr-2" />
-                        Registrar Pago
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
 
         {/* Mensajes de éxito y error */}
         {success && (
@@ -2467,6 +2200,35 @@ const EstudianteDetail = () => {
             </div>
           </div>
         )}
+
+        {/* Modal de Pago Administrativo */}
+        <AdminPaymentModal
+          isOpen={showAdminPaymentModal}
+          onClose={() => setShowAdminPaymentModal(false)}
+          onSuccess={(pagos) => {
+            setSuccess(`${pagos.length} pago(s) registrado(s) exitosamente`);
+            setTimeout(() => setSuccess(''), 3000);
+            // Recargar pagos del estudiante
+            const fetchPagosActualizados = async () => {
+              try {
+                const token = localStorage.getItem('token');
+                const config = { headers: { 'Authorization': `Bearer ${token}` } };
+                const pagosResponse = await axios.get(
+                  `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/pagos/estudiante/${id}`,
+                  config
+                );
+                setPagos(pagosResponse.data || []);
+              } catch (err) {
+                console.error('Error al recargar pagos:', err);
+              }
+            };
+            fetchPagosActualizados();
+          }}
+          estudiante={estudiante}
+          representante={representante}
+          theme="blue"
+          user={JSON.parse(localStorage.getItem('user') || '{}')}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { FaTimes, FaCheck, FaUserGraduate, FaUserTie, FaMoneyBill, FaPercentage, FaExclamationCircle, FaCalendarAlt, FaCreditCard, FaFileAlt, FaImage } from 'react-icons/fa';
+import { FaTimes, FaCheck, FaUserGraduate, FaUserTie, FaMoneyBill, FaPercentage, FaExclamationCircle, FaCalendarAlt, FaCreditCard, FaFileAlt, FaImage, FaTag, FaHashtag, FaReceipt } from 'react-icons/fa';
 import { formatearFecha, formatearFechaHoraLocal } from '../../../../utils/formatters';
 
 function formatCurrency(value) {
@@ -19,10 +19,16 @@ export default function PaymentDetailModalThemed({ pago, onClose, onPreview, onA
   const metodo = pago.metodoPago || pago.metodoPagos;
   const arancel = pago.arancel || pago.aranceles;
 
+  // Usar valores de mensualidadSnapshot si están disponibles
+  const snapshot = pago.mensualidadSnapshot || {};
   const monto = parseFloat(pago.monto || 0) || 0;
-  const mora = parseFloat(pago.montoMora || 0) || 0;
+  const montoVES = parseFloat(snapshot.precioAplicadoVES || pago.montoVES || 0) || 0;
+  const mora = parseFloat(snapshot.moraAplicadaUSD || pago.montoMora || 0) || 0;
+  const moraVES = parseFloat(snapshot.moraAplicadaVES || pago.montoMoraVES || 0) || 0;
   const desc = parseFloat(pago.descuento || 0) || 0;
+  const descVES = parseFloat(pago.descuentoVES || 0) || 0;
   const total = monto + mora - desc;
+  const totalVES = montoVES + moraVES - descVES;
 
   const isImage = pago.urlComprobante && (pago.urlComprobante.toLowerCase().endsWith('.jpg') || pago.urlComprobante.toLowerCase().endsWith('.jpeg') || pago.urlComprobante.toLowerCase().endsWith('.png'));
 
@@ -66,11 +72,11 @@ export default function PaymentDetailModalThemed({ pago, onClose, onPreview, onA
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/60 overflow-y-auto animate-fadeIn" onClick={onClose}>
       <div className="min-h-full flex items-center justify-center p-4">
-        <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slideUp" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
-          <div className={`bg-gradient-to-r ${colors.gradient} text-white px-6 py-4 flex items-center justify-between sticky top-0 z-10`}>
+          <div className={`bg-gradient-to-r ${colors.gradient} text-white px-6 py-4 flex items-center justify-between rounded-t-2xl`}>
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-white/20 rounded-lg">
                 <FaMoneyBill className="w-5 h-5" />
@@ -82,13 +88,13 @@ export default function PaymentDetailModalThemed({ pago, onClose, onPreview, onA
                 </span>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 rounded-lg bg-white/10 hover:bg-white/20">
+            <button onClick={onClose} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors duration-200">
               <FaTimes />
             </button>
           </div>
 
           {/* Body (scrollable) */}
-          <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto flex-1">
+          <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto flex-1" style={{ willChange: 'scroll-position' }}>
           <div className="bg-slate-50 rounded-xl p-4">
             <h4 className={`font-semibold text-slate-800 mb-3 flex items-center`}><FaUserGraduate className={`mr-2 ${colors.text}`} /> Estudiante</h4>
             <p className="text-sm text-slate-700"><span className="font-medium">Nombre:</span> {estudiante ? `${estudiante.nombre} ${estudiante.apellido}` : '-'}</p>
@@ -105,27 +111,27 @@ export default function PaymentDetailModalThemed({ pago, onClose, onPreview, onA
             <h4 className={`font-semibold text-slate-800 mb-3 flex items-center`}><FaFileAlt className={`mr-2 ${colors.text}`} /> Detalles</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="p-3 rounded-lg bg-white border">
-                <p className="text-xs text-slate-500">Concepto</p>
+                <p className={`text-xs text-slate-500 flex items-center`}><FaTag className={`mr-1 ${colors.text}`} /> Concepto</p>
                 <p className="font-semibold text-slate-800">{arancel?.nombre || pago.concepto || '-'}</p>
               </div>
               <div className="p-3 rounded-lg bg-white border">
-                <p className="text-xs text-slate-500">Método</p>
+                <p className={`text-xs text-slate-500 flex items-center`}><FaCreditCard className={`mr-1 ${colors.text}`} /> Método de pago</p>
                 <p className="font-semibold text-slate-800">{metodo?.nombre || '-'}</p>
               </div>
               <div className="p-3 rounded-lg bg-white border">
-                <p className="text-xs text-slate-500">Referencia</p>
+                <p className={`text-xs text-slate-500 flex items-center`}><FaHashtag className={`mr-1 ${colors.text}`} /> Referencia</p>
                 <p className="font-semibold text-slate-800">{pago.referencia || '-'}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-white border">
                 <p className={`text-xs text-slate-500 flex items-center`}><FaMoneyBill className={`mr-1 ${colors.text}`} /> Monto</p>
                 <p className="font-semibold text-slate-800">{formatCurrency(monto)}</p>
-                <p className="text-xs text-slate-500">Bs. {Number(pago.montoVES ?? 0).toFixed(2)}</p>
+                <p className="text-xs text-slate-500">Bs. {montoVES.toFixed(2)}</p>
               </div>
               <div className="p-3 rounded-lg bg-white border">
                 <p className={`text-xs text-slate-500 flex items-center`}><FaExclamationCircle className={`mr-1 ${colors.text}`} /> Mora</p>
                 <p className="font-semibold text-slate-800">{formatCurrency(mora)}</p>
-                <p className="text-xs text-slate-500">Bs. {Number(pago.montoMoraVES ?? 0).toFixed(2)}</p>
+                <p className="text-xs text-slate-500">Bs. {moraVES.toFixed(2)}</p>
               </div>
               <div className="p-3 rounded-lg bg-white border">
                 <p className={`text-xs text-slate-500 flex items-center`}><FaPercentage className={`mr-1 ${colors.text}`} /> Descuento</p>
@@ -133,9 +139,9 @@ export default function PaymentDetailModalThemed({ pago, onClose, onPreview, onA
               </div>
 
               <div className={`p-3 rounded-lg ${colors.bgLight} border ${colors.border} md:col-span-3`}>
-                <p className={`text-xs ${colors.textLight} flex items-center`}><FaCreditCard className="mr-1" /> Total</p>
+                <p className={`text-xs ${colors.textLight} flex items-center`}><FaMoneyBill className="mr-1" /> Total</p>
                 <p className={`text-xl font-extrabold ${colors.textDark}`}>{formatCurrency(total)}</p>
-                <p className={`text-xs ${colors.textLighter}`}>Bs. {Number(pago.montoTotalVES ?? 0).toFixed(2)}</p>
+                <p className={`text-xs ${colors.textLighter}`}>Bs. {totalVES.toFixed(2)}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-white border">
@@ -162,12 +168,12 @@ export default function PaymentDetailModalThemed({ pago, onClose, onPreview, onA
 
             {pago.urlComprobante && (
               <div className="mt-4">
-                <h5 className="text-sm font-semibold text-slate-800 mb-2">Comprobante</h5>
+                <h5 className={`text-sm font-semibold text-slate-800 mb-2 flex items-center`}><FaReceipt className={`mr-2 ${colors.text}`} /> Comprobante</h5>
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-slate-600 truncate">{pago.nombreArchivo || pago.urlComprobante.split('/').pop()}</p>
                   <button
                     onClick={() => onPreview?.(pago)}
-                    className={`inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md ${colors.bgHover} text-white`}
+                    className={`inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md ${colors.bgHover} text-white transition-all duration-200`}
                   >
                     <FaImage className="mr-2" /> Ver
                   </button>
@@ -186,18 +192,18 @@ export default function PaymentDetailModalThemed({ pago, onClose, onPreview, onA
           </div>
           </div>
           {/* Footer actions */}
-          <div className="px-6 py-4 border-t bg-white flex items-center justify-end gap-2">
+          <div className="px-6 py-4 border-t bg-white flex items-center justify-end gap-2 rounded-b-2xl">
             {pago.estado === 'pendiente' && onApprove && onReject && (
               <>
                 <button
                   onClick={() => onReject?.(pago)}
-                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700"
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all duration-200"
                 >
                   <FaTimes className="mr-2" /> Rechazar
                 </button>
                 <button
                   onClick={() => onApprove?.(pago)}
-                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700"
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all duration-200"
                 >
                   <FaCheck className="mr-2" /> Aprobar
                 </button>
@@ -205,7 +211,7 @@ export default function PaymentDetailModalThemed({ pago, onClose, onPreview, onA
             )}
             <button
               onClick={onClose}
-              className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200"
+              className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all duration-200"
             >
               Cerrar
             </button>

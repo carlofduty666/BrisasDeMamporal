@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FaPlus, FaSearch, FaEye, FaFileInvoiceDollar, FaSave, FaTimes, FaCheck, FaInfoCircle } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaEye, FaFileInvoiceDollar, FaSave, FaTimes, FaCheck, FaInfoCircle, FaMoneyBillWave } from 'react-icons/fa';
 import axios from 'axios';
 import HeaderStats from './components/HeaderStats';
 import MonthlySummaryModal from './components/MonthlySummaryModal.jsx';
@@ -10,6 +10,7 @@ import PaymentDetailModal from './components/PaymentDetailModal';
 import MensualidadesTable from './components/MensualidadesTable';
 import ConfiguracionPagosPanel from './components/PagosConfigPanel.jsx';
 import PagosConfigModal from './components/PagosConfigModal.jsx';
+import AdminPaymentModal from './components/AdminPaymentModal';
 import { formatearNombreGrado } from '../../../utils/formatters'
 
 const PagosList = () => {
@@ -94,6 +95,7 @@ const PagosList = () => {
   const [selectedMes, setSelectedMes] = useState(new Date().getMonth()+1);
   const [selectedAnio, setSelectedAnio] = useState(new Date().getFullYear());
   const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showAdminPaymentModal, setShowAdminPaymentModal] = useState(false);
 
   // Efecto para calcular el monto total automáticamente
   useEffect(() => {
@@ -1021,10 +1023,10 @@ const PagosList = () => {
           {showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
         </button>
         <button
-          onClick={handleOpenModal}
-          className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl bg-pink-700 text-white hover:bg-pink-800 shadow"
+          onClick={() => setShowAdminPaymentModal(true)}
+          className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl bg-gradient-to-r from-pink-600 to-pink-700 text-white hover:from-pink-700 hover:to-pink-800 shadow-lg"
         >
-          <FaPlus className="mr-2" /> Registrar Pago
+          <FaMoneyBillWave className="mr-2" /> Pago Administrativo
         </button>
       </div>
         
@@ -1206,398 +1208,7 @@ const PagosList = () => {
         )}
         
         {/* Modal para registrar nuevo pago */}
-        {showModal && (
-          <div className="fixed z-10 inset-0 overflow-y-auto">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-                <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-              </div>
-              
-              <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-              
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <div className="sm:flex sm:items-start">
-                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                        Registrar Nuevo Pago
-                      </h3>
-                      <div className="mt-2">
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                          {/* Sección de Representante y Estudiante */}
-                          <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                            <div className="sm:col-span-6">
-                              <label htmlFor="representante" className="block text-sm font-medium text-gray-700">
-                                Representante <span className="text-red-500">*</span>
-                              </label>
-                              <div className="mt-1 relative">
-                                <input
-                                  type="text"
-                                  id="representante"
-                                  placeholder="Buscar representante por nombre o cédula"
-                                  value={searchRepresentante}
-                                  onChange={(e) => filtrarRepresentantes(e.target.value)}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                  required
-                                />
-                                
-                                {showRepresentanteDropdown && representantesFiltrados.length > 0 && (
-                                  <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto max-h-60">
-                                    {representantesFiltrados.map((rep) => (
-                                      <div
-                                        key={rep.id}
-                                        onClick={() => seleccionarRepresentante(rep)}
-                                        className="cursor-pointer hover:bg-gray-100 py-2 px-4"
-                                      >
-                                        {rep.nombre} {rep.apellido} - {rep.cedula}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-6">
-                              <label htmlFor="estudiante" className="block text-sm font-medium text-gray-700">
-                                Estudiante <span className="text-red-500">*</span>
-                              </label>
-                              <div className="mt-1">
-                                <select
-                                  id="estudiante"
-                                  name="estudianteID"
-                                  value={formPago.estudianteID}
-                                  onChange={(e) => {
-                                    const estudianteID = e.target.value;
-                                    setFormPago({
-                                      ...formPago,
-                                      estudianteID
-                                    });
-                                    
-                                    // Buscar el estudiante seleccionado
-                                    const estudiante = estudiantes.find(est => est.id.toString() === estudianteID);
-                                    if (estudiante) {
-                                      seleccionarEstudiante(estudiante);
-                                    }
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                  required
-                                  disabled={!formPago.representanteID || loadingEstudiantes}
-                                >
-                                  <option value="">Seleccione un estudiante</option>
-                                  {estudiantes.map((est) => (
-                                    <option key={est.id} value={est.id}>
-                                      {est.nombre} {est.apellido} - {est.cedula}
-                                    </option>
-                                  ))}
-                                </select>
-                                
-                                {loadingEstudiantes && (
-                                  <div className="mt-2 flex justify-center">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-indigo-500"></div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Sección de Detalles del Pago */}
-                          <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                            <div className="sm:col-span-3">
-                              <label htmlFor="arancelID" className="block text-sm font-medium text-gray-700">
-                                Concepto de Pago <span className="text-red-500">*</span>
-                              </label>
-                              <div className="mt-1">
-                                <select
-                                  id="arancelID"
-                                  name="arancelID"
-                                  value={formPago.arancelID}
-                                  onChange={(e) => {
-                                    const arancelID = e.target.value;
-                                    const arancel = aranceles.find(a => a.id.toString() === arancelID);
-                                    
-                                    setFormPago({
-                                      ...formPago,
-                                      arancelID,
-                                      monto: arancel ? arancel.monto.toString() : ''
-                                    });
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                  required
-                                >
-                                  <option value="">Seleccione un concepto</option>
-                                  {aranceles.map((arancel) => (
-                                    <option key={arancel.id} value={arancel.id}>
-                                      {arancel.nombre} - ${arancel.monto}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-3">
-                              <label htmlFor="metodoPagoID" className="block text-sm font-medium text-gray-700">
-                                Método de Pago <span className="text-red-500">*</span>
-                              </label>
-                              <div className="mt-1">
-                                <select
-                                  id="metodoPagoID"
-                                  name="metodoPagoID"
-                                  value={formPago.metodoPagoID}
-                                  onChange={(e) => {
-                                    setFormPago({
-                                      ...formPago,
-                                      metodoPagoID: e.target.value
-                                    });
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                  required
-                                >
-                                  <option value="">Seleccione un método</option>
-                                  {metodosPago.map((metodo) => (
-                                    <option key={metodo.id} value={metodo.id}>
-                                      {metodo.nombre}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-3">
-                              <label htmlFor="monto" className="block text-sm font-medium text-gray-700">
-                                Monto <span className="text-red-500">*</span>
-                              </label>
-                              <div className="mt-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  id="monto"
-                                  name="monto"
-                                  value={formPago.monto}
-                                  onChange={(e) => {
-                                    setFormPago({
-                                      ...formPago,
-                                      monto: e.target.value
-                                    });
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                  required
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-3">
-                              <label htmlFor="montoMora" className="block text-sm font-medium text-gray-700">
-                                Monto por Mora
-                              </label>
-                              <div className="mt-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  id="montoMora"
-                                  name="montoMora"
-                                  value={formPago.montoMora}
-                                  onChange={(e) => {
-                                    setFormPago({
-                                      ...formPago,
-                                      montoMora: e.target.value
-                                    });
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-3">
-                              <label htmlFor="descuento" className="block text-sm font-medium text-gray-700">
-                                Descuento
-                              </label>
-                              <div className="mt-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  id="descuento"
-                                  name="descuento"
-                                  value={formPago.descuento}
-                                  onChange={(e) => {
-                                    setFormPago({
-                                      ...formPago,
-                                      descuento: e.target.value
-                                    });
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-3">
-                              <label htmlFor="montoTotal" className="block text-sm font-medium text-gray-700">
-                                Monto Total
-                              </label>
-                              <div className="mt-1">
-                                <input
-                                  type="text"
-                                  id="montoTotal"
-                                  value={`$${montoTotal}`}
-                                  className="bg-gray-100 shadow-sm block w-full sm:text-sm border-gray-300 rounded-md"
-                                  disabled
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-3">
-                              <label htmlFor="mesPago" className="block text-sm font-medium text-gray-700">
-                                Mes de Pago
-                              </label>
-                              <div className="mt-1">
-                                <select
-                                  id="mesPago"
-                                  name="mesPago"
-                                  value={formPago.mesPago}
-                                  onChange={(e) => {
-                                    setFormPago({
-                                      ...formPago,
-                                      mesPago: e.target.value
-                                    });
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                >
-                                  <option value="">Seleccione un mes</option>
-                                  <option value="Enero">Enero</option>
-                                  <option value="Febrero">Febrero</option>
-                                  <option value="Marzo">Marzo</option>
-                                  <option value="Abril">Abril</option>
-                                  <option value="Mayo">Mayo</option>
-                                  <option value="Junio">Junio</option>
-                                  <option value="Julio">Julio</option>
-                                  <option value="Agosto">Agosto</option>
-                                  <option value="Septiembre">Septiembre</option>
-                                  <option value="Octubre">Octubre</option>
-                                  <option value="Noviembre">Noviembre</option>
-                                  <option value="Diciembre">Diciembre</option>
-                                </select>
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-3">
-                              <label htmlFor="fechaPago" className="block text-sm font-medium text-gray-700">
-                                Fecha de Pago
-                              </label>
-                              <div className="mt-1">
-                                <input
-                                  type="date"
-                                  id="fechaPago"
-                                  name="fechaPago"
-                                  value={formPago.fechaPago}
-                                  onChange={(e) => {
-                                    setFormPago({
-                                      ...formPago,
-                                      fechaPago: e.target.value
-                                    });
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-6">
-                              <label htmlFor="referencia" className="block text-sm font-medium text-gray-700">
-                                Referencia
-                              </label>
-                              <div className="mt-1">
-                                <input
-                                  type="text"
-                                  id="referencia"
-                                  name="referencia"
-                                  value={formPago.referencia}
-                                  onChange={(e) => {
-                                    setFormPago({
-                                      ...formPago,
-                                      referencia: e.target.value
-                                    });
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="sm:col-span-6">
-                              <label htmlFor="comprobante" className="block text-sm font-medium text-gray-700">
-                                Comprobante de Pago
-                              </label>
-                              <div className="mt-1">
-                                <input
-                                  type="file"
-                                  id="comprobante"
-                                  ref={fileInputRef}
-                                  onChange={handleFileChange}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                  accept=".pdf,.jpg,.jpeg,.png"
-                                />
-                              </div>
-                              <p className="mt-2 text-sm text-gray-500">
-                                Formatos aceptados: PDF, JPG, JPEG, PNG
-                              </p>
-                            </div>
-                            
-                            <div className="sm:col-span-6">
-                              <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700">
-                                Observaciones
-                              </label>
-                              <div className="mt-1">
-                                <textarea
-                                  id="observaciones"
-                                  name="observaciones"
-                                  rows="3"
-                                  value={formPago.observaciones}
-                                  onChange={(e) => {
-                                    setFormPago({
-                                      ...formPago,
-                                      observaciones: e.target.value
-                                    });
-                                  }}
-                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                ></textarea>
-                              </div>
-                            </div>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                  >
-                    {loading ? (
-                      <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Guardando...
-                      </span>
-                    ) : (
-                      <span className="flex items-center">
-                        <FaSave className="mr-2" /> Registrar Pago
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Modal de Detalles del Pago (nuevo estilo) */}
         {showDetailModal && selectedPago && (
@@ -1609,6 +1220,19 @@ const PagosList = () => {
             onReject={(p) => { handleUpdateEstado(p.id, 'anulado'); handleCloseDetailModal(); }}
           />
         )}
+
+        {/* Modal de Pago Administrativo */}
+        <AdminPaymentModal
+          isOpen={showAdminPaymentModal}
+          onClose={() => setShowAdminPaymentModal(false)}
+          onSuccess={(pagos) => {
+            setSuccess(`${pagos.length} pago(s) registrado(s) exitosamente`);
+            setTimeout(() => setSuccess(''), 3000);
+            fetchPagos();
+          }}
+          theme="pink"
+          user={JSON.parse(localStorage.getItem('user') || '{}')}
+        />
 
       </div>
      
