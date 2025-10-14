@@ -233,6 +233,7 @@ const EmpleadoDetail = () => {
   };
 
   const handleVistaPrevia = (documento) => {
+    console.log('📄 Documento para vista previa:', documento);
     setDocumentoPreview(documento);
     setShowPreviewModal(true);
   };
@@ -919,19 +920,17 @@ const EmpleadoDetail = () => {
       {/* Modal de vista previa */}
       {showPreviewModal && documentoPreview && (
         <div className="fixed z-50 inset-0 overflow-y-auto animate-fade-in">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="flex items-center justify-center min-h-screen py-8 px-4 text-center">
             {/* Overlay */}
             <div 
               className="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm"
               onClick={() => setShowPreviewModal(false)}
             ></div>
             
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            
             {/* Modal */}
-            <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full animate-scale-in">
+            <div className="relative inline-block bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all max-w-4xl w-full max-h-[90vh] flex flex-col animate-scale-in">
               {/* Header */}
-              <div className="bg-amber-600 px-6 py-5">
+              <div className="bg-amber-600 px-6 py-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-white/20 rounded-lg">
@@ -956,53 +955,93 @@ const EmpleadoDetail = () => {
               </div>
               
               {/* Body */}
-              <div className="bg-white px-6 py-6">
-                <div className="bg-gray-100 rounded-xl p-8 min-h-[400px] flex items-center justify-center">
-                  {documentoPreview.ruta_archivo && documentoPreview.ruta_archivo.toLowerCase().endsWith('.pdf') ? (
-                    <iframe
-                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${documentoPreview.ruta_archivo}`}
-                      className="w-full h-[600px] rounded-lg"
-                      title="Vista previa del documento"
-                    />
-                  ) : documentoPreview.ruta_archivo && (documentoPreview.ruta_archivo.toLowerCase().endsWith('.jpg') || 
-                      documentoPreview.ruta_archivo.toLowerCase().endsWith('.jpeg') || 
-                      documentoPreview.ruta_archivo.toLowerCase().endsWith('.png')) ? (
-                    <img
-                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${documentoPreview.ruta_archivo}`}
-                      alt="Vista previa"
-                      className="max-w-full max-h-[600px] rounded-lg shadow-lg"
-                    />
-                  ) : (
-                    <div className="text-center">
-                      <FaFileAlt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">
-                        No se puede mostrar una vista previa de este tipo de archivo.
-                      </p>
-                      <button
-                        onClick={() => handleDescargarDocumento(documentoPreview.id)}
-                        className="mt-4 px-6 py-3 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 transition-colors duration-200 inline-flex items-center"
-                      >
-                        <FaFileDownload className="mr-2" />
-                        Descargar Documento
-                      </button>
-                    </div>
-                  )}
+              <div className="bg-white px-6 py-6 overflow-y-auto flex-1">
+                <div className="bg-gray-100 rounded-xl p-4 flex items-center justify-center">
+                  {(() => {
+                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                    // El backend guarda la ruta en 'urlDocumento' que ya incluye '/uploads/documentos/'
+                    const urlDocumento = documentoPreview.urlDocumento;
+                    
+                    // Construir la URL completa
+                    const urlCompleta = `${apiUrl}${urlDocumento}`;
+                    
+                    console.log('URL del documento:', urlCompleta);
+                    console.log('Documento completo:', documentoPreview);
+                    
+                    if (!urlDocumento) {
+                      return (
+                        <div className="text-center">
+                          <FaFileAlt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-600">
+                            No se encontró la ruta del archivo.
+                          </p>
+                        </div>
+                      );
+                    }
+                    
+                    const extension = urlDocumento.toLowerCase().split('.').pop();
+                    
+                    if (extension === 'pdf') {
+                      return (
+                        <iframe
+                          src={urlCompleta}
+                          className="w-full h-[500px] rounded-lg border-2 border-gray-300"
+                          title="Vista previa del documento"
+                          onError={(e) => {
+                            console.error('Error al cargar PDF:', urlCompleta);
+                          }}
+                        />
+                      );
+                    } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+                      return (
+                        <div className="w-full flex justify-center">
+                          <img
+                            src={urlCompleta}
+                            alt="Vista previa"
+                            className="max-w-full max-h-[500px] rounded-lg shadow-lg object-contain"
+                            onError={(e) => {
+                              console.error('Error al cargar imagen:', urlCompleta);
+                            }}
+                          />
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="text-center">
+                          <FaFileAlt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-600 mb-2">
+                            No se puede mostrar una vista previa de este tipo de archivo.
+                          </p>
+                          <p className="text-xs text-gray-500 mb-4">
+                            Tipo: {extension?.toUpperCase() || 'Desconocido'}
+                          </p>
+                          <button
+                            onClick={() => handleDescargarDocumento(documentoPreview.id)}
+                            className="mt-4 px-6 py-3 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 transition-colors duration-200 inline-flex items-center"
+                          >
+                            <FaFileDownload className="mr-2" />
+                            Descargar Documento
+                          </button>
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
               </div>
               
               {/* Footer */}
-              <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+              <div className="bg-gray-50 px-6 py-3 flex justify-end space-x-3 flex-shrink-0 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowPreviewModal(false)}
-                  className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 hover:border-gray-400 transition-all duration-200"
+                  className="px-6 py-2 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 hover:border-gray-400 transition-all duration-200"
                 >
                   Cerrar
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDescargarDocumento(documentoPreview.id)}
-                  className="px-8 py-3 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 transition-all duration-200 shadow-lg hover:shadow-xl inline-flex items-center"
+                  className="px-6 py-2 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 transition-all duration-200 shadow-lg hover:shadow-xl inline-flex items-center"
                 >
                   <FaFileDownload className="mr-2" />
                   Descargar

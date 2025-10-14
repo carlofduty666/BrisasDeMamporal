@@ -477,6 +477,65 @@ const gradosController = {
           return res.status(400).json({ message: 'Este estudiante ya está asignado al grado destino para este año escolar' });
         }
         
+        // Determinar la sección destino
+        let seccionFinal = seccionDestinoID;
+        
+        // Si no se proporcionó sección destino, buscar una con cupos disponibles
+        if (!seccionFinal) {
+          const seccionesDestino = await Secciones.findAll({
+            where: { gradoID: gradoDestinoID }
+          });
+          
+          if (!seccionesDestino || seccionesDestino.length === 0) {
+            return res.status(400).json({ message: 'No hay secciones disponibles en el grado destino' });
+          }
+          
+          // Buscar una sección con cupos disponibles
+          for (const seccion of seccionesDestino) {
+            const estudiantesInscritos = await db.Seccion_Personas.count({
+              where: {
+                seccionID: seccion.id,
+                annoEscolarID
+              }
+            });
+            
+            const capacidad = seccion.capacidad || 30;
+            if (estudiantesInscritos < capacidad) {
+              seccionFinal = seccion.id;
+              break;
+            }
+          }
+          
+          if (!seccionFinal) {
+            return res.status(400).json({ message: 'No hay cupos disponibles en ninguna sección del grado destino' });
+          }
+        } else {
+          // Validar que la sección destino existe y pertenece al grado destino
+          const seccionDestino = await Secciones.findOne({
+            where: { 
+              id: seccionDestinoID,
+              gradoID: gradoDestinoID
+            }
+          });
+          
+          if (!seccionDestino) {
+            return res.status(404).json({ message: 'La sección destino no existe o no pertenece al grado destino' });
+          }
+          
+          // Verificar que hay cupos disponibles
+          const estudiantesInscritos = await db.Seccion_Personas.count({
+            where: {
+              seccionID: seccionDestinoID,
+              annoEscolarID
+            }
+          });
+          
+          const capacidad = seccionDestino.capacidad || 30;
+          if (estudiantesInscritos >= capacidad) {
+            return res.status(400).json({ message: 'No hay cupos disponibles en la sección destino' });
+          }
+        }
+        
         // Usar una transacción para asegurar que todas las operaciones se completen o ninguna
         const t = await db.sequelize.transaction();
         
@@ -495,7 +554,7 @@ const gradosController = {
             fechaTransferencia: new Date() // Registrar la fecha de transferencia
           }, { transaction: t });
           
-          // 3. Si se proporcionaron IDs de sección, manejar la transferencia de sección
+          // 3. Manejar la transferencia de sección origen
           if (seccionOrigenID) {
             // Verificar si el estudiante está en la sección origen
             const seccionAsignacionOrigen = await db.Seccion_Personas.findOne({
@@ -534,62 +593,68 @@ const gradosController = {
                 }, { transaction: t });
               }
             }
-          }
-          
-          // 4. Si se proporcionó una sección destino, asignar al estudiante
-          if (seccionDestinoID) {
-            // Verificar si ya existe la asignación en la sección destino
-            const existingSeccionAssignment = await db.Seccion_Personas.findOne({
+          } else {
+            // Si no se proporcionó seccionOrigenID, buscar y eliminar cualquier asignación de sección existente
+            await db.Seccion_Personas.destroy({
               where: { 
                 personaID: estudianteID, 
-                seccionID: seccionDestinoID, 
                 annoEscolarID 
               },
               transaction: t
             });
+          }
+          
+          // 4. Asignar a la sección destino (ahora siempre tenemos una sección válida)
+          const existingSeccionAssignment = await db.Seccion_Personas.findOne({
+            where: { 
+              personaID: estudianteID, 
+              seccionID: seccionFinal, 
+              annoEscolarID 
+            },
+            transaction: t
+          });
+          
+          if (!existingSeccionAssignment) {
+            // Asignar a la sección destino
+            await db.Seccion_Personas.create({
+              personaID: estudianteID,
+              seccionID: seccionFinal,
+              annoEscolarID,
+              fechaAsignacion: new Date()
+            }, { transaction: t });
             
-            if (!existingSeccionAssignment) {
-              // Asignar a la sección destino
-              await db.Seccion_Personas.create({
-                personaID: estudianteID,
-                seccionID: seccionDestinoID,
-                annoEscolarID,
-                fechaAsignacion: new Date()
+            // Actualizar cupo de la sección destino (aumentar ocupados, disminuir disponibles)
+            const cupoDestino = await db.Cupos.findOne({
+              where: {
+                seccionID: seccionFinal,
+                annoEscolarID
+              },
+              transaction: t
+            });
+            
+            if (cupoDestino) {
+              await cupoDestino.update({
+                ocupados: cupoDestino.ocupados + 1,
+                disponibles: Math.max(0, cupoDestino.disponibles - 1)
               }, { transaction: t });
-              
-              // Actualizar cupo de la sección destino (aumentar ocupados, disminuir disponibles)
-              const cupoDestino = await db.Cupos.findOne({
-                where: {
-                  seccionID: seccionDestinoID,
-                  annoEscolarID
-                },
-                transaction: t
-              });
-              
-              if (cupoDestino) {
-                await cupoDestino.update({
-                  ocupados: cupoDestino.ocupados + 1,
-                  disponibles: Math.max(0, cupoDestino.disponibles - 1)
+            } else {
+              // Si no existe un registro de cupo para esta sección, crear uno
+              const seccion = await db.Secciones.findByPk(seccionFinal, { transaction: t });
+              if (seccion) {
+                const capacidad = seccion.capacidad || 30;
+                await db.Cupos.create({
+                  gradoID: gradoDestinoID,
+                  seccionID: seccionFinal,
+                  annoEscolarID,
+                  capacidad,
+                  ocupados: 1,
+                  disponibles: capacidad - 1
                 }, { transaction: t });
-              } else {
-                // Si no existe un registro de cupo para esta sección, crear uno
-                const seccion = await db.Secciones.findByPk(seccionDestinoID, { transaction: t });
-                if (seccion) {
-                  const capacidad = seccion.capacidad || 30;
-                  await db.Cupos.create({
-                    gradoID: gradoDestinoID,
-                    seccionID: seccionDestinoID,
-                    annoEscolarID,
-                    capacidad,
-                    ocupados: 1,
-                    disponibles: capacidad - 1
-                  }, { transaction: t });
-                }
               }
             }
           }
           
-          // 5. Actualizar la inscripción del estudiante si existe
+          // 5. Actualizar la inscripción del estudiante si existe (ahora siempre con una sección válida)
           const inscripcion = await db.Inscripciones.findOne({
             where: {
               estudianteID,
@@ -601,7 +666,7 @@ const gradosController = {
           if (inscripcion) {
             await inscripcion.update({
               gradoID: gradoDestinoID,
-              seccionID: seccionDestinoID || null
+              seccionID: seccionFinal
             }, { transaction: t });
           }
           
@@ -611,7 +676,8 @@ const gradosController = {
           res.status(200).json({ 
             message: 'Estudiante transferido correctamente',
             asignacion: newAssignment,
-            inscripcionID: inscripcion ? inscripcion.id : null
+            inscripcionID: inscripcion ? inscripcion.id : null,
+            seccionAsignada: seccionFinal
           });
         } catch (error) {
           // Si hay un error, revertir la transacción

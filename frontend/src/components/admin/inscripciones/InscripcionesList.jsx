@@ -356,10 +356,10 @@ const InscripcionesList = () => {
 
       {/* Messages */}
       {successMessage && (
-        <div className="bg-cyan-50 border-l-4 border-cyan-500 text-cyan-700 p-4 mb-6 rounded-r-lg shadow-sm animate-slideInRight">
+        <div className="bg-cyan-50 border-l-4 border-cyan-500 text-cyan-700 p-4 mb-6 rounded-r-lg shadow-sm">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <FaCheckCircle className="h-5 w-5 text-cyan-500 animate-bounce" />
+              <FaCheckCircle className="h-5 w-5 text-cyan-500" />
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium">{successMessage}</p>
@@ -369,10 +369,10 @@ const InscripcionesList = () => {
       )}
 
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg shadow-sm animate-slideInRight">
+        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg shadow-sm">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <FaExclamationTriangle className="h-5 w-5 text-red-500 animate-pulse" />
+              <FaExclamationTriangle className="h-5 w-5 text-red-500" />
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium">{error}</p>
@@ -393,7 +393,7 @@ const InscripcionesList = () => {
               <input
                 type="text"
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-300 hover:border-cyan-300"
-                placeholder="Buscar por código, nombre, apellido o cédula..."
+                placeholder="Buscar por nombre, apellido o cédula..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -404,20 +404,20 @@ const InscripcionesList = () => {
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 ${
+              className={`flex items-center px-4 py-3 rounded-xl font-medium transition-colors duration-200 ${
                 showFilters 
                   ? 'bg-cyan-600 text-white shadow-lg hover:bg-cyan-700' 
                   : 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100'
               }`}
             >
-              <FaFilter className={`mr-2 transition-transform duration-300 ${showFilters ? 'rotate-180' : ''}`} />
+              <FaFilter className="mr-2" />
               {showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
             </button>
 
             <div className="flex bg-gray-100 rounded-xl p-1">
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all duration-300 transform hover:scale-110 ${
+                className={`p-2 rounded-lg transition-colors duration-200 ${
                   viewMode === 'list' 
                     ? 'bg-white text-cyan-600 shadow-sm' 
                     : 'text-gray-600 hover:text-cyan-600'
@@ -428,7 +428,7 @@ const InscripcionesList = () => {
               </button>
               <button
                 onClick={() => setViewMode('cards')}
-                className={`p-2 rounded-lg transition-all duration-300 transform hover:scale-110 ${
+                className={`p-2 rounded-lg transition-colors duration-200 ${
                   viewMode === 'cards' 
                     ? 'bg-white text-cyan-600 shadow-sm' 
                     : 'text-gray-600 hover:text-cyan-600'
@@ -441,9 +441,9 @@ const InscripcionesList = () => {
 
             <button
               onClick={exportarInscripciones}
-              className="flex items-center px-4 py-3 bg-green-50 text-green-700 rounded-xl hover:bg-green-600 hover:text-white font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
+              className="flex items-center px-4 py-3 bg-green-50 text-green-700 rounded-xl hover:bg-green-600 hover:text-white font-medium transition-colors duration-200"
             >
-              <FaDownload className="mr-2 transition-transform duration-300 group-hover:animate-bounce" />
+              <FaDownload className="mr-2" />
               Exportar
             </button>
           </div>
@@ -576,12 +576,6 @@ const InscripcionesList = () => {
                 <tr>
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-cyan-800 uppercase tracking-wider">
                     <div className="flex items-center space-x-2">
-                      <FaHashtag className="w-3 h-3" />
-                      <span>Código</span>
-                    </div>
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-cyan-800 uppercase tracking-wider">
-                    <div className="flex items-center space-x-2">
                       <FaUserGraduate className="w-3 h-3" />
                       <span>Estudiante</span>
                     </div>
@@ -622,18 +616,12 @@ const InscripcionesList = () => {
                       <span>Pago</span>
                     </div>
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-cyan-800 uppercase tracking-wider">
-                    <div className="flex items-center space-x-2">
-                      <FaCog className="w-3 h-3" />
-                      <span>Acciones</span>
-                    </div>
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentItems.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="px-6 py-12 text-center">
+                    <td colSpan="7" className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center justify-center text-gray-500">
                         <FaClipboardList className="w-12 h-12 mb-3 text-gray-300" />
                         <p className="text-lg font-medium">No se encontraron inscripciones</p>
@@ -645,15 +633,9 @@ const InscripcionesList = () => {
                   currentItems.map((inscripcion, index) => (
                     <tr 
                       key={inscripcion.id} 
-                      className="hover:bg-cyan-50 transition-all duration-300 hover:shadow-md transform hover:scale-[1.01]"
-                      style={{ animationDelay: `${index * 50}ms` }}
+                      onClick={() => navigate(`/admin/inscripciones/${inscripcion.id}`)}
+                      className="hover:bg-cyan-50 transition-colors duration-150 cursor-pointer"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-cyan-600">
-                        <div className="flex items-center space-x-2">
-                          <FaHashtag className="w-3 h-3 text-cyan-400" />
-                          <span>{inscripcion.id}</span>
-                        </div>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div className="flex items-center space-x-2">
                           <div className="flex-shrink-0 h-8 w-8 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full flex items-center justify-center">
@@ -705,39 +687,31 @@ const InscripcionesList = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border transition-all duration-300 hover:scale-110 ${getEstadoColor(inscripcion.estado)}`}>
+                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getEstadoColor(inscripcion.estado)}`}>
                           {inscripcion.estado.charAt(0).toUpperCase() + inscripcion.estado.slice(1)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {inscripcion.documentosCompletos ? (
-                          <span className="text-green-600 flex items-center font-medium transition-all duration-300 hover:scale-110">
-                            <FaCheckCircle className="mr-1 animate-pulse" /> Completos
+                          <span className="text-green-600 flex items-center font-medium">
+                            <FaCheckCircle className="mr-1" /> Completos
                           </span>
                         ) : (
-                          <span className="text-yellow-600 flex items-center font-medium transition-all duration-300 hover:scale-110">
-                            <FaClock className="mr-1 animate-pulse" /> Pendientes
+                          <span className="text-yellow-600 flex items-center font-medium">
+                            <FaClock className="mr-1" /> Pendientes
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {inscripcion.pagoInscripcionCompletado ? (
-                          <span className="text-green-600 flex items-center font-medium transition-all duration-300 hover:scale-110">
-                            <FaCheckCircle className="mr-1 animate-pulse" /> Pagado
+                          <span className="text-green-600 flex items-center font-medium">
+                            <FaCheckCircle className="mr-1" /> Pagado
                           </span>
                         ) : (
-                          <span className="text-yellow-600 flex items-center font-medium transition-all duration-300 hover:scale-110">
-                            <FaMoneyBillWave className="mr-1 animate-pulse" /> Pendiente
+                          <span className="text-yellow-600 flex items-center font-medium">
+                            <FaMoneyBillWave className="mr-1" /> Pendiente
                           </span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <Link
-                          to={`/admin/inscripciones/${inscripcion.id}`}
-                          className="inline-flex items-center px-3 py-2 bg-cyan-50 text-cyan-700 rounded-lg hover:bg-cyan-600 hover:text-white font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md"
-                        >
-                          <FaEye className="mr-1" /> Ver
-                        </Link>
                       </td>
                     </tr>
                   ))
@@ -759,8 +733,7 @@ const InscripcionesList = () => {
             currentItems.map((inscripcion, index) => (
               <div
                 key={inscripcion.id}
-                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 hover:border-cyan-300 transform hover:scale-105 hover:-translate-y-2"
-                style={{ animationDelay: `${index * 100}ms` }}
+                className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-200 overflow-hidden border border-gray-100 hover:border-cyan-300"
               >
                 <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-4 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
@@ -786,7 +759,7 @@ const InscripcionesList = () => {
 
                 <div className="p-6 space-y-4">
                   {/* Estudiante */}
-                  <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-4 transition-all duration-300 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-4">
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full flex items-center justify-center">
                         <FaUserGraduate className="w-5 h-5 text-white" />
@@ -808,7 +781,7 @@ const InscripcionesList = () => {
                   </div>
 
                   {/* Representante */}
-                  <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-4 transition-all duration-300 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-4">
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-violet-400 to-violet-600 rounded-full flex items-center justify-center">
                         <FaUserTag className="w-5 h-5 text-white" />
@@ -854,28 +827,28 @@ const InscripcionesList = () => {
                   {/* Status Icons */}
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                     <div className="flex items-center space-x-4">
-                      <div className="text-center transition-all duration-300 hover:scale-110">
+                      <div className="text-center">
                         {inscripcion.documentosCompletos ? (
                           <>
-                            <FaCheckCircle className="w-6 h-6 text-green-500 mx-auto mb-1 animate-pulse" />
+                            <FaCheckCircle className="w-6 h-6 text-green-500 mx-auto mb-1" />
                             <p className="text-xs text-gray-600 font-medium">Docs OK</p>
                           </>
                         ) : (
                           <>
-                            <FaClock className="w-6 h-6 text-yellow-500 mx-auto mb-1 animate-pulse" />
+                            <FaClock className="w-6 h-6 text-yellow-500 mx-auto mb-1" />
                             <p className="text-xs text-gray-600 font-medium">Docs Pend.</p>
                           </>
                         )}
                       </div>
-                      <div className="text-center transition-all duration-300 hover:scale-110">
+                      <div className="text-center">
                         {inscripcion.pagoInscripcionCompletado ? (
                           <>
-                            <FaCheckCircle className="w-6 h-6 text-green-500 mx-auto mb-1 animate-pulse" />
+                            <FaCheckCircle className="w-6 h-6 text-green-500 mx-auto mb-1" />
                             <p className="text-xs text-gray-600 font-medium">Pagado</p>
                           </>
                         ) : (
                           <>
-                            <FaMoneyBillWave className="w-6 h-6 text-yellow-500 mx-auto mb-1 animate-pulse" />
+                            <FaMoneyBillWave className="w-6 h-6 text-yellow-500 mx-auto mb-1" />
                             <p className="text-xs text-gray-600 font-medium">Pago Pend.</p>
                           </>
                         )}
@@ -890,7 +863,7 @@ const InscripcionesList = () => {
                   {/* Action Button */}
                   <Link
                     to={`/admin/inscripciones/${inscripcion.id}`}
-                    className="block w-full mt-4 px-4 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-center font-semibold rounded-xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 shadow-md hover:shadow-xl transform hover:scale-105"
+                    className="block w-full mt-4 px-4 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-center font-semibold rounded-xl hover:from-cyan-600 hover:to-cyan-700 transition-colors duration-200 shadow-md"
                   >
                     <FaEye className="inline mr-2" />
                     Ver Detalles
@@ -904,7 +877,7 @@ const InscripcionesList = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-2xl shadow-lg p-6 border border-gray-100 transform transition-all duration-300 hover:shadow-xl">
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
           <div className="text-sm text-gray-700 flex items-center space-x-2">
             <FaInfoCircle className="w-4 h-4 text-cyan-500" />
             <span>
@@ -918,7 +891,7 @@ const InscripcionesList = () => {
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-cyan-50 hover:border-cyan-300 hover:text-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105"
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-cyan-50 hover:border-cyan-300 hover:text-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               Anterior
             </button>
@@ -936,9 +909,9 @@ const InscripcionesList = () => {
                     <button
                       key={pageNumber}
                       onClick={() => setCurrentPage(pageNumber)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-110 ${
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
                         currentPage === pageNumber
-                          ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-md hover:shadow-lg'
+                          ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-md'
                           : 'bg-white text-gray-700 border border-gray-300 hover:bg-cyan-50 hover:border-cyan-300 hover:text-cyan-700'
                       }`}
                     >
@@ -958,7 +931,7 @@ const InscripcionesList = () => {
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-cyan-50 hover:border-cyan-300 hover:text-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105"
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-cyan-50 hover:border-cyan-300 hover:text-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               Siguiente
             </button>
