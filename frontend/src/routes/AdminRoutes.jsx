@@ -8,6 +8,7 @@ import { getCurrentUser } from '../services/auth.service';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import CuposManager from '../components/admin/academico/CuposManager';
 import GradosList from '../components/admin/academico/GradosList';
+import GradoDetail from '../components/admin/academico/GradoDetail';
 import EditarGrado from '../components/admin/academico/EditarGrado';
 import MateriasList from '../components/admin/academico/MateriasList';
 import SeccionesList from '../components/admin/academico/SeccionesList';
@@ -90,6 +91,7 @@ const AdminRoutes = () => {
           {/* Gestión académica */}
           <Route path="cupos" element={<CuposManager />} />
           <Route path="academico/grados" element={<GradosList />} />
+          <Route path="academico/grados/:id" element={<GradoDetail />} />
           <Route path="academico/grados/:id/editar" element={<EditarGrado />} />
           <Route path="academico/materias" element={<MateriasList />} />
           <Route path="academico/secciones" element={<SeccionesList />} />

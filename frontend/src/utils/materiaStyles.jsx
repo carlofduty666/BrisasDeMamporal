@@ -2,6 +2,7 @@ import {
     FaBook, FaComments, FaGlobe, FaCalculator, FaPalette, 
     FaRunning, FaLanguage, FaLaptop, FaFlask, FaAtom, 
     FaPencilRuler, FaBrain, FaProjectDiagram, FaMoneyBillWave,
+    FaChartBar, FaEye
   } from 'react-icons/fa';
   import { FaEarthAmericas } from "react-icons/fa6";
   import { GiChemicalDrop } from 'react-icons/gi';

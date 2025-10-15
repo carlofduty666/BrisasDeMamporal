@@ -1,11 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaEdit, FaTrash, FaEye, FaUserGraduate, FaChalkboardTeacher, FaBook, FaUsers, FaSearch, FaFilter, FaChevronDown, FaChevronUp, FaComments, FaGlobe, FaCalculator, FaPalette, FaRunning, FaLanguage, FaLaptop, FaFlask, FaAtom, FaPencilRuler, FaBrain, FaProjectDiagram, FaMoneyBillWave, FaChartBar } from 'react-icons/fa';
-import { FaEarthAmericas } from "react-icons/fa6";
-import { GiChemicalDrop } from "react-icons/gi";
+import { 
+  FaPlus, 
+  FaSearch, 
+  FaEdit, 
+  FaTrash, 
+  FaEye, 
+  FaRedo,
+  FaGraduationCap,
+  FaUsers,
+  FaBookOpen,
+  FaChalkboardTeacher,
+  FaList,
+  FaTh,
+  FaFilter,
+  FaDownload,
+  FaChartLine,
+  FaUserGraduate,
+  FaBook
+} from 'react-icons/fa';
 import { formatearNombreGrado } from '../../../utils/formatters';
-import { getMateriaStyles, MateriaCard } from '../../../utils/materiaStyles';
 
 const GradosList = () => {
   const [grados, setGrados] = useState([]);
@@ -13,96 +28,177 @@ const GradosList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [annoEscolar, setAnnoEscolar] = useState(null);
-  const [selectedGrado, setSelectedGrado] = useState(null);
-  const [activeTab, setActiveTab] = useState('info');
-  const [estudiantes, setEstudiantes] = useState([]);
-  const [profesores, setProfesores] = useState([]);
-  const [materias, setMaterias] = useState([]);
-  const [secciones, setSecciones] = useState([]);
-  const [loadingDetails, setLoadingDetails] = useState(false);
-  const [cupos, setCupos] = useState({});
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [gradoToDelete, setGradoToDelete] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [selectedMateria, setSelectedMateria] = useState(null);
+  const [cupos, setCupos] = useState({});
+  const [viewMode, setViewMode] = useState('cards'); // 'list' o 'cards'
+  const navigate = useNavigate();
   
   // Estados para filtrado y búsqueda
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNivel, setSelectedNivel] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  
-  // Estados para filtrado de estudiantes
-  const [searchEstudiante, setSearchEstudiante] = useState('');
-  const [selectedSeccion, setSelectedSeccion] = useState('');
 
   // Obtener token de autenticación
   const token = localStorage.getItem('token');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Obtener año escolar activo
-        const annoResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/anno-escolar/actual`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        setAnnoEscolar(annoResponse.data);
-        
-        // Obtener niveles educativos
-        const nivelesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/nivel`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        setNiveles(nivelesResponse.data);
-        
-        // Obtener grados
-        const gradosResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados`,
-          { 
-            headers: { 'Authorization': `Bearer ${token}` },
-            params: { include: 'niveles' } // Solicitar que incluya la información de niveles
-          }
-        );
-        setGrados(gradosResponse.data);
-        
-        // Obtener información de cupos
-        try {
-          const cuposResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/cupos/resumen`,
-            { 
-              headers: { 'Authorization': `Bearer ${token}` },
-              params: { annoEscolarID: annoResponse.data.id }
-            }
-          );
-          
-          const cuposData = {};
-          if (cuposResponse.data && cuposResponse.data.cuposPorGrado) {
-            Object.entries(cuposResponse.data.cuposPorGrado).forEach(([gradoID, cupoInfo]) => {
-              cuposData[gradoID] = {
-                capacidad: cupoInfo.capacidadTotal || 0,
-                ocupados: cupoInfo.ocupados || 0,
-                disponibles: cupoInfo.disponibles || 0
-              };
-            });
-          }
-          setCupos(cuposData);
-        } catch (error) {
-          console.error('Error al cargar cupos:', error);
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Error al cargar datos:', error);
-        setError('Error al cargar los datos. Por favor, intente de nuevo.');
-        setLoading(false);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      if (!token) {
+        navigate('/login');
+        return;
       }
-    };
-    
+
+      const config = {
+        headers: { 'Authorization': `Bearer ${token}` }
+      };
+      
+      // Obtener año escolar activo
+      const annoResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/anno-escolar/actual`,
+        config
+      );
+      setAnnoEscolar(annoResponse.data);
+      
+      // Obtener niveles educativos
+      const nivelesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/nivel`,
+        config
+      );
+      setNiveles(nivelesResponse.data);
+      
+      // Obtener grados con información básica
+      const gradosResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados`,
+        { 
+          ...config,
+          params: { include: 'niveles' }
+        }
+      );
+      
+      // Enriquecer datos con SOLO contadores (optimizado)
+      const gradosEnriquecidos = await Promise.all(
+        gradosResponse.data.map(async (grado) => {
+          try {
+            // Obtener solo contadores en paralelo para mejor rendimiento
+            const [seccionesResponse, estudiantesResponse, profesoresResponse, materiasResponse] = await Promise.all([
+              // Secciones - obtener lista completa (son pocas)
+              axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/grado/${grado.id}`,
+                { 
+                  ...config,
+                  params: { annoEscolarID: annoResponse.data.id }
+                }
+              ),
+              // Estudiantes - solo contar
+              axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${grado.id}/estudiantes`,
+                { 
+                  ...config,
+                  params: { 
+                    annoEscolarID: annoResponse.data.id,
+                    tipo: 'estudiante',
+                    count: true // Solo obtener el conteo
+                  }
+                }
+              ),
+              // Profesores - solo contar
+              axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${grado.id}/profesores`,
+                { 
+                  ...config,
+                  params: { 
+                    annoEscolarID: annoResponse.data.id,
+                    tipo: 'profesor',
+                    count: true // Solo obtener el conteo
+                  }
+                }
+              ),
+              // Materias - solo contar
+              axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/grado/${grado.id}`,
+                { 
+                  ...config,
+                  params: { 
+                    annoEscolarID: annoResponse.data.id,
+                    count: true // Solo obtener el conteo
+                  }
+                }
+              )
+            ]);
+
+            return {
+              ...grado,
+              // Secciones: guardamos la lista completa (son pocas)
+              secciones: seccionesResponse.data || [],
+              // Para el resto, solo guardamos el conteo
+              estudiantesCount: Array.isArray(estudiantesResponse.data) 
+                ? estudiantesResponse.data.length 
+                : (estudiantesResponse.data?.count || 0),
+              profesoresCount: Array.isArray(profesoresResponse.data) 
+                ? profesoresResponse.data.length 
+                : (profesoresResponse.data?.count || 0),
+              materiasCount: Array.isArray(materiasResponse.data) 
+                ? materiasResponse.data.length 
+                : (materiasResponse.data?.count || 0)
+            };
+          } catch (err) {
+            console.error(`Error al obtener datos adicionales para grado ${grado.id}:`, err);
+            return {
+              ...grado,
+              secciones: [],
+              estudiantesCount: 0,
+              profesoresCount: 0,
+              materiasCount: 0
+            };
+          }
+        })
+      );
+      
+      setGrados(gradosEnriquecidos);
+      
+      // Obtener información de cupos
+      try {
+        const cuposResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/cupos/resumen`,
+          { 
+            ...config,
+            params: { annoEscolarID: annoResponse.data.id }
+          }
+        );
+        
+        const cuposData = {};
+        if (cuposResponse.data && cuposResponse.data.cuposPorGrado) {
+          Object.entries(cuposResponse.data.cuposPorGrado).forEach(([gradoID, cupoInfo]) => {
+            cuposData[gradoID] = {
+              capacidad: cupoInfo.capacidadTotal || 0,
+              ocupados: cupoInfo.ocupados || 0,
+              disponibles: cupoInfo.disponibles || 0
+            };
+          });
+        }
+        setCupos(cuposData);
+      } catch (error) {
+        console.error('Error al cargar cupos:', error);
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error al cargar datos:', error);
+      setError('Error al cargar los datos. Por favor, intente de nuevo.');
+      setLoading(false);
+      
+      if (error.response && error.response.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
+    }
+  };
+
+  useEffect(() => {
     fetchData();
-  }, [token]);
+  }, [navigate]);
   
   // Filtrar grados según búsqueda y nivel seleccionado
   const filteredGrados = useMemo(() => {
@@ -117,1116 +213,648 @@ const GradosList = () => {
       return matchesSearch && matchesNivel;
     });
   }, [grados, searchTerm, selectedNivel]);
-  
-  // Filtrar estudiantes por sección y término de búsqueda
-  const filteredEstudiantes = useMemo(() => {
-    return estudiantes.filter(estudiante => {
-      const matchesSearch = searchEstudiante === '' || 
-        `${estudiante.nombre} ${estudiante.apellido}`.toLowerCase().includes(searchEstudiante.toLowerCase()) ||
-        (estudiante.cedula && estudiante.cedula.toLowerCase().includes(searchEstudiante.toLowerCase()));
-      
-      const matchesSeccion = selectedSeccion === '' || 
-        (estudiante.seccionID && estudiante.seccionID.toString() === selectedSeccion);
-      
-      return matchesSearch && matchesSeccion;
-    });
-  }, [estudiantes, searchEstudiante, selectedSeccion]);
-  
-  // Agrupar estudiantes por sección
-  const estudiantesPorSeccion = useMemo(() => {
+
+  // Agrupar grados por nivel educativo
+  const gradosPorNivel = useMemo(() => {
     const grupos = {};
     
-    // Inicializar grupos con todas las secciones
-    secciones.forEach(seccion => {
-      grupos[seccion.id] = {
-        seccion: seccion,
-        estudiantes: []
-      };
+    filteredGrados.forEach(grado => {
+      const nivelInfo = grado.Niveles || niveles.find(n => n.id === grado.nivelID);
+      const nivelNombre = nivelInfo ? nivelInfo.nombre_nivel : 'Sin Nivel';
+      const nivelId = nivelInfo ? nivelInfo.id : 'sin-nivel';
+      
+      if (!grupos[nivelId]) {
+        grupos[nivelId] = {
+          id: nivelId,
+          nombre: nivelNombre,
+          grados: []
+        };
+      }
+      
+      grupos[nivelId].grados.push(grado);
     });
     
-    // Agrupar estudiantes por sección
-    filteredEstudiantes.forEach(estudiante => {
-      // Verificar si el estudiante tiene información de inscripción con sección
-      const seccionID = estudiante.seccion?.id || estudiante.seccionID || 
-                        (estudiante.inscripcion && estudiante.inscripcion.seccionID);
-      
-      if (seccionID && grupos[seccionID]) {
-        grupos[seccionID].estudiantes.push(estudiante);
-      } else {
-        // Si no tiene sección asignada o la sección no existe en el grupo
-        if (!grupos['sin_seccion']) {
-          grupos['sin_seccion'] = {
-            seccion: { id: 'sin_seccion', nombre_seccion: 'Sin sección asignada' },
-            estudiantes: []
-          };
-        }
-        grupos['sin_seccion'].estudiantes.push(estudiante);
-      }
+    // Ordenar los grados dentro de cada nivel
+    Object.values(grupos).forEach(grupo => {
+      grupo.grados.sort((a, b) => {
+        const nombreA = formatearNombreGrado(a.nombre_grado);
+        const nombreB = formatearNombreGrado(b.nombre_grado);
+        return nombreA.localeCompare(nombreB);
+      });
     });
     
-    return grupos;
-  }, [filteredEstudiantes, secciones]);
+    // Convertir a array y ordenar niveles (primaria primero, luego secundaria)
+    return Object.values(grupos).sort((a, b) => {
+      const ordenNiveles = { 'primaria': 1, 'secundaria': 2 };
+      const ordenA = ordenNiveles[a.nombre.toLowerCase()] || 999;
+      const ordenB = ordenNiveles[b.nombre.toLowerCase()] || 999;
+      return ordenA - ordenB;
+    });
+  }, [filteredGrados, niveles]);
 
-  const loadGradoDetails = async (grado) => {
-    setSelectedGrado(grado);
-    setActiveTab('info');
-    setLoadingDetails(true);
+  const exportToCSV = () => {
+    const headers = ['Grado', 'Nivel', 'Secciones', 'Estudiantes', 'Profesores', 'Materias', 'Cupos Totales', 'Cupos Ocupados', 'Cupos Disponibles'];
+    const csvData = [
+      headers.join(','),
+      ...filteredGrados.map(grado => {
+        const cupoInfo = cupos[grado.id] || { capacidad: 0, ocupados: 0, disponibles: 0 };
+        const nivelInfo = grado.Niveles || niveles.find(n => n.id === grado.nivelID);
+        return [
+          formatearNombreGrado(grado.nombre_grado),
+          nivelInfo ? nivelInfo.nombre_nivel : 'N/A',
+          grado.secciones?.length || 0,
+          grado.estudiantesCount || 0,
+          grado.profesoresCount || 0,
+          grado.materiasCount || 0,
+          cupoInfo.capacidad,
+          cupoInfo.ocupados,
+          cupoInfo.disponibles
+        ].join(',');
+      })
+    ].join('\n');
     
-    try {
-      // Cargar secciones primero para tener la información disponible
-      try {
-        const seccionesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/grado/${grado.id}`,
-          { 
-            headers: { 'Authorization': `Bearer ${token}` },
-            params: { annoEscolarID: annoEscolar.id }
-          }
-        );
-        setSecciones(seccionesResponse.data);
-      } catch (seccionesError) {
-        console.error('Error al cargar secciones:', seccionesError);
-        setSecciones([]);
-      }
-      
-      // Cargar estudiantes
-      try {
-        const estudiantesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${grado.id}/estudiantes`,
-          { 
-            headers: { 'Authorization': `Bearer ${token}` },
-            params: { 
-              annoEscolarID: annoEscolar.id,
-              tipo: 'estudiante'
-            }
-          }
-        );
-        
-        // Obtener información de sección para cada estudiante
-        const estudiantesConSeccion = [];
-        
-        for (const estudiante of estudiantesResponse.data) {
-          try {
-            // Usar la ruta de secciones para obtener la sección actual del estudiante
-            const seccionEstudianteResponse = await axios.get(
-              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/estudiante/${estudiante.id}`,
-              { 
-                headers: { 'Authorization': `Bearer ${token}` },
-                params: { annoEscolarID: annoEscolar.id }
-              }
-            );
-            
-            // Verificar si el estudiante tiene una sección asignada en este grado
-            const seccionesDelEstudiante = seccionEstudianteResponse.data;
-            const seccionEnEsteGrado = seccionesDelEstudiante.find(s => s.gradoID === grado.id);
-            
-            if (seccionEnEsteGrado) {
-              // Si tiene sección en este grado, usamos esa información
-              estudiantesConSeccion.push({
-                ...estudiante,
-                seccionID: seccionEnEsteGrado.id,
-                seccion: seccionEnEsteGrado
-              });
-            } else {
-              // Si no tiene sección asignada en este grado, buscamos en la inscripción como fallback
-              const inscripcionResponse = await axios.get(
-                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/inscripciones/estudiante/${estudiante.id}/actual`,
-                { 
-                  headers: { 'Authorization': `Bearer ${token}` },
-                  params: { annoEscolarID: annoEscolar.id }
-                }
-              );
-              
-              if (inscripcionResponse.data && inscripcionResponse.data.seccionID) {
-                // Buscar la información completa de la sección
-                const seccion = secciones.find(s => s.id === inscripcionResponse.data.seccionID);
-                
-                estudiantesConSeccion.push({
-                  ...estudiante,
-                  seccionID: inscripcionResponse.data.seccionID,
-                  seccion: seccion || null,
-                  inscripcion: inscripcionResponse.data
-                });
-              } else {
-                estudiantesConSeccion.push(estudiante);
-              }
-            }
-          } catch (error) {
-            console.error(`Error al obtener sección para estudiante ${estudiante.id}:`, error);
-            estudiantesConSeccion.push(estudiante);
-          }
-        }
-        
-        setEstudiantes(estudiantesConSeccion);
-      } catch (estudiantesError) {
-        console.error('Error al cargar estudiantes:', estudiantesError);
-        setEstudiantes([]);
-      }
-      
-      // Cargar profesores
-      try {
-        const profesoresResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${grado.id}/profesores`,
-          { 
-            headers: { 'Authorization': `Bearer ${token}` },
-            params: { 
-              annoEscolarID: annoEscolar.id,
-              tipo: 'profesor'
-            }
-          }
-        );
-        setProfesores(profesoresResponse.data);
-      } catch (profesoresError) {
-        console.error('Error al cargar profesores:', profesoresError);
-        setProfesores([]);
-      }
-      
-      // Cargar materias
-      try {
-        const materiasResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/grado/${grado.id}`,
-          { 
-            headers: { 'Authorization': `Bearer ${token}` },
-            params: { 
-              annoEscolarID: annoEscolar.id,
-              limit: 0
-            }
-          }
-        );
-        setMaterias(materiasResponse.data);
-      } catch (materiasError) {
-        console.error('Error al cargar materias:', materiasError);
-        setMaterias([]);
-      }
-      
-      setLoadingDetails(false);
-    } catch (error) {
-      console.error('Error general al cargar detalles del grado:', error);
-      setLoadingDetails(false);
-    }
-  };
-  
-
-  // Función para confirmar eliminación de grado
-  const confirmDelete = (grado) => {
-    setGradoToDelete(grado);
-    setShowDeleteModal(true);
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'grados.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  // Función para eliminar grado
-  const handleDeleteGrado = async () => {
-    if (!gradoToDelete) return;
-    
-    setDeleteLoading(true);
-    try {
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${gradoToDelete.id}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      
-      // Actualizar la lista de grados
-      setGrados(grados.filter(g => g.id !== gradoToDelete.id));
-      
-      // Si el grado eliminado es el seleccionado, limpiar la selección
-      if (selectedGrado && selectedGrado.id === gradoToDelete.id) {
-        setSelectedGrado(null);
-      }
-      
-      setSuccessMessage(`El grado ${formatearNombreGrado(gradoToDelete.nombre_grado)} ha sido eliminado correctamente.`);
-      setTimeout(() => setSuccessMessage(''), 3000);
-      
-      setShowDeleteModal(false);
-      setGradoToDelete(null);
-      setDeleteLoading(false);
-    } catch (error) {
-      console.error('Error al eliminar grado:', error);
-      setError('No se pudo eliminar el grado. Verifique que no tenga estudiantes o profesores asignados.');
-      setDeleteLoading(false);
-    }
-  };
+  // Paginación (deshabilitada para vista agrupada)
+  // const indexOfLastItem = currentPage * itemsPerPage;
+  // const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  // const currentItems = filteredGrados.slice(indexOfFirstItem, indexOfLastItem);
+  // const totalPages = Math.ceil(filteredGrados.length / itemsPerPage);
 
-  const handleShowMateriaDetails = (materia) => {
-    setSelectedMateria(materia);
-  };
+  // Calcular estadísticas totales (usando contadores optimizados)
+  const totalEstudiantes = grados.reduce((sum, g) => sum + (g.estudiantesCount || 0), 0);
+  const totalProfesores = grados.reduce((sum, g) => sum + (g.profesoresCount || 0), 0);
+  const totalMaterias = grados.reduce((sum, g) => sum + (g.materiasCount || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-slate-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600 mx-auto"></div>
+            <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-pulse"></div>
+          </div>
+          <p className="mt-4 text-indigo-600 font-medium">Cargando grados...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Gestión de Grados</h1>
-        <Link
-          to="/admin/academico/grados/nuevo"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
-        >
-          Nuevo Grado
-        </Link>
+    <div>
+      {/* Header Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-800 to-indigo-900 shadow-2xl rounded-2xl mb-8">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-transparent"></div>
+
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-400/20 rounded-full blur-xl"></div>
+        <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-indigo-300/10 rounded-full blur-2xl"></div>
+        
+        <div className="relative px-6 py-12">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-3 bg-indigo-500/20 rounded-xl backdrop-blur-sm border border-indigo-400/30">
+                  <FaGraduationCap className="w-8 h-8 text-indigo-200" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-white mb-2">
+                    Gestión de Grados
+                  </h1>
+                  <p className="text-indigo-200 text-lg">
+                    Administra los grados académicos de la institución
+                  </p>
+                </div>
+              </div>
+              
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-indigo-200 text-sm font-medium">Total Grados</p>
+                      <p className="text-2xl font-bold text-white">{filteredGrados.length}</p>
+                    </div>
+                    <FaGraduationCap className="w-8 h-8 text-indigo-300" />
+                  </div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-indigo-200 text-sm font-medium">Total Estudiantes</p>
+                      <p className="text-2xl font-bold text-white">{totalEstudiantes}</p>
+                    </div>
+                    <FaUsers className="w-8 h-8 text-indigo-300" />
+                  </div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-indigo-200 text-sm font-medium">Profesores Activos</p>
+                      <p className="text-2xl font-bold text-white">{totalProfesores}</p>
+                    </div>
+                    <FaChalkboardTeacher className="w-8 h-8 text-indigo-300" />
+                  </div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-indigo-200 text-sm font-medium">Año Escolar</p>
+                      <p className="text-2xl font-bold text-white">{annoEscolar?.periodo || 'N/A'}</p>
+                    </div>
+                    <FaBookOpen className="w-8 h-8 text-indigo-300" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Action Button */}
+            <div className="mt-8 lg:mt-0 lg:ml-8">
+              <Link
+                to="/admin/academico/grados/nuevo"
+                className="inline-flex items-center px-8 py-4 bg-white/20 backdrop-blur-md text-white font-semibold rounded-2xl border border-white/30 hover:bg-white/30 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+              >
+                <FaPlus className="w-5 h-5 mr-3" />
+                Nuevo Grado
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
-      
-      {error && (
-        <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-md">
-          {error}
-        </div>
-      )}
-      
+
+      {/* Messages */}
       {successMessage && (
-        <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-md">
-          {successMessage}
+        <div className="bg-indigo-50 border-l-4 border-indigo-500 text-indigo-700 p-4 mb-6 rounded-r-lg shadow-sm">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium">{successMessage}</p>
+            </div>
+          </div>
         </div>
       )}
-      
-      {annoEscolar && (
-        <div className="mb-6 p-4 bg-blue-50 rounded-md">
-          <h2 className="text-lg font-medium text-blue-800">
-            Año Escolar: {annoEscolar.periodo}
-            {annoEscolar.activo ? ' (Activo)' : ''}
-          </h2>
-          <p className="text-sm text-blue-600 mt-1">
-            Los datos mostrados corresponden al año escolar actual.
-          </p>
+
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg shadow-sm">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium">{error}</p>
+            </div>
+          </div>
         </div>
       )}
-      
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-        </div>
-      ) : (
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Panel de filtros y lista de grados */}
-          <div className="md:w-1/3">
-            <div className="bg-white rounded-lg shadow-md overflow-hidden mb-4">
-              <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
-                <h2 className="text-lg font-medium text-gray-800">Filtros</h2>
-                <button 
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="text-gray-500 hover:text-gray-700"
+
+      {/* Controls */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 mb-8">
+        <div className="p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Search */}
+            <div className="flex-1 max-w-md">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaSearch className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200"
+                  placeholder="Buscar grado..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex items-center space-x-3">
+              {/* Filter Toggle */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center px-4 py-2 rounded-xl transition-all duration-200 border ${
+                  showFilters
+                    ? 'bg-indigo-50 text-indigo-600 border-indigo-200'
+                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                <FaFilter className="w-4 h-4 mr-2" />
+                Filtros
+              </button>
+
+              {/* View Mode Toggle */}
+              <div className="flex bg-gray-100 rounded-xl p-1">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    viewMode === 'list'
+                      ? 'bg-white text-indigo-600 shadow-sm'
+                      : 'text-gray-600 hover:text-indigo-600'
+                  }`}
                 >
-                  {showFilters ? <FaChevronUp /> : <FaChevronDown />}
+                  <FaList className="w-4 h-4 mr-2" />
+                  Lista
+                </button>
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    viewMode === 'cards'
+                      ? 'bg-white text-indigo-600 shadow-sm'
+                      : 'text-gray-600 hover:text-indigo-600'
+                  }`}
+                >
+                  <FaTh className="w-4 h-4 mr-2" />
+                  Tarjetas
                 </button>
               </div>
-              
-              {showFilters && (
-                <div className="p-4 border-b">
-                  <div className="mb-4">
-                    <label htmlFor="nivel" className="block text-sm font-medium text-gray-700 mb-1">
-                      Nivel Educativo
-                    </label>
-                    <select
-                      id="nivel"
-                      value={selectedNivel}
-                      onChange={(e) => setSelectedNivel(e.target.value)}
-                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    >
-                      <option value="">Todos los niveles</option>
-                      {niveles.map((nivel) => (
-                        <option key={nivel.id} value={nivel.id}>
-                          {nivel.nombre_nivel.charAt(0).toUpperCase() + nivel.nombre_nivel.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-              
-              <div className="p-4">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaSearch className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Buscar grado..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
+
+              {/* Export Button */}
+              <button
+                onClick={exportToCSV}
+                className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors duration-200 border border-indigo-200"
+              >
+                <FaDownload className="w-4 h-4 mr-2" />
+                Exportar
+              </button>
+
+              {/* Refresh Button */}
+              <button
+                onClick={fetchData}
+                className="flex items-center px-4 py-2 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition-colors duration-200 border border-gray-200"
+                title="Actualizar lista"
+              >
+                <FaRedo className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Filters Panel */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="nivel" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nivel Educativo
+                  </label>
+                  <select
+                    id="nivel"
+                    value={selectedNivel}
+                    onChange={(e) => setSelectedNivel(e.target.value)}
+                    className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-xl"
+                  >
+                    <option value="">Todos los niveles</option>
+                    {niveles.map((nivel) => (
+                      <option key={nivel.id} value={nivel.id}>
+                        {nivel.nombre_nivel.charAt(0).toUpperCase() + nivel.nombre_nivel.slice(1)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
-              
-              <div className="overflow-y-auto max-h-[calc(100vh-350px)]">
-                {filteredGrados.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500">
-                    No se encontraron grados con los filtros seleccionados.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Content - Agrupado por Nivel */}
+      {gradosPorNivel.length > 0 ? (
+        <div className="space-y-8">
+          {gradosPorNivel.map((nivelGrupo) => (
+            <div key={nivelGrupo.id} className="animate-fadeIn">
+              {/* Nivel Header */}
+              <div className="mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg">
+                      <FaGraduationCap className="text-white text-xl" />
+                    </div>
                   </div>
-                ) : (
-                  <ul className="divide-y divide-gray-200">
-                    {filteredGrados.map((grado) => {
-                      // Obtener información del nivel
-                      const nivelInfo = grado.Niveles || niveles.find(n => n.id === grado.nivelID);
-                      const nivelNombre = nivelInfo ? nivelInfo.nombre_nivel : 'No asignado';
-                      
-                      // Obtener información de cupos
-                      const cupoInfo = cupos[grado.id] || { capacidad: 0, ocupados: 0, disponibles: 0 };
-                      const porcentajeOcupacion = cupoInfo.capacidad > 0 
-                        ? Math.round((cupoInfo.ocupados / cupoInfo.capacidad) * 100) 
-                        : 0;
-                      
-                      return (
-                        <li 
-                          key={grado.id}
-                          className={`p-4 hover:bg-gray-50 cursor-pointer ${selectedGrado && selectedGrado.id === grado.id ? 'bg-indigo-50' : ''}`}
-                          onClick={() => loadGradoDetails(grado)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="text-md font-medium text-gray-900">
-                                {formatearNombreGrado(grado.nombre_grado)}
-                              </h3>
-                              <p className="text-sm text-gray-500 mt-1">
-                                Nivel: {nivelNombre.charAt(0).toUpperCase() + nivelNombre.slice(1)}
-                              </p>
-                            </div>
-                            <div className="flex space-x-2">
-                              {/* <Link
-                                to={`/admin/academico/grados/${grado.id}/editar`}
-                                className="text-indigo-600 hover:text-indigo-900"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <FaEdit />
-                              </Link> */}
-                              {/* <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  confirmDelete(grado);
-                                }}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                <FaTrash />
-                              </button> */}
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {nivelGrupo.nombre.charAt(0).toUpperCase() + nivelGrupo.nombre.slice(1)}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {nivelGrupo.grados.length} {nivelGrupo.grados.length === 1 ? 'grado' : 'grados'}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-100 text-indigo-800">
+                      {nivelGrupo.grados.reduce((sum, g) => sum + (g.estudiantes?.length || 0), 0)} estudiantes
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grados del Nivel */}
+              {viewMode === 'list' ? (
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gradient-to-r from-indigo-50 to-indigo-100">
+                        <tr>
+                          <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-indigo-800 uppercase tracking-wider">
+                            Grado
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-indigo-800 uppercase tracking-wider">
+                            Secciones
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-indigo-800 uppercase tracking-wider">
+                            Estudiantes
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-indigo-800 uppercase tracking-wider">
+                            Profesores
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-indigo-800 uppercase tracking-wider">
+                            Materias
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-indigo-800 uppercase tracking-wider">
+                            Cupos
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-indigo-800 uppercase tracking-wider">
+                            Acciones
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {nivelGrupo.grados.map((grado) => {
+                          const cupoInfo = cupos[grado.id] || { capacidad: 0, ocupados: 0, disponibles: 0 };
+                          const porcentajeOcupacion = cupoInfo.capacidad > 0 
+                            ? Math.round((cupoInfo.ocupados / cupoInfo.capacidad) * 100) 
+                            : 0;
+
+                          return (
+                            <tr key={grado.id} className="hover:bg-indigo-50/50 transition-colors duration-200">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-12 w-12">
+                                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center">
+                                      <FaGraduationCap className="text-white text-xl" />
+                                    </div>
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-semibold text-gray-900">
+                                      {formatearNombreGrado(grado.nombre_grado)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <Link
+                                  to={`/admin/academico/grados/${grado.id}?tab=info`}
+                                  className="flex items-center hover:text-indigo-600 transition-colors cursor-pointer group"
+                                  title="Ver secciones"
+                                >
+                                  <FaUsers className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 mr-2 transition-colors" />
+                                  <span className="text-sm text-gray-900 group-hover:text-indigo-600 font-medium transition-colors">
+                                    {grado.secciones?.length || 0}
+                                  </span>
+                                </Link>
+                              </td>
+                              <td className="px-6 py-4">
+                                <Link
+                                  to={`/admin/academico/grados/${grado.id}?tab=estudiantes`}
+                                  className="flex items-center hover:text-blue-600 transition-colors cursor-pointer group"
+                                  title="Ver estudiantes"
+                                >
+                                  <FaUserGraduate className="w-4 h-4 text-gray-400 group-hover:text-blue-500 mr-2 transition-colors" />
+                                  <span className="text-sm text-gray-900 group-hover:text-blue-600 font-medium transition-colors">
+                                    {grado.estudiantesCount || 0}
+                                  </span>
+                                </Link>
+                              </td>
+                              <td className="px-6 py-4">
+                                <Link
+                                  to={`/admin/academico/grados/${grado.id}?tab=profesores`}
+                                  className="flex items-center hover:text-emerald-600 transition-colors cursor-pointer group"
+                                  title="Ver profesores"
+                                >
+                                  <FaChalkboardTeacher className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 mr-2 transition-colors" />
+                                  <span className="text-sm text-gray-900 group-hover:text-emerald-600 font-medium transition-colors">
+                                    {grado.profesoresCount || 0}
+                                  </span>
+                                </Link>
+                              </td>
+                              <td className="px-6 py-4">
+                                <Link
+                                  to={`/admin/academico/grados/${grado.id}?tab=materias`}
+                                  className="flex items-center hover:text-purple-600 transition-colors cursor-pointer group"
+                                  title="Ver materias"
+                                >
+                                  <FaBook className="w-4 h-4 text-gray-400 group-hover:text-purple-500 mr-2 transition-colors" />
+                                  <span className="text-sm text-gray-900 group-hover:text-purple-600 font-medium transition-colors">
+                                    {grado.materiasCount || 0}
+                                  </span>
+                                </Link>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="w-32">
+                                  <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span>{cupoInfo.ocupados}/{cupoInfo.capacidad}</span>
+                                    <span>{porcentajeOcupacion}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className={`h-2 rounded-full transition-all duration-300 ${
+                                        porcentajeOcupacion >= 90 ? 'bg-red-500' : 
+                                        porcentajeOcupacion >= 70 ? 'bg-yellow-500' : 'bg-green-500'
+                                      }`}
+                                      style={{ width: `${porcentajeOcupacion}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center space-x-3">
+                                  <Link
+                                    to={`/admin/academico/grados/${grado.id}`}
+                                    className="inline-flex items-center px-3 py-2 border border-indigo-300 rounded-lg text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors duration-200"
+                                    title="Ver detalles"
+                                  >
+                                    <FaEye className="w-4 h-4" />
+                                  </Link>
+                                  <Link
+                                    to={`/admin/academico/grados/${grado.id}/editar`}
+                                    className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors duration-200"
+                                    title="Editar"
+                                  >
+                                    <FaEdit className="w-4 h-4" />
+                                  </Link>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {nivelGrupo.grados.map((grado) => {
+                    const cupoInfo = cupos[grado.id] || { capacidad: 0, ocupados: 0, disponibles: 0 };
+                    const porcentajeOcupacion = cupoInfo.capacidad > 0 
+                      ? Math.round((cupoInfo.ocupados / cupoInfo.capacidad) * 100) 
+                      : 0;
+
+                    return (
+                      <div
+                        key={grado.id}
+                        className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                      >
+                        {/* Card Header */}
+                        <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                                <FaGraduationCap className="w-6 h-6 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-bold text-white">
+                                  {formatearNombreGrado(grado.nombre_grado)}
+                                </h3>
+                              </div>
                             </div>
                           </div>
-                          
-                          <div className="mt-2">
-                            <div className="flex justify-between text-xs text-gray-500 mb-1">
-                              <span>Cupos: {cupoInfo.ocupados}/{cupoInfo.capacidad}</span>
-                              <span>{porcentajeOcupacion}% ocupado</span>
+                        </div>
+
+                        {/* Card Body */}
+                        <div className="p-6">
+                          {/* Stats Grid - Clickeable */}
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <Link
+                              to={`/admin/academico/grados/${grado.id}?tab=info`}
+                              className="bg-indigo-50 rounded-xl p-3 hover:bg-indigo-100 transition-all duration-200 transform hover:scale-105 cursor-pointer group"
+                              title="Ver secciones"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs text-indigo-600 font-medium group-hover:text-indigo-700">Secciones</p>
+                                  <p className="text-xl font-bold text-indigo-900">{grado.secciones?.length || 0}</p>
+                                </div>
+                                <FaUsers className="w-6 h-6 text-indigo-400 group-hover:text-indigo-600 transition-colors" />
+                              </div>
+                            </Link>
+
+                            <Link
+                              to={`/admin/academico/grados/${grado.id}?tab=estudiantes`}
+                              className="bg-blue-50 rounded-xl p-3 hover:bg-blue-100 transition-all duration-200 transform hover:scale-105 cursor-pointer group"
+                              title="Ver estudiantes"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs text-blue-600 font-medium group-hover:text-blue-700">Estudiantes</p>
+                                  <p className="text-xl font-bold text-blue-900">{grado.estudiantesCount || 0}</p>
+                                </div>
+                                <FaUserGraduate className="w-6 h-6 text-blue-400 group-hover:text-blue-600 transition-colors" />
+                              </div>
+                            </Link>
+
+                            <Link
+                              to={`/admin/academico/grados/${grado.id}?tab=profesores`}
+                              className="bg-emerald-50 rounded-xl p-3 hover:bg-emerald-100 transition-all duration-200 transform hover:scale-105 cursor-pointer group"
+                              title="Ver profesores"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs text-emerald-600 font-medium group-hover:text-emerald-700">Profesores</p>
+                                  <p className="text-xl font-bold text-emerald-900">{grado.profesoresCount || 0}</p>
+                                </div>
+                                <FaChalkboardTeacher className="w-6 h-6 text-emerald-400 group-hover:text-emerald-600 transition-colors" />
+                              </div>
+                            </Link>
+
+                            <Link
+                              to={`/admin/academico/grados/${grado.id}?tab=materias`}
+                              className="bg-purple-50 rounded-xl p-3 hover:bg-purple-100 transition-all duration-200 transform hover:scale-105 cursor-pointer group"
+                              title="Ver materias"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs text-purple-600 font-medium group-hover:text-purple-700">Materias</p>
+                                  <p className="text-xl font-bold text-purple-900">{grado.materiasCount || 0}</p>
+                                </div>
+                                <FaBook className="w-6 h-6 text-purple-400 group-hover:text-purple-600 transition-colors" />
+                              </div>
+                            </Link>
+                          </div>
+
+                          {/* Cupos Progress */}
+                          <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm font-medium text-gray-700">Cupos</span>
+                              <span className="text-sm font-bold text-gray-900">
+                                {cupoInfo.ocupados}/{cupoInfo.capacidad}
+                              </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
                               <div 
-                                className={`h-2 rounded-full ${
+                                className={`h-3 rounded-full transition-all duration-300 ${
                                   porcentajeOcupacion >= 90 ? 'bg-red-500' : 
                                   porcentajeOcupacion >= 70 ? 'bg-yellow-500' : 'bg-green-500'
                                 }`}
                                 style={{ width: `${porcentajeOcupacion}%` }}
                               ></div>
                             </div>
+                            <div className="flex justify-between text-xs text-gray-600">
+                              <span>{porcentajeOcupacion}% ocupado</span>
+                              <span>{cupoInfo.disponibles} disponibles</span>
+                            </div>
                           </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
+
+                          {/* Actions */}
+                          <div className="flex space-x-2">
+                            <Link
+                              to={`/admin/academico/grados/${grado.id}`}
+                              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-indigo-300 rounded-xl text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors duration-200"
+                            >
+                              <FaEye className="w-4 h-4 mr-2" />
+                              Ver
+                            </Link>
+                            <Link
+                              to={`/admin/academico/grados/${grado.id}/editar`}
+                              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-blue-300 rounded-xl text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors duration-200"
+                            >
+                              <FaEdit className="w-4 h-4 mr-2" />
+                              Editar
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-          
-          {/* Panel de detalles del grado seleccionado */}
-          <div className="md:w-2/3">
-            {selectedGrado ? (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="bg-gray-50 px-6 py-4 border-b">
-                  <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      {formatearNombreGrado(selectedGrado.nombre_grado)}
-                    </h2>
-                    <div className="flex space-x-2">
-                      <Link
-                        to={`/admin/academico/grados/${selectedGrado.id}/editar`}
-                        className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-md hover:bg-indigo-200 flex items-center"
-                      >
-                        <FaEdit className="mr-1" /> Editar
-                      </Link>
-                      {/* <button
-                        onClick={() => confirmDelete(selectedGrado)}
-                        className="bg-red-100 text-red-700 px-3 py-1 rounded-md hover:bg-red-200 flex items-center"
-                      >
-                        <FaTrash className="mr-1" /> Eliminar
-                      </button> */}
-                    </div>
-                  </div>
-                  
-                  {/* Información del nivel */}
-                  <div className="mt-2 text-sm text-gray-600">
-                    <p>
-                      <span className="font-medium">Nivel:</span>{' '}
-                      {selectedGrado.Niveles 
-                        ? selectedGrado.Niveles.nombre_nivel.charAt(0).toUpperCase() + selectedGrado.Niveles.nombre_nivel.slice(1)
-                        : niveles.find(n => n.id === selectedGrado.nivelID)?.nombre_nivel.charAt(0).toUpperCase() + niveles.find(n => n.id === selectedGrado.nivelID)?.nombre_nivel.slice(1) || 'No asignado'}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Pestañas de navegación */}
-                <div className="border-b border-gray-200">
-                  <nav className="flex -mb-px">
-                    <button
-                      onClick={() => setActiveTab('info')}
-                      className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                        activeTab === 'info'
-                          ? 'border-indigo-500 text-indigo-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Información
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('estudiantes')}
-                      className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                        activeTab === 'estudiantes'
-                          ? 'border-indigo-500 text-indigo-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Estudiantes ({estudiantes.length})
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('profesores')}
-                      className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                        activeTab === 'profesores'
-                          ? 'border-indigo-500 text-indigo-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Profesores ({profesores.length})
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('materias')}
-                      className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                        activeTab === 'materias'
-                          ? 'border-indigo-500 text-indigo-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Materias ({materias.length})
-                    </button>
-                  </nav>
-                </div>
-                
-                {/* Contenido de las pestañas */}
-                <div className="p-6">
-                  {loadingDetails ? (
-                    <div className="flex justify-center py-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Pestaña de Información */}
-                      {activeTab === 'info' && (
-                        <div>
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">Información del Grado</h3>
-                          
-                          <div className="bg-gray-50 p-4 rounded-md mb-6">
-                            <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
-                              <div>
-                                <dt className="text-sm font-medium text-gray-500">Nombre</dt>
-                                <dd className="mt-1 text-sm text-gray-900 uppercase">{formatearNombreGrado(selectedGrado.nombre_grado)}</dd>
-                              </div>
-                              <div>
-                                <dt className="text-sm font-medium text-gray-500">Nivel Educativo</dt>
-                                <dd className="mt-1 text-sm text-gray-900 uppercase">
-                                  {selectedGrado.Niveles 
-                                    ? selectedGrado.Niveles.nombre_nivel.charAt(0).toUpperCase() + selectedGrado.Niveles.nombre_nivel.slice(1)
-                                    : niveles.find(n => n.id === selectedGrado.nivelID)?.nombre_nivel.charAt(0).toUpperCase() + niveles.find(n => n.id === selectedGrado.nivelID)?.nombre_nivel.slice(1) || 'No asignado'}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt className="text-sm font-medium text-gray-500">Descripción</dt>
-                                <dd className="mt-1 text-sm text-gray-900">{selectedGrado.descripcion || 'Sin descripción'}</dd>
-                              </div>
-                            </dl>
-                          </div>
-                          
-                          {/* Resumen de estadísticas */}
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">Resumen</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div className="bg-blue-50 p-4 rounded-md shadow-sm">
-                              <div className="flex items-center">
-                                <div className="p-3 rounded-full bg-blue-100 mr-4">
-                                  <FaUsers className="h-6 w-6 text-blue-600" />
-                                </div>
-                                <div>
-                                  <p className="text-sm text-blue-500">Estudiantes</p>
-                                  <p className="text-xl font-semibold text-blue-700">{estudiantes.length}</p>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="bg-green-50 p-4 rounded-md shadow-sm">
-                              <div className="flex items-center">
-                                <div className="p-3 rounded-full bg-green-100 mr-4">
-                                  <FaChalkboardTeacher className="h-6 w-6 text-green-600" />
-                                </div>
-                                <div>
-                                  <p className="text-sm text-green-500">Profesores</p>
-                                  <p className="text-xl font-semibold text-green-700">{profesores.length}</p>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="bg-purple-50 p-4 rounded-md shadow-sm">
-                              <div className="flex items-center">
-                              <div className="p-3 rounded-full bg-purple-100 mr-4">
-                                <FaBook className="h-6 w-6 text-purple-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-purple-500">Materias</p>
-                                <p className="text-xl font-semibold text-purple-700">{materias.length}</p>
-                              </div>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Secciones y Cupos */}
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">Secciones y Cupos</h3>
-                          <div className="bg-gray-50 p-4 rounded-md mb-6">
-                            {secciones.length > 0 ? (
-                              <div>
-                                <div className="mb-4">
-                                  <h4 className="text-md font-medium text-gray-800 mb-2">Resumen de Cupos</h4>
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="bg-white p-3 rounded-md shadow-sm">
-                                      <p className="text-sm text-gray-500">Capacidad Total</p>
-                                      <p className="text-xl font-semibold text-gray-900">
-                                        {secciones.reduce((total, seccion) => total + (seccion.capacidad || 0), 0)}
-                                      </p>
-                                    </div>
-                                    <div className="bg-white p-3 rounded-md shadow-sm">
-                                      <p className="text-sm text-gray-500">Cupos Ocupados</p>
-                                      <p className="text-xl font-semibold text-gray-900">
-                                        {cupos[selectedGrado.id]?.ocupados || 0}
-                                      </p>
-                                    </div>
-                                    <div className="bg-white p-3 rounded-md shadow-sm">
-                                      <p className="text-sm text-gray-500">Cupos Disponibles</p>
-                                      <p className="text-xl font-semibold text-gray-900">
-                                        {cupos[selectedGrado.id]?.disponibles || 
-                                          (secciones.reduce((total, seccion) => total + (seccion.capacidad || 0), 0) - 
-                                          (cupos[selectedGrado.id]?.ocupados || 0))}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                <h4 className="text-md font-medium text-gray-800 mb-2">Secciones</h4>
-                                <div className="overflow-x-auto">
-                                  <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-100">
-                                      <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                          Sección
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                          Capacidad
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                          Estado
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                          Ocupación
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                      {secciones.map((seccion) => {
-                                        // Calcular ocupación de la sección
-                                        const seccionCupos = cupos[`${selectedGrado.id}-${seccion.id}`] || { ocupados: 0 };
-                                        const porcentajeOcupacion = seccion.capacidad > 0 
-                                          ? Math.round((seccionCupos.ocupados / seccion.capacidad) * 100) 
-                                          : 0;
-                                        
-                                        return (
-                                          <tr key={seccion.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                              {seccion.nombre_seccion}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                              {seccion.capacidad}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                seccion.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                              }`}>
-                                                {seccion.activo ? 'Activo' : 'Inactivo'}
-                                              </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                              <div className="flex items-center">
-                                                <div className="w-full bg-gray-200 rounded-full h-2 mr-2 flex-grow">
-                                                  <div 
-                                                    className={`h-2 rounded-full ${
-                                                      porcentajeOcupacion >= 90 ? 'bg-red-500' : 
-                                                      porcentajeOcupacion >= 70 ? 'bg-yellow-500' : 'bg-green-500'
-                                                    }`}
-                                                    style={{ width: `${porcentajeOcupacion}%` }}
-                                                  ></div>
-                                                </div>
-                                                <span className="text-xs text-gray-500 whitespace-nowrap">
-                                                  {seccionCupos.ocupados}/{seccion.capacidad}
-                                                </span>
-                                              </div>
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
-                                
-                                <div className="mt-4 flex justify-end">
-                                  <Link
-                                    to={`/admin/academico/grados/${selectedGrado.id}/secciones`}
-                                    className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
-                                  >
-                                    Administrar secciones →
-                                  </Link>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-center py-6">
-                                <p className="text-gray-500 mb-4">No hay secciones creadas para este grado.</p>
-                                <Link
-                                  to={`/admin/academico/grados/${selectedGrado.id}/secciones/nueva`}
-                                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-                                >
-                                  Crear Sección
-                                </Link>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Pestaña de Estudiantes */}
-                      {activeTab === 'estudiantes' && (
-                        <div>
-                          <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-medium text-gray-900">Estudiantes Inscritos</h3>
-                          </div>
-                          
-                          {/* Filtros para estudiantes */}
-                          <div className="bg-gray-50 p-4 rounded-md mb-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label htmlFor="searchEstudiante" className="block text-sm font-medium text-gray-700 mb-1">
-                                  Buscar estudiante
-                                </label>
-                                <div className="relative">
-                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <FaSearch className="h-4 w-4 text-gray-400" />
-                                  </div>
-                                  <input
-                                    type="text"
-                                    id="searchEstudiante"
-                                    placeholder="Nombre o cédula..."
-                                    value={searchEstudiante}
-                                    onChange={(e) => setSearchEstudiante(e.target.value)}
-                                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <label htmlFor="seccionFilter" className="block text-sm font-medium text-gray-700 mb-1">
-                                  Filtrar por sección
-                                </label>
-                                <select
-                                  id="seccionFilter"
-                                  value={selectedSeccion}
-                                  onChange={(e) => setSelectedSeccion(e.target.value)}
-                                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                                >
-                                  <option value="">Todas las secciones</option>
-                                  {secciones.map((seccion) => (
-                                    <option key={seccion.id} value={seccion.id}>
-                                      {seccion.nombre_seccion}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {estudiantes.length > 0 ? (
-                            <div>
-                              {/* Mostrar estudiantes agrupados por sección */}
-                              {Object.entries(estudiantesPorSeccion).map(([seccionId, grupo]) => (
-                                <div key={seccionId} className="mb-6">
-                                  <h4 className="text-md font-medium text-gray-800 mb-2 bg-gray-100 p-2 rounded">
-                                    {grupo.seccion.nombre_seccion} ({grupo.estudiantes.length} estudiantes)
-                                  </h4>
-                                  
-                                  <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                      <thead className="bg-gray-50">
-                                        <tr>
-                                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Cédula
-                                          </th>
-                                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Nombre
-                                          </th>
-                                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Acciones
-                                          </th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="bg-white divide-y divide-gray-200">
-                                        {grupo.estudiantes.map((estudiante) => (
-                                          <tr key={estudiante.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                              {estudiante.cedula}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                              <div className="text-sm font-medium text-gray-900 uppercase">
-                                                {estudiante.nombre} {estudiante.apellido}
-                                              </div>
-                                            </td>
-                                            <td className="px-6 py-4 flex flex-row text-sm font-medium">
-                                              <Link
-                                                to={`/admin/estudiantes/${estudiante.id}`}
-                                                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-900 mr-3"
-                                              >
-                                                 Detalles
-                                              </Link>
-                                              <Link
-                                                to={`/admin/estudiantes/${estudiante.id}/notas`}
-                                                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-900 mr-3"
-                                              >
-                                                 Notas
-                                              </Link>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-center py-6">
-                              <p className="text-gray-500">No hay estudiantes inscritos en este grado.</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Pestaña de Profesores */}
-                      {activeTab === 'profesores' && (
-                        <div>
-                          <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-medium text-gray-900">Profesores Asignados</h3>
-                          </div>
-                          
-                          {profesores.length > 0 ? (
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                <tr>
-                                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Cédula
-                                  </th>
-                                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Nombre
-                                  </th>
-                                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Materias Asignadas
-                                  </th>
-                                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Acciones
-                                  </th>
-                                </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                  {profesores.map((profesor) => (
-                                    <tr key={profesor.id}>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {profesor.cedula}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900 uppercase">
-                                          {profesor.nombre} {profesor.apellido}
-                                        </div>
-                                      </td>
-                                      <td className="px-6 py-4 text-sm text-gray-500">
-                                        {profesor.materiasAsignadas && profesor.materiasAsignadas.length > 0 ? (
-                                          <div className="flex flex-wrap gap-1">
-                                            {profesor.materiasAsignadas.map(materia => {
-                                              const { bgColor, textColor, Icon } = getMateriaStyles(
-                                                materia.nombre || materia.asignatura, 
-                                                'tag'
-                                              );
-                                              
-                                              return (
-                                                <span 
-                                                  key={materia.id}
-                                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor} uppercase`}
-                                                >
-                                                  <Icon className="mr-1 h-3 w-3" />
-                                                  {materia.nombre || materia.asignatura}
-                                                </span>
-                                              );
-                                            })}
-                                          </div>
-                                        ) : profesor.materias && profesor.materias.length > 0 ? (
-                                          <div className="flex flex-wrap gap-1">
-                                            {profesor.materias.map(materia => {
-                                              const { bgColor, textColor, Icon } = getMateriaStyles(
-                                                materia.nombre || materia.asignatura, 
-                                                'tag'
-                                              );
-                                              
-                                              return (
-                                                <span 
-                                                  key={materia.id}
-                                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor} uppercase`}
-                                                >
-                                                  <Icon className="mr-1 h-3 w-3" />
-                                                  {materia.nombre || materia.asignatura}
-                                                </span>
-                                              );
-                                            })}
-                                          </div>
-                                        ) : (
-                                          'No asignadas'
-                                        )}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <Link
-                                          to={`/admin/profesores/${profesor.id}`}
-                                          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-900 mr-3"
-                                        >
-                                          Detalles
-                                        </Link>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-                            <div className="text-center py-6">
-                              <p className="text-gray-500">No hay profesores asignados a este grado.</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Pestaña de Materias */}
-                      {activeTab === 'materias' && (
-                        <div>
-                          <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-medium text-gray-900">Materias del Grado</h3>
-                          </div>
-                          
-                          {materias.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                              {materias.map((materia) => {
-                                const { bgColor, textColor, iconColor, bgIconColor, Icon } = getMateriaStyles(
-                                  materia.nombre || materia.asignatura, 
-                                  'card'
-                                );
-                                
-                                return (
-                                  <div key={materia.id} className={`${bgColor} p-3 rounded-md shadow-sm hover:shadow-md transition-shadow duration-200`}>
-                                    <div className="flex items-center">
-                                      <div className={`p-2 rounded-full ${bgIconColor} mr-3`}>
-                                        <Icon className={`h-5 w-5 ${iconColor}`} />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className={`text-sm font-medium ${textColor} truncate`}>
-                                          {materia.nombre || materia.asignatura}
-                                        </p>
-                                        <p className="text-xs text-gray-500 mt-0.5 truncate">
-                                          {materia.codigo || `Código: ${materia.id}`}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="mt-3 flex justify-between items-center">
-                                      <button
-                                        onClick={() => handleShowMateriaDetails(materia)}
-                                        className={`text-xs font-medium ${textColor} hover:underline flex items-center`}
-                                      >
-                                        <FaChartBar className="mr-1" /> Estadísticas
-                                      </button>
-                                      <Link
-                                        to={`/admin/academico/materias/${materia.id}`}
-                                        className={`text-xs font-medium ${textColor} hover:underline flex items-center`}
-                                      >
-                                        <FaEye className="mr-1" /> Detalles
-                                      </Link>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="text-center py-6">
-                              <p className="text-gray-500">No hay materias asignadas a este grado.</p>
-                            </div>
-                          )}
-                          
-                          {/* Modal para mostrar detalles de la materia */}
-                          {selectedMateria && (
-                            <div className="fixed z-10 inset-0 overflow-y-auto">
-                              <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                                <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-                                  <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-                                </div>
-                                
-                                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                                
-                                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                                  <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                    <div className="sm:flex sm:items-start">
-                                      <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                          {selectedMateria.nombre || selectedMateria.asignatura}
-                                        </h3>
-                                        
-                                        <div className="mt-4">
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="bg-gray-50 p-3 rounded-md">
-                                              <p className="text-sm font-medium text-gray-700">Profesor Asignado</p>
-                                              <p className="text-sm text-gray-900">
-                                                {selectedMateria.profesor 
-                                                  ? `${selectedMateria.profesor.nombre} ${selectedMateria.profesor.apellido}` 
-                                                  : selectedMateria.profesorAsignado
-                                                    ? `${selectedMateria.profesorAsignado.nombre} ${selectedMateria.profesorAsignado.apellido}`
-                                                    : 'No asignado'}
-                                              </p>
-                                            </div>
-                                            
-                                            <div className="bg-gray-50 p-3 rounded-md">
-                                              <p className="text-sm font-medium text-gray-700">Estudiantes</p>
-                                              <p className="text-sm text-gray-900">
-                                                {selectedMateria.estudiantesCount || estudiantes.length || 0}
-                                              </p>
-                                            </div>
-                                            
-                                            <div className="bg-gray-50 p-3 rounded-md">
-                                              <p className="text-sm font-medium text-gray-700">Horas Semanales</p>
-                                              <p className="text-sm text-gray-900">
-                                                {selectedMateria.horasSemanales || 'No especificado'}
-                                              </p>
-                                            </div>
-                                            
-                                            <div className="bg-gray-50 p-3 rounded-md">
-                                              <p className="text-sm font-medium text-gray-700">Código</p>
-                                              <p className="text-sm text-gray-900">
-                                                {selectedMateria.codigo || selectedMateria.id}
-                                              </p>
-                                            </div>
-                                          </div>
-                                          
-                                          {selectedMateria.descripcion && (
-                                            <div className="mt-4 bg-gray-50 p-3 rounded-md">
-                                              <p className="text-sm font-medium text-gray-700">Descripción</p>
-                                              <p className="text-sm text-gray-900">{selectedMateria.descripcion}</p>
-                                            </div>
-                                          )}
-                                          
-                                          <div className="mt-4">
-                                            <h4 className="text-md font-medium text-gray-900 mb-2">Estadísticas</h4>
-                                            <div className="bg-gray-50 p-3 rounded-md">
-                                              <p className="text-sm font-medium text-gray-700">Rendimiento Promedio</p>
-                                              <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                                                <div 
-                                                  className="bg-blue-600 h-2.5 rounded-full" 
-                                                  style={{ width: `${selectedMateria.rendimientoPromedio || 75}%` }}
-                                                ></div>
-                                              </div>
-                                              <p className="text-xs text-gray-500 mt-1">
-                                                {selectedMateria.rendimientoPromedio || 75}% de aprobación
-                                              </p>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedMateria(null)}
-                                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                                    >
-                                      Cerrar
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                <p className="text-gray-500">Seleccione un grado para ver sus detalles.</p>
-              </div>
-            )}
-          </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
+          <FaGraduationCap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 text-lg font-medium">No se encontraron grados</p>
+          <p className="text-gray-400 text-sm mt-2">Intenta ajustar los filtros de búsqueda</p>
         </div>
       )}
-      
-      {/* Modal de confirmación para eliminar grado */}
-      {showDeleteModal && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <FaTrash className="h-5 w-5 text-red-600" />
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                      Eliminar Grado
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500">
-                        ¿Está seguro de que desea eliminar el grado <strong>{gradoToDelete && formatearNombreGrado(gradoToDelete.nombre_grado)}</strong>? Esta acción no se puede deshacer.
-                      </p>
-                      <p className="text-sm text-red-500 mt-2">
-                        Nota: Solo se pueden eliminar grados que no tengan estudiantes o profesores asignados.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={handleDeleteGrado}
-                  disabled={deleteLoading}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                >
-                  {deleteLoading ? 'Eliminando...' : 'Eliminar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setGradoToDelete(null);
-                  }}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
+
     </div>
   );
 };

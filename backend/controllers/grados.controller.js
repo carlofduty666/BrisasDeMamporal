@@ -30,7 +30,15 @@ const gradosController = {
     },
     getGradoById: async (req, res) => {
         try {
-            const grado = await Grados.findByPk(req.params.id);
+            const grado = await Grados.findByPk(req.params.id, {
+              include: [
+                {
+                  model: db.Niveles,
+                  as: 'Niveles',
+                  attributes: ['id', 'nombre_nivel']
+                }
+              ]
+            });
             if (grado) {
                 res.json(grado);
             } else {
