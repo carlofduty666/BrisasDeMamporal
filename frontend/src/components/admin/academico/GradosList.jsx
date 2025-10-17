@@ -18,7 +18,8 @@ import {
   FaDownload,
   FaChartLine,
   FaUserGraduate,
-  FaBook
+  FaBook,
+  FaCog
 } from 'react-icons/fa';
 import { formatearNombreGrado } from '../../../utils/formatters';
 
@@ -311,21 +312,14 @@ const GradosList = () => {
 
   return (
     <div>
-      {/* Header Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-800 to-indigo-900 shadow-2xl rounded-2xl mb-8">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-transparent"></div>
-
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-400/20 rounded-full blur-xl"></div>
-        <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-indigo-300/10 rounded-full blur-2xl"></div>
-        
-        <div className="relative px-6 py-12">
+      {/* Header Hero Section - Optimizado */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-800 to-indigo-900 shadow-xl rounded-2xl mb-8">
+        <div className="relative px-6 py-10">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-4">
-                <div className="p-3 bg-indigo-500/20 rounded-xl backdrop-blur-sm border border-indigo-400/30">
-                  <FaGraduationCap className="w-8 h-8 text-indigo-200" />
+                <div className="p-3 bg-indigo-600 rounded-xl border border-indigo-500">
+                  <FaGraduationCap className="w-8 h-8 text-white" />
                 </div>
                 <div>
                   <h1 className="text-4xl font-bold text-white mb-2">
@@ -337,9 +331,9 @@ const GradosList = () => {
                 </div>
               </div>
               
-              {/* Stats Cards */}
+              {/* Stats Cards - Optimizado */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                <div className="bg-indigo-700 rounded-xl p-4 border border-indigo-600">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-indigo-200 text-sm font-medium">Total Grados</p>
@@ -349,7 +343,7 @@ const GradosList = () => {
                   </div>
                 </div>
                 
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                <div className="bg-indigo-700 rounded-xl p-4 border border-indigo-600">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-indigo-200 text-sm font-medium">Total Estudiantes</p>
@@ -359,7 +353,7 @@ const GradosList = () => {
                   </div>
                 </div>
                 
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                <div className="bg-indigo-700 rounded-xl p-4 border border-indigo-600">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-indigo-200 text-sm font-medium">Profesores Activos</p>
@@ -369,7 +363,7 @@ const GradosList = () => {
                   </div>
                 </div>
                 
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                <div className="bg-indigo-700 rounded-xl p-4 border border-indigo-600">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-indigo-200 text-sm font-medium">Año Escolar</p>
@@ -381,11 +375,11 @@ const GradosList = () => {
               </div>
             </div>
             
-            {/* Action Button */}
+            {/* Action Button - Optimizado */}
             <div className="mt-8 lg:mt-0 lg:ml-8">
               <Link
                 to="/admin/academico/grados/nuevo"
-                className="inline-flex items-center px-8 py-4 bg-white/20 backdrop-blur-md text-white font-semibold rounded-2xl border border-white/30 hover:bg-white/30 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                className="inline-flex items-center px-8 py-4 bg-white text-indigo-700 font-semibold rounded-xl border border-indigo-200 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <FaPlus className="w-5 h-5 mr-3" />
                 Nuevo Grado
@@ -556,10 +550,18 @@ const GradosList = () => {
                       {nivelGrupo.grados.length} {nivelGrupo.grados.length === 1 ? 'grado' : 'grados'}
                     </p>
                   </div>
-                  <div className="flex-shrink-0">
+                  <div className="flex items-center space-x-3">
                     <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-100 text-indigo-800">
                       {nivelGrupo.grados.reduce((sum, g) => sum + (g.estudiantes?.length || 0), 0)} estudiantes
                     </span>
+                    <Link
+                      to="/admin/academico/secciones"
+                      className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors duration-200 shadow-md hover:shadow-lg"
+                      title="Gestionar secciones"
+                    >
+                      <FaCog className="w-4 h-4 mr-2" />
+                      Gestionar Secciones
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -718,13 +720,13 @@ const GradosList = () => {
                     return (
                       <div
                         key={grado.id}
-                        className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                        className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow duration-200"
                       >
                         {/* Card Header */}
                         <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                              <div className="p-2 bg-indigo-700 rounded-lg">
                                 <FaGraduationCap className="w-6 h-6 text-white" />
                               </div>
                               <div>
@@ -742,7 +744,7 @@ const GradosList = () => {
                           <div className="grid grid-cols-2 gap-4 mb-4">
                             <Link
                               to={`/admin/academico/grados/${grado.id}?tab=info`}
-                              className="bg-indigo-50 rounded-xl p-3 hover:bg-indigo-100 transition-all duration-200 transform hover:scale-105 cursor-pointer group"
+                              className="bg-indigo-50 rounded-xl p-3 hover:bg-indigo-100 transition-colors duration-200 cursor-pointer group"
                               title="Ver secciones"
                             >
                               <div className="flex items-center justify-between">
@@ -756,7 +758,7 @@ const GradosList = () => {
 
                             <Link
                               to={`/admin/academico/grados/${grado.id}?tab=estudiantes`}
-                              className="bg-blue-50 rounded-xl p-3 hover:bg-blue-100 transition-all duration-200 transform hover:scale-105 cursor-pointer group"
+                              className="bg-blue-50 rounded-xl p-3 hover:bg-blue-100 transition-colors duration-200 cursor-pointer group"
                               title="Ver estudiantes"
                             >
                               <div className="flex items-center justify-between">
@@ -770,7 +772,7 @@ const GradosList = () => {
 
                             <Link
                               to={`/admin/academico/grados/${grado.id}?tab=profesores`}
-                              className="bg-emerald-50 rounded-xl p-3 hover:bg-emerald-100 transition-all duration-200 transform hover:scale-105 cursor-pointer group"
+                              className="bg-emerald-50 rounded-xl p-3 hover:bg-emerald-100 transition-colors duration-200 cursor-pointer group"
                               title="Ver profesores"
                             >
                               <div className="flex items-center justify-between">
@@ -784,7 +786,7 @@ const GradosList = () => {
 
                             <Link
                               to={`/admin/academico/grados/${grado.id}?tab=materias`}
-                              className="bg-purple-50 rounded-xl p-3 hover:bg-purple-100 transition-all duration-200 transform hover:scale-105 cursor-pointer group"
+                              className="bg-purple-50 rounded-xl p-3 hover:bg-purple-100 transition-colors duration-200 cursor-pointer group"
                               title="Ver materias"
                             >
                               <div className="flex items-center justify-between">

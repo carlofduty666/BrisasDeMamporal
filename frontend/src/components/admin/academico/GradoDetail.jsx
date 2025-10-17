@@ -14,10 +14,12 @@ import {
   FaInfoCircle,
   FaChartBar,
   FaCalendarAlt,
-  FaUser
+  FaUser,
+  FaClipboardList
 } from 'react-icons/fa';
 import { formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
 import { getMateriaStyles, MateriaCard } from '../../../utils/materiaStyles';
+import MateriaDetailModal from './MateriaDetailModal';
 
 const GradoDetail = () => {
   const { id } = useParams();
@@ -38,6 +40,7 @@ const GradoDetail = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedMateria, setSelectedMateria] = useState(null);
+  const [evaluacionesPorMateria, setEvaluacionesPorMateria] = useState({});
   
   // Estados para filtrado de estudiantes
   const [searchEstudiante, setSearchEstudiante] = useState('');
@@ -225,6 +228,31 @@ const GradoDetail = () => {
           }
         );
         setMaterias(materiasResponse.data);
+
+        // Cargar evaluaciones por materia
+        const evaluacionesMap = {};
+        await Promise.all(
+          materiasResponse.data.map(async (materia) => {
+            try {
+              const evaluacionesResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/evaluaciones/filtradas`,
+                {
+                  ...config,
+                  params: {
+                    materiaID: materia.id,
+                    gradoID: id,
+                    annoEscolarID: annoResponse.data.id
+                  }
+                }
+              );
+              evaluacionesMap[materia.id] = evaluacionesResponse.data.length;
+            } catch (error) {
+              console.error(`Error al cargar evaluaciones para materia ${materia.id}:`, error);
+              evaluacionesMap[materia.id] = 0;
+            }
+          })
+        );
+        setEvaluacionesPorMateria(evaluacionesMap);
       } catch (error) {
         console.error('Error al cargar materias:', error);
         setMaterias([]);
@@ -524,8 +552,8 @@ const GradoDetail = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <FaBook className="inline-block w-4 h-4 mr-2" />
-              Materias ({materias.length})
+              <FaClipboardList className="inline-block w-4 h-4 mr-2" />
+              Materias y Evaluaciones ({materias.length})
             </button>
           </nav>
         </div>
@@ -736,7 +764,11 @@ const GradoDetail = () => {
               {profesores.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {profesores.map((profesor) => (
-                    <div key={profesor.id} className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-6 border border-emerald-200 hover:shadow-lg transition-all duration-200">
+                    <Link
+                      key={profesor.id}
+                      to={`/admin/profesores/${profesor.id}`}
+                      className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-6 border border-emerald-200 hover:shadow-lg hover:border-emerald-300 transition-all duration-200 cursor-pointer transform hover:-translate-y-1"
+                    >
                       <div className="flex items-center space-x-4 mb-4">
                         <div className="flex-shrink-0">
                           <div className="h-14 w-14 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
@@ -780,7 +812,7 @@ const GradoDetail = () => {
                           <p className="text-xs text-emerald-600 truncate mt-2">{profesor.email}</p>
                         )}
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
@@ -795,18 +827,34 @@ const GradoDetail = () => {
 
           {/* Materias Tab */}
           {activeTab === 'materias' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Mensaje instructivo */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 rounded-lg p-4">
+                <div className="flex items-start">
+                  <FaInfoCircle className="w-5 h-5 text-indigo-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-indigo-900 mb-1">
+                      Selecciona una materia para ver detalles
+                    </h4>
+                    <p className="text-sm text-indigo-700">
+                      Haz clic en cualquier materia para ver sus evaluaciones, calificaciones y estadísticas detalladas.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {materias.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {materias.map((materia) => {
                     const { bgColor, textColor, iconColor, borderColor, Icon } = getMateriaStyles(materia.asignatura, 'full');
                     const profesoresAsignados = materia.profesoresAsignados || [];
+                    const numEvaluaciones = evaluacionesPorMateria[materia.id] || 0;
                     
                     return (
                       <div
                         key={materia.id}
                         onClick={() => setSelectedMateria(materia)}
-                        className={`${bgColor} rounded-2xl p-6 border-2 ${borderColor} hover:shadow-lg transition-all duration-200 cursor-pointer transform hover:-translate-y-1`}
+                        className={`${bgColor} rounded-2xl p-6 border-2 ${borderColor} hover:shadow-xl transition-all duration-200 cursor-pointer transform hover:-translate-y-1 hover:scale-105`}
                       >
                         <div className="flex items-center justify-between mb-4">
                           <div className={`p-3 bg-white/50 rounded-xl`}>
@@ -819,6 +867,34 @@ const GradoDetail = () => {
                         <h4 className={`text-lg font-bold ${textColor} mb-3`}>
                           {materia.asignatura}
                         </h4>
+                        
+                        {/* Información de evaluaciones */}
+                        <div className="mb-3 space-y-2">
+                          <div className={`flex items-center justify-between bg-white/40 rounded-lg px-3 py-2`}>
+                            <div className="flex items-center">
+                              <FaClipboardList className={`w-4 h-4 mr-2 ${iconColor}`} />
+                              <span className={`text-sm font-medium ${textColor}`}>Evaluaciones</span>
+                            </div>
+                            <span className={`text-lg font-bold ${textColor}`}>
+                              {numEvaluaciones}
+                            </span>
+                          </div>
+                          
+                          {/* Información por sección */}
+                          {secciones.length > 0 && (
+                            <div className={`flex items-center justify-between bg-white/40 rounded-lg px-3 py-2`}>
+                              <div className="flex items-center">
+                                <FaUsers className={`w-4 h-4 mr-2 ${iconColor}`} />
+                                <span className={`text-sm font-medium ${textColor}`}>Secciones</span>
+                              </div>
+                              <span className={`text-lg font-bold ${textColor}`}>
+                                {secciones.length}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Profesores asignados */}
                         {profesoresAsignados.length > 0 ? (
                           <div className="space-y-1">
                             {profesoresAsignados.map((profesor, index) => (
@@ -829,7 +905,7 @@ const GradoDetail = () => {
                             ))}
                           </div>
                         ) : (
-                          <p className={`text-sm ${textColor} opacity-70`}>
+                          <p className={`text-sm ${textColor} opacity-70 italic`}>
                             Sin profesor asignado
                           </p>
                         )}
@@ -902,78 +978,14 @@ const GradoDetail = () => {
         </div>
       )}
 
-      {/* Modal de detalles de materia */}
-      {selectedMateria && (
-        <div className="fixed z-50 inset-0 overflow-y-auto animate-fade-in">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true" onClick={() => setSelectedMateria(null)}>
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            
-            <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      Detalles de la Materia
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Asignatura</p>
-                        <p className="text-lg font-bold text-gray-900">{selectedMateria.asignatura}</p>
-                      </div>
-                      {selectedMateria.codigo && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">Código</p>
-                          <p className="text-sm text-gray-900">{selectedMateria.codigo}</p>
-                        </div>
-                      )}
-                      {selectedMateria.profesoresAsignados && selectedMateria.profesoresAsignados.length > 0 ? (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-2">
-                            Profesores Asignados ({selectedMateria.profesoresAsignados.length})
-                          </p>
-                          <div className="space-y-2">
-                            {selectedMateria.profesoresAsignados.map((profesor, index) => (
-                              <div key={index} className="flex items-center bg-gray-50 rounded-lg p-2">
-                                <FaChalkboardTeacher className="w-4 h-4 mr-2 text-indigo-600" />
-                                <span className="text-sm text-gray-900">
-                                  {profesor.nombre} {profesor.apellido}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">Profesor</p>
-                          <p className="text-sm text-gray-500 italic">Sin profesor asignado</p>
-                        </div>
-                      )}
-                      {selectedMateria.descripcion && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">Descripción</p>
-                          <p className="text-sm text-gray-900">{selectedMateria.descripcion}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMateria(null)}
-                  className="w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition-all duration-200"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Modal de detalles de materia con evaluaciones y calificaciones */}
+      {selectedMateria && grado && annoEscolar && (
+        <MateriaDetailModal
+          materia={selectedMateria}
+          grado={grado}
+          annoEscolar={annoEscolar}
+          onClose={() => setSelectedMateria(null)}
+        />
       )}
     </div>
   );
