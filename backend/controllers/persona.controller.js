@@ -550,6 +550,49 @@ const eliminarRolDePersona = async (req, res) => {
   }
 };
 
+// Obtener profesores asignados a una materia y grado específicos
+const getProfesorByMateriaGrado = async (req, res) => {
+  try {
+    const { materiaID, gradoID } = req.query;
+    
+    if (!materiaID || !gradoID) {
+      return res.status(400).json({ 
+        message: 'Se requieren los parámetros materiaID y gradoID' 
+      });
+    }
+    
+    // Buscar asignaciones de profesor-materia-grado
+    const asignaciones = await db.Profesor_Materia_Grados.findAll({
+      where: { 
+        materiaID: materiaID,
+        gradoID: gradoID
+      },
+      include: [
+        {
+          model: db.Personas,
+          as: 'profesor',
+          where: { tipo: 'profesor' },
+          attributes: ['id', 'nombre', 'apellido', 'cedula', 'email', 'tipo']
+        }
+      ],
+      attributes: []  // No necesitamos los atributos de la tabla de unión
+    });
+    
+    // Extraer solo los datos de profesores, sin duplicados
+    const profesoresMap = new Map();
+    asignaciones.forEach(asignacion => {
+      if (asignacion.profesor && !profesoresMap.has(asignacion.profesor.id)) {
+        profesoresMap.set(asignacion.profesor.id, asignacion.profesor);
+      }
+    });
+    
+    res.json(Array.from(profesoresMap.values()));
+  } catch (err) {
+    console.error('Error al obtener profesores por materia y grado:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Obtener roles de una persona
 const getRolesDePersona = async (req, res) => {
   try {
@@ -590,7 +633,7 @@ module.exports = {
     getPersonaTipoById,
     getEstudiantesByRepresentante,
     getRepresentanteByEstudiante,
-    getPersonasByQuery,
     getEstudiantesByProfesor,
-    getProfesorByEstudiante
+    getProfesorByEstudiante,
+    getProfesorByMateriaGrado
 }

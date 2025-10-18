@@ -168,8 +168,32 @@ const gradosController = {
           return res.status(404).json({ message: 'Año escolar no encontrado' });
         }
         
-        // Obtener los grados asignados al profesor para el año escolar especificado
+        // Obtener los grados asignados al profesor de forma segura (sin SQL literal)
+        // Primero obtener los IDs de grados del profesor
+        const gradosAsignados = await db.Profesor_Materia_Grados.findAll({
+          attributes: [[db.Sequelize.fn('DISTINCT', db.Sequelize.col('gradoID')), 'gradoID']],
+          where: { 
+            profesorID: profesorID, 
+            annoEscolarID: annoEscolar.id 
+          },
+          raw: true,
+          subQuery: false
+        });
+        
+        const gradoIDs = gradosAsignados.map(g => g.gradoID);
+        
+        // Si no hay grados asignados, devolver array vacío
+        if (gradoIDs.length === 0) {
+          return res.status(200).json([]);
+        }
+        
+        // Obtener los grados completos con niveles
         const grados = await db.Grados.findAll({
+          where: {
+            id: {
+              [db.Sequelize.Op.in]: gradoIDs
+            }
+          },
           include: [
             {
               model: db.Niveles,
@@ -177,41 +201,43 @@ const gradosController = {
               attributes: ['id', 'nombre_nivel']
             }
           ],
-          where: {
-            id: {
-              [db.Sequelize.Op.in]: db.Sequelize.literal(`
-                (SELECT DISTINCT gradoID FROM Profesor_Materia_Grados 
-                 WHERE profesorID = ${profesorID} AND annoEscolarID = ${annoEscolar.id})
-              `)
-            }
-          }
+          order: [['nombre_grado', 'ASC']]
         });
         
         // Para cada grado, obtener las materias que imparte el profesor
         const gradosConMaterias = await Promise.all(
           grados.map(async (grado) => {
-            // Obtener las materias que el profesor imparte en este grado
-            const materiasQuery = await db.Profesor_Materia_Grados.findAll({
-              where: { 
-                profesorID: profesorID,
-                gradoID: grado.id,
-                annoEscolarID: annoEscolar.id
-              },
-              include: [
-                {
-                  model: db.Materias,
-                  as: 'materia',
-                  attributes: ['id', 'asignatura']
-                }
-              ]
-            });
-            
-            const materias = materiasQuery.map(item => item.materia);
-            
-            return {
-              ...grado.get({ plain: true }),
-              materiasImpartidas: materias
-            };
+            try {
+              // Obtener las materias que el profesor imparte en este grado
+              const materiasQuery = await db.Profesor_Materia_Grados.findAll({
+                attributes: ['materiaID'],
+                where: { 
+                  profesorID: profesorID,
+                  gradoID: grado.id,
+                  annoEscolarID: annoEscolar.id
+                },
+                include: [
+                  {
+                    model: db.Materias,
+                    as: 'materia',
+                    attributes: ['id', 'asignatura']
+                  }
+                ]
+              });
+              
+              const materias = materiasQuery.map(item => item.materia);
+              
+              return {
+                ...grado.get({ plain: true }),
+                materiasImpartidas: materias
+              };
+            } catch (gradoError) {
+              console.error(`Error al obtener materias para grado ${grado.id}:`, gradoError);
+              return {
+                ...grado.get({ plain: true }),
+                materiasImpartidas: []
+              };
+            }
           })
         );
         

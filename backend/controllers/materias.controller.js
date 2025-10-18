@@ -45,6 +45,15 @@ const materiasController = {
         
         console.log('Buscando materias para el profesor ID:', id);
         
+        // Verificar que el profesor existe
+        const profesor = await db.Personas.findOne({
+          where: { id: id, tipo: 'profesor' }
+        });
+        
+        if (!profesor) {
+          return res.status(404).json({ message: 'Profesor no encontrado' });
+        }
+        
         // Obtener el año escolar activo o el especificado en la consulta
         const annoEscolarID = req.query.annoEscolarID || (await db.AnnoEscolar.findOne({ where: { activo: true } }))?.id;
         
@@ -52,57 +61,60 @@ const materiasController = {
           return res.status(404).json({ message: 'No se encontró un año escolar activo' });
         }
         
-        // Obtener materias asignadas al profesor
-        const materias = await db.Materias.findAll({
+        // Obtener materias asignadas al profesor de forma más robusta
+        // Primero obtener los registros de asignación profesor-materia-grado
+        const asignaciones = await db.Profesor_Materia_Grados.findAll({
+          attributes: ['profesorID', 'materiaID', 'gradoID', 'annoEscolarID'],
+          where: {
+            profesorID: id,
+            annoEscolarID: annoEscolarID
+          },
           include: [
             {
-              model: db.Grados,
-              as: 'Grados', // Usa el alias definido en el modelo
-              through: { attributes: [] } // No incluir atributos de la tabla de unión
+              model: db.Materias,
+              as: 'materia',
+              attributes: ['id', 'asignatura']
             },
             {
-              model: db.Personas,
-              as: 'profesores', // Usa el alias definido en el modelo
-              where: { 
-                id: id, // ID del profesor
-                tipo: 'profesor' // Asegurarse de que es un profesor
-              },
-              through: { 
-                model: db.Profesor_Materia_Grados,
-                where: { annoEscolarID: annoEscolarID },
-                attributes: [] // No incluir atributos de la tabla de unión
-              },
-              attributes: [], // No incluir atributos del profesor
-              required: true
+              model: db.Grados,
+              as: 'grado',
+              attributes: ['id', 'nombre_grado', 'nivelID'],
+              include: [
+                {
+                  model: db.Niveles,
+                  as: 'Niveles',
+                  attributes: ['id', 'nombre_nivel']
+                }
+              ]
             }
           ]
         });
         
-        // Obtener información adicional de los grados para cada materia
-        const materiasConGrados = await Promise.all(
-          materias.map(async (materia) => {
-            // Obtener los grados en los que el profesor imparte esta materia
-            const gradosProfesor = await db.Profesor_Materia_Grados.findAll({
-              where: {
-                profesorID: id,
-                materiaID: materia.id,
-                annoEscolarID: annoEscolarID
-              },
-              include: [
-                {
-                  model: db.Grados,
-                  as: 'grado',
-                  attributes: ['id', 'nombre_grado', 'nivelID']
-                }
-              ]
-            });
-            
-            return {
+        // Si no hay asignaciones, devolver array vacío
+        if (asignaciones.length === 0) {
+          return res.status(200).json([]);
+        }
+        
+        // Agrupar por materia y recolectar grados
+        const materiasMap = {};
+        
+        asignaciones.forEach(asignacion => {
+          const materia = asignacion.materia;
+          if (!materiasMap[materia.id]) {
+            materiasMap[materia.id] = {
               ...materia.get({ plain: true }),
-              gradosImpartidos: gradosProfesor.map(gp => gp.grado)
+              gradosImpartidos: []
             };
-          })
-        );
+          }
+          
+          // Agregar el grado si no está duplicado
+          const gradoExistente = materiasMap[materia.id].gradosImpartidos.some(g => g.id === asignacion.grado.id);
+          if (!gradoExistente) {
+            materiasMap[materia.id].gradosImpartidos.push(asignacion.grado.get({ plain: true }));
+          }
+        });
+        
+        const materiasConGrados = Object.values(materiasMap);
         
         res.status(200).json(materiasConGrados);
       } catch (error) {
@@ -111,16 +123,81 @@ const materiasController = {
       }
     },
     
-    // Asegúrate de que este método exista y esté correctamente implementado
+    // Obtener grados asignados a una materia
+    getGradosByMateria: async (req, res) => {
+      try {
+        const { id } = req.params; // ID de la materia
+        const { annoEscolarID } = req.query;
+        
+        // Validar que la materia existe
+        const materia = await db.Materias.findByPk(id);
+        if (!materia) {
+          return res.status(404).json({ message: 'Materia no encontrada' });
+        }
+        
+        // Obtener el año escolar actual o el especificado
+        let idAnnoEscolar = annoEscolarID;
+        if (!idAnnoEscolar) {
+          const annoEscolarActivo = await db.AnnoEscolar.findOne({ 
+            where: { activo: true } 
+          });
+          if (annoEscolarActivo) {
+            idAnnoEscolar = annoEscolarActivo.id;
+          }
+        }
+        
+        // Obtener los grados asignados a esta materia
+        const grados = await db.Grados.findAll({
+          attributes: ['id', 'nombre_grado', 'nivelID'],
+          include: [
+            {
+              model: db.Materias,
+              as: 'Materias',
+              where: { id },
+              through: {
+                model: db.Grado_Materia,
+                where: idAnnoEscolar ? { annoEscolarID: idAnnoEscolar } : {},
+                attributes: []
+              },
+              attributes: []
+            },
+            {
+              model: db.Niveles,
+              as: 'Niveles',
+              attributes: ['id', 'nombre_nivel']
+            }
+          ],
+          order: [['nombre_grado', 'ASC']]
+        });
+        
+        res.json(grados);
+      } catch (err) {
+        console.error('Error al obtener grados por materia:', err);
+        res.status(500).json({ message: err.message });
+      }
+    },
+
+    // Obtener materias de un grado (por ruta /grado/:gradoID/materias)
     getMateriasByGrado: async (req, res) => {
       try {
-        const { id } = req.params; // ID del grado
+        const { gradoID } = req.params; // ID del grado
         const { annoEscolarID, limit } = req.query;
         
         // Validar que el grado existe
-        const grado = await db.Grados.findByPk(id);
+        const grado = await db.Grados.findByPk(gradoID);
         if (!grado) {
           return res.status(404).json({ message: 'Grado no encontrado' });
+        }
+        
+        // Obtener el año escolar actual o el especificado
+        let idAnnoEscolar = annoEscolarID;
+        if (!idAnnoEscolar) {
+          const annoEscolarActivo = await db.AnnoEscolar.findOne({ 
+            where: { activo: true } 
+          });
+          if (annoEscolarActivo) {
+            idAnnoEscolar = annoEscolarActivo.id;
+          }
         }
         
         // Construir las opciones de consulta
@@ -129,8 +206,12 @@ const materiasController = {
             {
               model: db.Grados,
               as: 'Grados',
-              where: { id },
-              through: { attributes: [] }
+              where: { id: gradoID },
+              through: { 
+                model: db.Grado_Materia,
+                where: idAnnoEscolar ? { annoEscolarID: idAnnoEscolar } : {},
+                attributes: [] 
+              }
             }
           ],
           order: [['asignatura', 'ASC']]
@@ -156,7 +237,7 @@ const materiasController = {
                   where: { id: materia.id },
                   through: {
                     model: db.Profesor_Materia_Grados,
-                    where: { gradoID: id }
+                    where: { gradoID: gradoID, annoEscolarID: idAnnoEscolar }
                   }
                 }
               ]
@@ -309,7 +390,7 @@ const materiasController = {
       // Asignar profesor a materia en grado
         asignarProfesorAMateria: async (req, res) => {
         try {
-          const { profesorID, materiaID, gradoID, annoEscolarID } = req.body;
+          const { profesorID, materiaID, gradoID, seccionID, annoEscolarID } = req.body;
           
           // Verificar que el profesor existe y es de tipo profesor
           const profesor = await db.Personas.findByPk(profesorID);
@@ -331,23 +412,39 @@ const materiasController = {
               message: 'Esta materia no está asignada a este grado. Primero debe asignar la materia al grado.' 
             });
           }
+
+          // Si se proporciona seccionID, validar que la sección pertenece al grado
+          if (seccionID) {
+            const seccion = await db.Secciones.findByPk(seccionID);
+            if (!seccion || seccion.gradoID !== parseInt(gradoID)) {
+              return res.status(400).json({ 
+                message: 'La sección seleccionada no pertenece al grado especificado.' 
+              });
+            }
+          }
           
           // Verificar si ya existe la asignación
+          const whereClause = { profesorID, materiaID, gradoID, annoEscolarID };
+          if (seccionID) {
+            whereClause.seccionID = seccionID;
+          }
+          
           const existingAssignment = await db.Profesor_Materia_Grados.findOne({
-            where: { profesorID, materiaID, gradoID, annoEscolarID }
+            where: whereClause
           });
           
           if (existingAssignment) {
             return res.status(400).json({ 
-              message: 'Este profesor ya está asignado a esta materia en este grado para este año escolar' 
+              message: 'Este profesor ya está asignado a esta materia en este grado' + (seccionID ? ' y sección' : '') + ' para este año escolar' 
             });
-            }
+          }
           
           // Crear la asignación
           const newAssignment = await db.Profesor_Materia_Grados.create({
             profesorID,
             materiaID,
             gradoID,
+            seccionID: seccionID || null,
             annoEscolarID
           });
           

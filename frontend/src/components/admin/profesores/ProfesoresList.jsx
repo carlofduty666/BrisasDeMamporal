@@ -77,7 +77,7 @@ const ProfesoresList = () => {
       }
 
       // Enriquecer datos con materias y grados
-      const profesoresEnriquecidos = await Promise.all(
+      const profesoresEnriquecidos = await Promise.allSettled(
         profesoresData.map(async (profesor) => {
           try {
             // Obtener materias que imparte el profesor
@@ -85,7 +85,8 @@ const ProfesoresList = () => {
               `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/profesor/${profesor.id}`,
               { 
                 ...config,
-                params: { annoEscolarID: annoResponse.data.id }
+                params: { annoEscolarID: annoResponse.data.id },
+                timeout: 5000 // Timeout de 5 segundos
               }
             );
 
@@ -94,18 +95,20 @@ const ProfesoresList = () => {
               `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/profesor/${profesor.id}`,
               { 
                 ...config,
-                params: { annoEscolarID: annoResponse.data.id }
+                params: { annoEscolarID: annoResponse.data.id },
+                timeout: 5000 // Timeout de 5 segundos
               }
             );
 
             return {
               ...profesor,
-              materias: materiasResponse.data || [],
-              grados: gradosResponse.data || [],
+              materias: Array.isArray(materiasResponse.data) ? materiasResponse.data : [],
+              grados: Array.isArray(gradosResponse.data) ? gradosResponse.data : [],
               nombreCompleto: `${profesor.nombre} ${profesor.apellido}`
             };
           } catch (err) {
-            console.error(`Error al obtener datos adicionales para profesor ${profesor.id}:`, err);
+            console.error(`Error al obtener datos adicionales para profesor ${profesor.id}:`, err.message);
+            // Devolver datos básicos incluso si falla
             return {
               ...profesor,
               materias: [],
@@ -116,8 +119,28 @@ const ProfesoresList = () => {
         })
       );
       
-      setProfesores(profesoresEnriquecidos);
-      setFilteredProfesores(profesoresEnriquecidos);
+      // Procesar resultados de Promise.allSettled
+      const procesados = profesoresEnriquecidos
+        .map((resultado, index) => {
+          if (resultado.status === 'fulfilled') {
+            return resultado.value;
+          } else {
+            // Si falla, devolver datos básicos del profesor
+            console.error(`Error en promesa del profesor ${index}:`, resultado.reason);
+            return {
+              ...profesoresData[index],
+              materias: [],
+              grados: [],
+              nombreCompleto: `${profesoresData[index].nombre} ${profesoresData[index].apellido}`
+            };
+          }
+        });
+      
+      // Filtrar resultados nulos
+      const profesoresValidos = procesados.filter(p => p !== null);
+      
+      setProfesores(profesoresValidos);
+      setFilteredProfesores(profesoresValidos);
       setLoading(false);
     } catch (err) {
       console.error('Error al cargar profesores:', err);

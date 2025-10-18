@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   FaPlus, 
   FaEdit, 
@@ -6,18 +6,20 @@ import {
   FaSearch, 
   FaUsers, 
   FaRedo, 
-  FaList, 
-  FaTh, 
   FaDownload,
   FaGraduationCap,
   FaChalkboard,  
   FaBook,
-  FaEye
+  FaChevronDown,
+  FaChevronRight
 } from 'react-icons/fa';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { formatearNombreGrado, formatearNombreNivel } from '../../../utils/formatters';
+import CrearSeccion from './modals/CrearSeccion';
+import EditarSeccion from './modals/EditarSeccion';
+import EliminarSeccion from './modals/EliminarSeccion';
 
 const SeccionesList = () => {
   const navigate = useNavigate();
@@ -27,11 +29,15 @@ const SeccionesList = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('cards');
   const [annoEscolar, setAnnoEscolar] = useState(null);
   const [niveles, setNiveles] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(12);
+  const [expandedNiveles, setExpandedNiveles] = useState({});
+  const [expandedGrados, setExpandedGrados] = useState({});
+
+  // Modal states
+  const [modalCrear, setModalCrear] = useState({ isOpen: false, gradoId: null, gradoNombre: '', nivelNombre: '' });
+  const [modalEditar, setModalEditar] = useState({ isOpen: false, seccion: null });
+  const [modalEliminar, setModalEliminar] = useState({ isOpen: false, seccion: null });
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -77,6 +83,14 @@ const SeccionesList = () => {
         setGrados(gradosResponse.data);
         setNiveles(nivelesResponse.data);
         setAnnoEscolar(annoResponse.data);
+        
+        // Expandir todos los niveles por defecto
+        const allNivelesExpanded = {};
+        nivelesResponse.data.forEach(nivel => {
+          allNivelesExpanded[nivel.id] = true;
+        });
+        setExpandedNiveles(allNivelesExpanded);
+        
         setLoading(false);
       } catch (err) {
         console.error('Error al cargar datos:', err);
@@ -93,59 +107,176 @@ const SeccionesList = () => {
     fetchData();
   }, [navigate]);
 
-  // Filtrar secciones según término de búsqueda
-  const filteredSecciones = secciones.filter(seccion => {
-    const grado = grados.find(g => g.id === seccion.gradoID);
-    const gradoNombre = grado?.nombre_grado.toLowerCase() || '';
-    const seccionNombre = seccion.nombre_seccion.toLowerCase();
+  // Agrupar secciones por nivel y grado
+  const organizarPorNivelyGrado = useMemo(() => {
+    const estructura = {};
+    
+    niveles.forEach(nivel => {
+      estructura[nivel.id] = {
+        nivel,
+        grados: {}
+      };
+    });
+    
+    grados.forEach(grado => {
+      if (!estructura[grado.nivelID]) {
+        estructura[grado.nivelID] = {
+          nivel: null,
+          grados: {}
+        };
+      }
+      estructura[grado.nivelID].grados[grado.id] = {
+        grado,
+        secciones: []
+      };
+    });
+    
+    secciones.forEach(seccion => {
+      const grado = grados.find(g => g.id === seccion.gradoID);
+      if (grado && estructura[grado.nivelID] && estructura[grado.nivelID].grados[grado.id]) {
+        estructura[grado.nivelID].grados[grado.id].secciones.push(seccion);
+      }
+    });
+    
+    return estructura;
+  }, [secciones, grados, niveles]);
+
+  // Filtrar por búsqueda
+  const estructuraFiltrada = useMemo(() => {
+    if (!searchTerm.trim()) return organizarPorNivelyGrado;
+    
     const search = searchTerm.toLowerCase();
+    const resultado = {};
     
-    return seccionNombre.includes(search) || gradoNombre.includes(search);
-  });
-
-  // Eliminar sección
-  const handleDeleteSeccion = async (id) => {
-    if (!window.confirm('¿Está seguro de eliminar esta sección?')) return;
-    
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
+    Object.entries(organizarPorNivelyGrado).forEach(([nivelId, nivelData]) => {
+      const gradosFiltrados = {};
       
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL}/secciones/${id}`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
+      Object.entries(nivelData.grados).forEach(([gradoId, gradoData]) => {
+        const seccionesFiltradas = gradoData.secciones.filter(seccion => {
+          const gradoNombre = gradoData.grado?.nombre_grado.toLowerCase() || '';
+          const seccionNombre = seccion.nombre_seccion.toLowerCase();
+          const nivelNombre = nivelData.nivel?.nombre_nivel.toLowerCase() || '';
+          
+          return seccionNombre.includes(search) || 
+                 gradoNombre.includes(search) || 
+                 nivelNombre.includes(search);
+        });
+        
+        if (seccionesFiltradas.length > 0) {
+          gradosFiltrados[gradoId] = {
+            ...gradoData,
+            secciones: seccionesFiltradas
+          };
         }
-      );
+      });
+      
+      if (Object.keys(gradosFiltrados).length > 0) {
+        resultado[nivelId] = {
+          ...nivelData,
+          grados: gradosFiltrados
+        };
+      }
+    });
+    
+    return resultado;
+  }, [organizarPorNivelyGrado, searchTerm]);
 
-      setSecciones(secciones.filter(seccion => seccion.id !== id));
-      setSuccessMessage('Sección eliminada correctamente');
-      toast.success('Sección eliminada correctamente');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (err) {
-      console.error('Error al eliminar sección:', err);
-      setError(err.response?.data?.message || 'Error al eliminar sección');
-      toast.error(err.response?.data?.message || 'Error al eliminar sección');
-    } finally {
-      setLoading(false);
-    }
+  // Estadísticas
+  const stats = useMemo(() => {
+    let totalSecciones = 0;
+    let totalGrados = 0;
+    let totalNiveles = 0;
+    
+    Object.values(estructuraFiltrada).forEach(nivelData => {
+      if (Object.keys(nivelData.grados).length > 0) {
+        totalNiveles++;
+      }
+      Object.values(nivelData.grados).forEach(gradoData => {
+        totalGrados++;
+        totalSecciones += gradoData.secciones.length;
+      });
+    });
+    
+    return { totalSecciones, totalGrados, totalNiveles };
+  }, [estructuraFiltrada]);
+
+  // Modal handlers - Crear
+  const handleOpenCrearModal = (gradoId, gradoNombre, nivelNombre) => {
+    setModalCrear({
+      isOpen: true,
+      gradoId,
+      gradoNombre,
+      nivelNombre
+    });
+  };
+
+  const handleCloseCrearModal = () => {
+    setModalCrear({ isOpen: false, gradoId: null, gradoNombre: '', nivelNombre: '' });
+  };
+
+  const handleSectionCreated = (newSection) => {
+    setSecciones([...secciones, newSection]);
+    setSuccessMessage('Sección creada correctamente');
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  // Modal handlers - Editar
+  const handleOpenEditarModal = (seccion) => {
+    setModalEditar({
+      isOpen: true,
+      seccion
+    });
+  };
+
+  const handleCloseEditarModal = () => {
+    setModalEditar({ isOpen: false, seccion: null });
+  };
+
+  const handleSectionUpdated = (updatedSection) => {
+    setSecciones(secciones.map(s => s.id === updatedSection.id ? updatedSection : s));
+    setSuccessMessage('Sección actualizada correctamente');
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  // Modal handlers - Eliminar
+  const handleOpenEliminarModal = (seccion) => {
+    setModalEliminar({
+      isOpen: true,
+      seccion
+    });
+  };
+
+  const handleCloseEliminarModal = () => {
+    setModalEliminar({ isOpen: false, seccion: null });
+  };
+
+  const handleSectionDeleted = (sectionId) => {
+    setSecciones(secciones.filter(s => s.id !== sectionId));
+    setSuccessMessage('Sección eliminada correctamente');
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   const exportToCSV = () => {
-    const headers = ['Sección', 'Grado', 'Nivel', 'Capacidad', 'Estado'];
+    const headers = ['Nivel', 'Grado', 'Sección', 'Capacidad', 'Estado'];
+    const rows = [];
+    
+    Object.values(estructuraFiltrada).forEach(nivelData => {
+      Object.values(nivelData.grados).forEach(gradoData => {
+        gradoData.secciones.forEach(seccion => {
+          rows.push([
+            nivelData.nivel?.nombre_nivel || 'N/A',
+            gradoData.grado?.nombre_grado || '',
+            seccion.nombre_seccion,
+            seccion.capacidad || 30,
+            seccion.activo ? 'Activo' : 'Inactivo'
+          ]);
+        });
+      });
+    });
+    
     const csvData = [
       headers.join(','),
-      ...filteredSecciones.map(seccion => {
-        const grado = grados.find(g => g.id === seccion.gradoID);
-        const nivel = niveles.find(n => n.id === grado?.nivelID);
-        return [
-          seccion.nombre_seccion,
-          grado?.nombre_grado || '',
-          nivel?.nombre_nivel || '',
-          seccion.capacidad || 30,
-          seccion.activo ? 'Activo' : 'Inactivo'
-        ].join(',');
-      })
+      ...rows.map(row => row.join(','))
     ].join('\n');
     
     const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
@@ -159,17 +290,18 @@ const SeccionesList = () => {
     document.body.removeChild(link);
   };
 
-  // Paginación
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredSecciones.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredSecciones.length / itemsPerPage);
+  const toggleNivel = (nivelId) => {
+    setExpandedNiveles(prev => ({
+      ...prev,
+      [nivelId]: !prev[nivelId]
+    }));
+  };
 
-  // Obtener grado e información asociada
-  const getGradoInfo = (gradoID) => {
-    const grado = grados.find(g => g.id === gradoID);
-    const nivel = grado ? niveles.find(n => n.id === grado.nivelID) : null;
-    return { grado, nivel };
+  const toggleGrado = (gradoId) => {
+    setExpandedGrados(prev => ({
+      ...prev,
+      [gradoId]: !prev[gradoId]
+    }));
   };
 
   if (loading) {
@@ -209,7 +341,7 @@ const SeccionesList = () => {
                     Gestión de Secciones
                   </h1>
                   <p className="text-purple-200 text-lg">
-                    Administra las secciones académicas de la institución
+                    Administra las secciones académicas organizadas por nivel y grado
                   </p>
                 </div>
               </div>
@@ -220,7 +352,7 @@ const SeccionesList = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-purple-200 text-sm font-medium">Total Secciones</p>
-                      <p className="text-2xl font-bold text-white">{filteredSecciones.length}</p>
+                      <p className="text-2xl font-bold text-white">{stats.totalSecciones}</p>
                     </div>
                     <FaGraduationCap className="w-8 h-8 text-purple-300" />
                   </div>
@@ -229,8 +361,8 @@ const SeccionesList = () => {
                 <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-colors duration-300">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-purple-200 text-sm font-medium">Grados Activos</p>
-                      <p className="text-2xl font-bold text-white">{grados.length}</p>
+                      <p className="text-purple-200 text-sm font-medium">Grados</p>
+                      <p className="text-2xl font-bold text-white">{stats.totalGrados}</p>
                     </div>
                     <FaBook className="w-8 h-8 text-purple-300" />
                   </div>
@@ -239,25 +371,15 @@ const SeccionesList = () => {
                 <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-colors duration-300">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-purple-200 text-sm font-medium">Año Escolar</p>
-                      <p className="text-2xl font-bold text-white">{annoEscolar?.periodo || 'N/A'}</p>
+                      <p className="text-purple-200 text-sm font-medium">Niveles</p>
+                      <p className="text-2xl font-bold text-white">{stats.totalNiveles}</p>
                     </div>
                     <FaUsers className="w-8 h-8 text-purple-300" />
                   </div>
                 </div>
               </div>
             </div>
-            
-            {/* Action Button */}
-            <div className="mt-8 lg:mt-0 lg:ml-8">
-              <Link
-                to="/admin/academico/secciones/nuevo"
-                className="inline-flex items-center px-8 py-4 bg-white/20 backdrop-blur-md text-white font-semibold rounded-2xl border border-white/30 hover:bg-white/30 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-              >
-                <FaPlus className="w-5 h-5 mr-3" />
-                Nueva Sección
-              </Link>
-            </div>
+
           </div>
         </div>
       </div>
@@ -306,7 +428,7 @@ const SeccionesList = () => {
                 <input
                   type="text"
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200"
-                  placeholder="Buscar por sección o grado..."
+                  placeholder="Buscar por nivel, grado o sección..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -315,38 +437,6 @@ const SeccionesList = () => {
 
             {/* View Mode & Actions */}
             <div className="flex items-center space-x-3">
-              {/* View Mode Toggle */}
-              <div className="flex bg-gray-100 rounded-xl p-1">
-                <button
-                  onClick={() => {
-                    setViewMode('list');
-                    setCurrentPage(1);
-                  }}
-                  className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    viewMode === 'list'
-                      ? 'bg-white text-purple-600 shadow-sm'
-                      : 'text-gray-600 hover:text-purple-600'
-                  }`}
-                >
-                  <FaList className="w-4 h-4 mr-2" />
-                  Lista
-                </button>
-                <button
-                  onClick={() => {
-                    setViewMode('cards');
-                    setCurrentPage(1);
-                  }}
-                  className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    viewMode === 'cards'
-                      ? 'bg-white text-purple-600 shadow-sm'
-                      : 'text-gray-600 hover:text-purple-600'
-                  }`}
-                >
-                  <FaTh className="w-4 h-4 mr-2" />
-                  Tarjetas
-                </button>
-              </div>
-
               {/* Export Button */}
               <button
                 onClick={exportToCSV}
@@ -373,278 +463,204 @@ const SeccionesList = () => {
         </div>
       </div>
 
-      {/* Content */}
-      {viewMode === 'list' ? (
-        // Lista View
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-purple-50 to-purple-100">
-                <tr>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-purple-800 uppercase tracking-wider">
-                    Sección
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-purple-800 uppercase tracking-wider">
-                    Grado
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-purple-800 uppercase tracking-wider">
-                    Nivel
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-purple-800 uppercase tracking-wider">
-                    Capacidad
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-purple-800 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-purple-800 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {currentItems.length > 0 ? (
-                  currentItems.map((seccion) => {
-                    const { grado, nivel } = getGradoInfo(seccion.gradoID);
-                    return (
-                      <tr key={seccion.id} className="hover:bg-purple-50/50 transition-colors duration-200">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-12 w-12">
-                              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                                <span className="text-white font-semibold text-lg">
-                                  {seccion.nombre_seccion?.charAt(0)}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-semibold text-gray-900">
-                                {seccion.nombre_seccion}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                Sección
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {grado ? formatearNombreGrado(grado.nombre_grado) : 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                            {nivel ? formatearNombreNivel(nivel.nombre_nivel) : 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {seccion.capacidad || 30} estudiantes
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            seccion.activo 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {seccion.activo ? 'Activa' : 'Inactiva'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center space-x-3">
-                            <Link
-                              to={`/admin/academico/secciones/${seccion.id}`}
-                              className="inline-flex items-center px-3 py-2 border border-purple-300 rounded-lg text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors duration-200"
-                              title="Ver detalles"
-                            >
-                              <FaEye className="w-4 h-4" />
-                            </Link>
-                            <Link
-                              to={`/admin/academico/secciones/editar/${seccion.id}`}
-                              className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors duration-200"
-                              title="Editar"
-                            >
-                              <FaEdit className="w-4 h-4" />
-                            </Link>
-                            <button
-                              onClick={() => handleDeleteSeccion(seccion.id)}
-                              className="inline-flex items-center px-3 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors duration-200"
-                              title="Eliminar"
-                            >
-                              <FaTrash className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center">
-                        <FaChalkboard className="w-12 h-12 text-gray-400 mb-4" />
-                        <p className="text-lg font-medium text-gray-900 mb-2">No se encontraron secciones</p>
-                        <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        // Tarjetas View
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {currentItems.length > 0 ? (
-            currentItems.map((seccion) => {
-              const { grado, nivel } = getGradoInfo(seccion.gradoID);
-              return (
-                <div
-                  key={seccion.id}
-                  className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-                >
-                  {/* Header Color Band */}
-                  <div className="h-2 bg-gradient-to-r from-purple-500 to-purple-600"></div>
-
-                  <div className="p-6">
-                    {/* Avatar y nombre */}
-                    <div className="flex items-center mb-6">
-                      <div className="flex-shrink-0 h-14 w-14">
-                        <div className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                          <span className="text-white font-bold text-xl">
-                            {seccion.nombre_seccion?.charAt(0)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="ml-4 flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 truncate">
-                          Sección {seccion.nombre_seccion}
-                        </h3>
-                        <p className="text-sm text-gray-500">Académica</p>
-                      </div>
-                    </div>
-
-                    {/* Información */}
-                    <div className="space-y-4 mb-6">
-                      <div className="flex items-start">
-                        <FaBook className="w-4 h-4 text-purple-600 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium">Grado</p>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {grado ? formatearNombreGrado(grado.nombre_grado) : 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start">
-                        <FaGraduationCap className="w-4 h-4 text-purple-600 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium">Nivel</p>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {nivel ? formatearNombreNivel(nivel.nombre_nivel) : 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start">
-                        <FaUsers className="w-4 h-4 text-purple-600 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium">Capacidad</p>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {seccion.capacidad || 30} estudiantes
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Status Badge */}
-                    <div className="mb-6">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                        seccion.activo 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {seccion.activo ? '● Activa' : '● Inactiva'}
-                      </span>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <Link
-                        to={`/admin/academico/secciones/${seccion.id}`}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-purple-300 rounded-lg text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors duration-200"
-                        title="Ver detalles"
-                      >
-                        <FaEye className="w-4 h-4" />
-                      </Link>
-                      <Link
-                        to={`/admin/academico/secciones/editar/${seccion.id}`}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-blue-300 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors duration-200"
-                        title="Editar"
-                      >
-                        <FaEdit className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => handleDeleteSeccion(seccion.id)}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors duration-200"
-                        title="Eliminar"
-                      >
-                        <FaTrash className="w-4 h-4" />
-                      </button>
-                    </div>
+      {/* Hierarchical View */}
+      <div className="space-y-6">
+        {Object.entries(estructuraFiltrada).length > 0 ? (
+          Object.entries(estructuraFiltrada).map(([nivelId, nivelData]) => (
+            <div key={nivelId} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+              {/* Nivel Header */}
+              <button
+                onClick={() => toggleNivel(nivelId)}
+                className="w-full px-6 py-4 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-150 transition-colors duration-200 flex items-center justify-between border-b border-gray-100"
+              >
+                <div className="flex items-center space-x-4 flex-1 text-left">
+                  {expandedNiveles[nivelId] ? (
+                    <FaChevronDown className="w-5 h-5 text-purple-600" />
+                  ) : (
+                    <FaChevronRight className="w-5 h-5 text-purple-600" />
+                  )}
+                  <div className="p-2 bg-purple-500/20 rounded-lg">
+                    <FaGraduationCap className="w-5 h-5 text-purple-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      {nivelData.nivel ? formatearNombreNivel(nivelData.nivel.nombre_nivel) : 'Nivel desconocido'}
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      {Object.keys(nivelData.grados).length} grado(s) • {
+                        Object.values(nivelData.grados).reduce((sum, g) => sum + g.secciones.length, 0)
+                      } sección(es)
+                    </p>
                   </div>
                 </div>
-              );
-            })
-          ) : (
-            <div className="col-span-full">
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12">
-                <div className="flex flex-col items-center">
-                  <FaChalkboard className="w-12 h-12 text-gray-400 mb-4" />
-                  <p className="text-lg font-medium text-gray-900 mb-2">No se encontraron secciones</p>
-                  <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+              </button>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-8 flex items-center justify-center space-x-2">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-          >
-            Anterior
-          </button>
-          
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors duration-200 ${
-                currentPage === page
-                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-          
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-          >
-            Siguiente
-          </button>
-        </div>
-      )}
+              {/* Nivel Content */}
+              {expandedNiveles[nivelId] && (
+                <div className="p-6 space-y-4">
+                  {Object.entries(nivelData.grados).map(([gradoId, gradoData]) => (
+                    <div key={gradoId} className="border border-gray-200 rounded-xl overflow-hidden">
+                      {/* Grado Header */}
+                      <button
+                        onClick={() => toggleGrado(gradoId)}
+                        className="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-150 transition-colors duration-200 flex items-center space-x-3 text-left"
+                      >
+                        {expandedGrados[gradoId] ? (
+                          <FaChevronDown className="w-4 h-4 text-blue-600" />
+                        ) : (
+                          <FaChevronRight className="w-4 h-4 text-blue-600" />
+                        )}
+                        <div className="p-1.5 bg-blue-500/20 rounded-lg">
+                          <FaBook className="w-4 h-4 text-blue-700" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {formatearNombreGrado(gradoData.grado.nombre_grado)}
+                          </h3>
+                          <p className="text-xs text-gray-600">
+                            {gradoData.secciones.length} sección(es)
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* Secciones Grid */}
+                      {expandedGrados[gradoId] && (
+                        <div className="p-4 bg-gray-50/50">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {gradoData.secciones.map((seccion) => (
+                              <div
+                                key={seccion.id}
+                                className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300 p-4"
+                              >
+                                {/* Header Color Band */}
+                                <div className="h-1 bg-gradient-to-r from-purple-500 to-purple-600 -mx-4 -mt-4 mb-4"></div>
+
+                                {/* Avatar y nombre */}
+                                <div className="flex items-center mb-4">
+                                  <div className="flex-shrink-0 h-10 w-10">
+                                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                                      <span className="text-white font-bold text-sm">
+                                        {seccion.nombre_seccion?.charAt(0)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="ml-3 flex-1">
+                                    <h4 className="text-sm font-semibold text-gray-900">
+                                      Sección {seccion.nombre_seccion}
+                                    </h4>
+                                  </div>
+                                </div>
+
+                                {/* Información */}
+                                <div className="space-y-2 mb-4 text-xs">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Capacidad:</span>
+                                    <span className="font-semibold text-gray-900">{seccion.capacidad || 30} est.</span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Estado:</span>
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                      seccion.activo 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {seccion.activo ? '● Activa' : '● Inactiva'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleOpenEditarModal(seccion)}
+                                    className="flex-1 inline-flex items-center justify-center px-2 py-1.5 border border-blue-300 rounded-lg text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors duration-200"
+                                    title="Editar"
+                                  >
+                                    <FaEdit className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenEliminarModal(seccion)}
+                                    className="flex-1 inline-flex items-center justify-center px-2 py-1.5 border border-red-300 rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors duration-200"
+                                    title="Eliminar"
+                                  >
+                                    <FaTrash className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Card Añadir Nueva Sección */}
+                            <button
+                              onClick={() => handleOpenCrearModal(
+                                gradoId,
+                                formatearNombreGrado(gradoData.grado.nombre_grado),
+                                formatearNombreNivel(nivelData.nivel.nombre_nivel)
+                              )}
+                              className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow border-2 border-dashed border-purple-300 overflow-hidden hover:shadow-lg hover:from-purple-100 hover:to-purple-150 transition-all duration-300 p-4 flex flex-col items-center justify-center min-h-[240px] group"
+                            >
+                              {/* Header Color Band */}
+                              <div className="h-1 bg-gradient-to-r from-purple-500 to-purple-600 -mx-4 -mt-4 mb-4 w-full"></div>
+
+                              {/* Icon and Text */}
+                              <div className="flex flex-col items-center justify-center flex-1 space-y-3">
+                                <div className="p-3 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full group-hover:scale-110 transition-transform duration-300">
+                                  <FaPlus className="w-6 h-6 text-white" />
+                                </div>
+                                <div className="text-center">
+                                  <h4 className="text-sm font-semibold text-purple-900">
+                                    Añadir Sección
+                                  </h4>
+                                  <p className="text-xs text-purple-600 mt-1">
+                                    Crear nueva
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12">
+            <div className="flex flex-col items-center text-center">
+              <FaChalkboard className="w-16 h-16 text-gray-400 mb-4" />
+              <p className="text-lg font-semibold text-gray-900 mb-2">No se encontraron secciones</p>
+              <p className="text-gray-600">
+                {searchTerm ? 'Intenta ajustar los filtros de búsqueda' : 'Comienza creando una nueva sección'}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modales */}
+      <CrearSeccion
+        isOpen={modalCrear.isOpen}
+        onClose={handleCloseCrearModal}
+        gradoId={modalCrear.gradoId}
+        gradoNombre={modalCrear.gradoNombre}
+        nivelNombre={modalCrear.nivelNombre}
+        onSectionCreated={handleSectionCreated}
+      />
+
+      <EditarSeccion
+        isOpen={modalEditar.isOpen}
+        onClose={handleCloseEditarModal}
+        seccion={modalEditar.seccion}
+        onSectionUpdated={handleSectionUpdated}
+      />
+
+      <EliminarSeccion
+        isOpen={modalEliminar.isOpen}
+        onClose={handleCloseEliminarModal}
+        seccion={modalEliminar.seccion}
+        onSectionDeleted={handleSectionDeleted}
+      />
     </div>
   );
 };

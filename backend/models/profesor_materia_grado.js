@@ -30,6 +30,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'annoEscolarID',
         as: 'annoEscolar'
       });
+
+      Profesor_Materia_Grados.belongsTo(models.Secciones, {
+        foreignKey: 'seccionID',
+        as: 'seccion'
+      });
     }
   }
   
@@ -69,6 +74,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       references: {
         model: 'AnnoEscolar',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE'
+    },
+    seccionID: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Secciones',
         key: 'id'
       },
       onUpdate: 'CASCADE',

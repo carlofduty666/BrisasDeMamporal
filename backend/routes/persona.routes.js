@@ -3,6 +3,7 @@ const router = express.Router();
 const personaController = require('../controllers/persona.controller');
 const authMiddleware = require('../middleware/auth.middleware');
 
+router.get('/personas/profesor/materia-grado', authMiddleware.verifyToken, personaController.getProfesorByMateriaGrado); // Para obtener profesores por materia y grado
 router.get('/personas', authMiddleware.verifyToken, personaController.getPersonasByQuery); // Para obtener todas las personas
 router.get('/personas/criterio/:field/:value', authMiddleware.verifyToken, personaController.getPersonaByCriterio); // Para obtener una persona por criterio es decir 
 router.get('/personas/:id/roles', authMiddleware.verifyToken, personaController.getRolesDePersona);
