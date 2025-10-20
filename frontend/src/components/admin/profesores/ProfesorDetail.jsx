@@ -1937,7 +1937,7 @@ useEffect(() => {
                 try {
                   // Obtener materias asignadas a este grado
                   const response = await axios.get(
-                    `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/grado/${selectedGradoID}`,
+                    `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grado/${selectedGradoID}/materias`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                   );
                   

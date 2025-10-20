@@ -61,7 +61,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     gradoID: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'Grados',
         key: 'id'

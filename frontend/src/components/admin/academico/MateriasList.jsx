@@ -16,7 +16,8 @@ import {
 } from 'react-icons/fa';
 import { getMateriaStyles, MateriaIcon } from '../../../utils/materiaStyles';
 import AsignarMateriaGradoSeccion from './modals/AsignarMateriaGradoSeccion';
-import AsignarProfesorMateriaGradoSeccion from './modals/AsignarProfesorMateriaGradoSeccion';
+import AsignarProfesorMateria from './modals/AsignarProfesorMateria';
+import AsignarProfesorGrado from './modals/AsignarProfesorGrado';
 import MateriaDetail from './MateriaDetail';
 
 const MateriasList = () => {
@@ -37,10 +38,12 @@ const MateriasList = () => {
 
   // Modales
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAsignGradoSeccionModal, setShowAsignGradoSeccionModal] = useState(false);
-  const [showAsignProfesorModal, setShowAsignProfesorModal] = useState(false);
+  const [showAsignMateriaGradoModal, setShowAsignMateriaGradoModal] = useState(false);
+  const [showAsignProfesorMateriaModal, setShowAsignProfesorMateriaModal] = useState(false);
+  const [showAsignProfesorGradoModal, setShowAsignProfesorGradoModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedMateria, setSelectedMateria] = useState(null);
+  const [profesoresAsignadosAMateria, setProfesoresAsignadosAMateria] = useState([]);
 
   // Formularios
   const [newMateria, setNewMateria] = useState({ asignatura: '' });
@@ -105,7 +108,7 @@ const MateriasList = () => {
           materiasData.map(async (materia) => {
             try {
               const gradosResponse = await axios.get(
-                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/grado/${materia.id}`,
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/${materia.id}/grados`,
                 { ...config, params: { annoEscolarID: annoResponse.data.id } }
               );
               
@@ -144,13 +147,55 @@ const MateriasList = () => {
           { ...config, params: { tipo: 'profesor' } }
         );
         
+        let profesoresData = [];
         if (Array.isArray(profesoresResponse.data)) {
-          setProfesores(profesoresResponse.data.filter(p => p.tipo === 'profesor'));
+          profesoresData = profesoresResponse.data.filter(p => p.tipo === 'profesor');
         } else if (profesoresResponse.data?.tipo === 'profesor') {
-          setProfesores([profesoresResponse.data]);
-        } else {
-          setProfesores([]);
+          profesoresData = [profesoresResponse.data];
         }
+        
+        // Enriquecer profesores con sus materias asignadas
+        const profesoresEnriquecidos = await Promise.all(
+          profesoresData.map(async (profesor) => {
+            try {
+              const materiasResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/profesor/${profesor.id}`,
+                config
+              );
+              
+              let materias = Array.isArray(materiasResponse.data) 
+                ? materiasResponse.data 
+                : (materiasResponse.data?.data ? materiasResponse.data.data : []);
+              
+              // Extraer nombres únicos de materias
+              const materiasUnicas = [...new Set(
+                materias
+                  .map(m => m.asignatura || m.nombre)
+                  .filter(Boolean)
+              )];
+              
+              const profesor_enriquecido = {
+                ...profesor,
+                materiasAsignadas: materiasUnicas
+              };
+              
+              // console.log(`Profesor ${profesor.id} (${profesor.nombre}): ${materiasUnicas.join(', ') || 'Sin materias'}`);
+              
+              return profesor_enriquecido;
+            } catch (err) {
+              // Si no existe el endpoint, devolver sin materias asignadas
+              if (err.response?.status === 404) {
+                // console.log(`Profesor ${profesor.id}: No tiene materias asignadas (404)`);
+                return { ...profesor, materiasAsignadas: [] };
+              }
+              console.warn(`Error enriqueciendo profesor ${profesor.id}:`, err.message);
+              return { ...profesor, materiasAsignadas: [] };
+            }
+          })
+        );
+        
+        // console.log('Profesores enriquecidos:', profesoresEnriquecidos);
+        setProfesores(profesoresEnriquecidos);
         
         // Obtener secciones
         const seccionesResponse = await axios.get(
@@ -228,20 +273,37 @@ const MateriasList = () => {
     }
   };
 
-  const handleAsignGrado = async (form) => {
+  const handleAsignMateriaGrado = async (form) => {
     try {
       setLoading(true);
-      await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/asignar-a-grado`,
-        {
-          materiaID: selectedMateria.id,
-          gradoID: form.gradoID,
-          annoEscolarID: form.annoEscolarID || annoEscolar.id
-        },
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      // Enviar múltiples grados
+      if (form.gradoID) {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/asignar-a-grado`,
+          {
+            materiaID: selectedMateria.id,
+            gradoID: form.gradoID,
+            annoEscolarID: form.annoEscolarID || annoEscolar.id
+          },
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+      } else if (form.gradoIDs && Array.isArray(form.gradoIDs)) {
+        // Soporte para múltiples grados
+        for (const gradoID of form.gradoIDs) {
+          await axios.post(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/asignar-a-grado`,
+            {
+              materiaID: selectedMateria.id,
+              gradoID,
+              annoEscolarID: form.annoEscolarID || annoEscolar.id
+            },
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+        }
+      }
       
       setSuccessMessage('Materia asignada al grado correctamente');
+      setShowAsignMateriaGradoModal(false);
       
       // Refrescar materias
       const materiasResponse = await axios.get(
@@ -276,51 +338,73 @@ const MateriasList = () => {
     }
   };
 
-  const handleAsignSeccion = async (form) => {
+  const handleAsignProfesorMateria = async (form) => {
+    // Esta función es llamada por el modal AsignarProfesorMateria
+    // El modal maneja los mensajes de éxito/error
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/asignar-profesor-materia`,
+      {
+        materiaID: selectedMateria.id,
+        profesorID: form.profesorID,
+        annoEscolarID: form.annoEscolarID || annoEscolar.id
+      },
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    
+    // Cargar profesores asignados nuevamente (en segundo plano)
     try {
-      setLoading(true);
-      await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/asignar-a-seccion`,
-        {
-          materiaID: selectedMateria.id,
-          seccionID: form.seccionID,
-          annoEscolarID: form.annoEscolarID || annoEscolar.id
-        },
+      const profesoresResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/${selectedMateria.id}/profesores`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
-      
-      setSuccessMessage('Materia asignada a sección correctamente');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      setLoading(false);
+      setProfesoresAsignadosAMateria(profesoresResponse.data || []);
     } catch (err) {
-      console.error('Error al asignar materia a sección:', err);
-      setError(err.response?.data?.message || 'Error al asignar materia');
-      setLoading(false);
+      console.warn('Error al cargar profesores asignados:', err);
     }
+    
+    return response;
   };
 
-  const handleAsignProfesor = async (form) => {
+  const handleAsignProfesorGrado = async (form) => {
+    // Esta función es llamada por el modal AsignarProfesorGrado
+    // El modal maneja los mensajes de éxito/error
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/asignar-profesor-grado`,
+      {
+        materiaID: selectedMateria.id,
+        profesorID: form.profesorID,
+        gradoID: form.gradoID,
+        seccionID: form.seccionID,
+        annoEscolarID: form.annoEscolarID || annoEscolar.id
+      },
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    
+    // Refrescar profesores asignados en segundo plano para actualización en tiempo real
     try {
-      setLoading(true);
-      await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/asignar-profesor`,
-        {
-          profesorID: form.profesorID,
-          materiaID: selectedMateria.id,
-          gradoID: form.gradoID,
-          seccionID: form.seccionID,
-          annoEscolarID: form.annoEscolarID || annoEscolar.id
-        },
+      const profesoresResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/${selectedMateria.id}/profesores`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
-      
-      setSuccessMessage('Profesor asignado correctamente');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      setLoading(false);
+      setProfesoresAsignadosAMateria(profesoresResponse.data || []);
     } catch (err) {
-      console.error('Error al asignar profesor:', err);
-      setError(err.response?.data?.message || 'Error al asignar profesor');
-      setLoading(false);
+      console.warn('Error al refrescar profesores asignados:', err);
+    }
+    
+    return response;
+  };
+
+  // Cargar profesores asignados a una materia
+  const loadProfesoresAsignados = async (materiaID) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/${materiaID}/profesores`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      setProfesoresAsignadosAMateria(response.data || []);
+    } catch (err) {
+      // Si no hay endpoint, establecer vacío
+      setProfesoresAsignadosAMateria([]);
     }
   };
 
@@ -698,28 +782,29 @@ const MateriasList = () => {
                   )}
 
                   {/* Actions */}
-                  <div className="px-6 py-4 bg-white/30 border-t border-gray-200 flex gap-2">
+                  <div className="px-6 py-4 bg-white/30 border-t border-gray-200 grid grid-cols-2 gap-2">
                     <button
                       onClick={() => {
                         setSelectedMateria(materia);
-                        setShowAsignGradoSeccionModal(true);
+                        setShowAsignMateriaGradoModal(true);
                       }}
-                      className={`flex-1 py-2 px-3 ${textColor} bg-white/60 hover:bg-white border border-current rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2`}
-                      title="Asignar a Grado y Sección"
+                      className="py-2 px-2 bg-orange-500/20 hover:bg-orange-500/40 border border-orange-400 text-orange-700 rounded-lg transition-colors text-xs font-medium flex items-center justify-center gap-1 hover:shadow-md"
+                      title="Asignar Materia a Grado"
                     >
-                      <FaLayerGroup className="w-4 h-4" />
-                      <span className="hidden sm:inline">Grado/Sección</span>
+                      <FaLayerGroup className="w-3 h-3" />
+                      <span className="hidden sm:inline">Asignar a grado</span>
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setSelectedMateria(materia);
-                        setShowAsignProfesorModal(true);
+                        await loadProfesoresAsignados(materia.id);
+                        setShowAsignProfesorMateriaModal(true);
                       }}
-                      className={`flex-1 py-2 px-3 ${textColor} bg-white/60 hover:bg-white border border-current rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2`}
-                      title="Asignar Profesor"
+                      className="py-2 px-2 bg-blue-500/20 hover:bg-blue-500/40 border border-blue-400 text-blue-700 rounded-lg transition-colors text-xs font-medium flex items-center justify-center gap-1 hover:shadow-md"
+                      title="Asignar Profesor a Materia"
                     >
-                      <FaChalkboardTeacher className="w-4 h-4" />
-                      <span className="hidden sm:inline">Profesor</span>
+                      <FaChalkboardTeacher className="w-3 h-3" />
+                      <span className="hidden sm:inline">Asignar a profesor</span>
                     </button>
                   </div>
                 </div>
@@ -795,20 +880,21 @@ const MateriasList = () => {
                           <button
                             onClick={() => {
                               setSelectedMateria(materia);
-                              setShowAsignGradoSeccionModal(true);
+                              setShowAsignMateriaGradoModal(true);
                             }}
                             className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
-                            title="Asignar a Grado y Sección"
+                            title="Asignar Materia a Grado"
                           >
                             <FaLayerGroup className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               setSelectedMateria(materia);
-                              setShowAsignProfesorModal(true);
+                              await loadProfesoresAsignados(materia.id);
+                              setShowAsignProfesorMateriaModal(true);
                             }}
                             className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                            title="Asignar Profesor"
+                            title="Asignar Profesor a Materia"
                           >
                             <FaChalkboardTeacher className="w-4 h-4" />
                           </button>
@@ -895,32 +981,48 @@ const MateriasList = () => {
         </div>
       )}
 
-      {/* Modales importados */}
+      {/* Modales importados - Nuevo flujo de tres pasos */}
+      
+      {/* Paso 1: Asignar Materia a Grado */}
       <AsignarMateriaGradoSeccion 
-        isOpen={showAsignGradoSeccionModal}
-        onClose={() => setShowAsignGradoSeccionModal(false)}
+        isOpen={showAsignMateriaGradoModal}
+        onClose={() => setShowAsignMateriaGradoModal(false)}
         materia={selectedMateria}
         grados={grados}
-        secciones={secciones}
         annoEscolar={annoEscolar}
         loading={loading}
-        onSubmitGrado={handleAsignGrado}
-        onSubmitSeccion={handleAsignSeccion}
+        onSubmit={handleAsignMateriaGrado}
         gradosYaAsignados={selectedMateria?.gradosAsignados?.map(g => g.id) || []}
-        seccionesYaAsignadas={selectedMateria?.seccionesAsignadas?.map(s => s.id) || []}
       />
 
-      <AsignarProfesorMateriaGradoSeccion
-        isOpen={showAsignProfesorModal}
-        onClose={() => setShowAsignProfesorModal(false)}
+      {/* Paso 2: Asignar Profesor a Materia */}
+      <AsignarProfesorMateria
+        isOpen={showAsignProfesorMateriaModal}
+        onClose={() => setShowAsignProfesorMateriaModal(false)}
         materia={selectedMateria}
         profesores={profesores}
+        annoEscolar={annoEscolar}
+        loading={loading}
+        onSubmit={handleAsignProfesorMateria}
+        profesoresYaAsignados={profesoresAsignadosAMateria}
+        onSuccessAndContinue={() => {
+          setShowAsignProfesorMateriaModal(false);
+          setShowAsignProfesorGradoModal(true);
+        }}
+      />
+
+      {/* Paso 3: Asignar Profesor a Grado y Sección */}
+      <AsignarProfesorGrado
+        isOpen={showAsignProfesorGradoModal}
+        onClose={() => setShowAsignProfesorGradoModal(false)}
+        materia={selectedMateria}
         grados={grados}
+        profesores={profesores}
         secciones={secciones}
         annoEscolar={annoEscolar}
         loading={loading}
-        onSubmit={handleAsignProfesor}
-        profesoresYaAsignados={selectedMateria?.profesoresAsignados || []}
+        onSubmit={handleAsignProfesorGrado}
+        profesoresYaAsignados={profesoresAsignadosAMateria}
       />
 
       {/* Modal de Detalles de Materia */}
@@ -930,6 +1032,7 @@ const MateriasList = () => {
         materia={selectedMateria}
         grados={grados}
         token={token}
+        annoEscolar={annoEscolar}
       />
 
       <style>{`

@@ -81,14 +81,14 @@ const AsignarMateriaGrado = ({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-fade-in"
+        className="fixed inset-0 bg-black/40 z-40 fade-in"
         onClick={handleBackdropClick}
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="fixed inset-0 flex items-center justify-center z-50 p-4 fade-in">
         <div
-          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border-2 border-orange-200 animate-slide-up"
+          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border-2 border-orange-200 slide-up"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -104,7 +104,7 @@ const AsignarMateriaGrado = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+              className="p-1 hover:bg-white/20 rounded-lg"
               aria-label="Cerrar"
             >
               <FaTimes className="w-5 h-5 text-white" />
@@ -144,7 +144,7 @@ const AsignarMateriaGrado = ({
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+                  className="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded"
                 >
                   {selectedGrados.length === gradosDisponibles.length ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
                 </button>
@@ -158,7 +158,7 @@ const AsignarMateriaGrado = ({
                   </p>
                 ) : (
                   gradosDisponibles.map((grado) => (
-                    <label key={grado.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors">
+                    <label key={grado.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
                       <input
                         type="checkbox"
                         checked={selectedGrados.includes(grado.id)}
@@ -178,14 +178,14 @@ const AsignarMateriaGrado = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-all duration-200"
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading || selectedGrados.length === 0}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white font-semibold rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Asignando...' : `Asignar (${selectedGrados.length})`}
                 </button>
@@ -196,32 +196,28 @@ const AsignarMateriaGrado = ({
       </div>
 
       <style>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
+        .fade-in {
+          animation: fadeIn 0.15s ease-in-out forwards;
         }
 
-        @keyframes slide-up {
+        .slide-up {
+          animation: slideUp 0.2s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
           from {
-            transform: translateY(20px);
+            transform: translateY(10px);
             opacity: 0;
           }
           to {
             transform: translateY(0);
             opacity: 1;
           }
-        }
-
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out forwards;
-        }
-
-        .animate-slide-up {
-          animation: slide-up 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
       `}</style>
     </>

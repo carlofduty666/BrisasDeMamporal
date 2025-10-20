@@ -18,6 +18,7 @@ import {
   FaClock
 } from 'react-icons/fa';
 import { getMateriaStyles } from '../../../utils/materiaStyles';
+import { formatearNombreGrado } from '../../../utils/formatters'
 
 const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
   const [loading, setLoading] = useState(true);
@@ -26,6 +27,7 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
   const [secciones, setSecciones] = useState([]);
   const [selectedSeccion, setSelectedSeccion] = useState('');
   const [selectedLapso, setSelectedLapso] = useState('');
+  const [selectedProfesor, setSelectedProfesor] = useState('');
   const [selectedEvaluacion, setSelectedEvaluacion] = useState(null);
   const [activeView, setActiveView] = useState('evaluaciones'); // 'evaluaciones' o 'calificaciones'
   
@@ -175,6 +177,11 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
 
   const lapsos = [1, 2, 3];
 
+  // Filtrar evaluaciones por profesor seleccionado
+  const evaluacionesFiltradas = selectedProfesor 
+    ? evaluaciones.filter(ev => ev.Profesor && ev.Profesor.id == selectedProfesor)
+    : evaluaciones;
+
   return (
     <div className="fixed z-50 inset-0 overflow-y-auto animate-fade-in">
       <div className="flex items-center justify-center min-h-screen px-4 py-6">
@@ -199,7 +206,7 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                     {materia.asignatura}
                   </h2>
                   <p className={`text-sm ${textColor} opacity-80 mt-1`}>
-                    {grado.nombre_grado} - {annoEscolar.periodo}
+                    {formatearNombreGrado(grado.nombre_grado)} - {annoEscolar.periodo}
                   </p>
                 </div>
               </div>
@@ -243,7 +250,7 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                   style={activeView === 'evaluaciones' ? { borderBottom: `3px solid ${iconColor}` } : {}}
                 >
                   <FaClipboardList className="inline-block w-4 h-4 mr-2" />
-                  Evaluaciones ({evaluaciones.length})
+                  Evaluaciones ({evaluacionesFiltradas.length}{selectedProfesor && evaluaciones.length !== evaluacionesFiltradas.length ? `/${evaluaciones.length}` : ''})
                 </button>
                 <button
                   onClick={() => setActiveView('estadisticas')}
@@ -263,7 +270,7 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
 
           {/* Filtros */}
           <div className={`${bgColor} bg-opacity-5 px-6 py-4 border-b-2`} style={{ borderColor: iconColor }}>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4 mb-4">
               <div className="flex-1 min-w-[200px]">
                 <label className={`block text-sm font-semibold mb-2 ${textColor}`}>
                   <FaUserGraduate className="inline-block w-4 h-4 mr-1" />
@@ -309,6 +316,41 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                 </select>
               </div>
             </div>
+
+            {/* Filtro de Profesor */}
+            {materia.profesoresAsignados && materia.profesoresAsignados.length > 0 && (
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${textColor}`}>
+                  <FaChalkboardTeacher className="inline-block w-4 h-4 mr-1" />
+                  Filtrar por Profesor
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedProfesor('')}
+                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                      !selectedProfesor
+                        ? `${bgColor} ${textColor} shadow-md`
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  {materia.profesoresAsignados.map((profesor) => (
+                    <button
+                      key={profesor.id}
+                      onClick={() => setSelectedProfesor(profesor.id.toString())}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                        selectedProfesor == profesor.id
+                          ? `${bgColor} ${textColor} shadow-md`
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {profesor.nombre} {profesor.apellido}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Contenido */}
@@ -322,8 +364,8 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                 {/* Vista de Evaluaciones */}
                 {activeView === 'evaluaciones' && (
                   <div className="space-y-4">
-                    {evaluaciones.length > 0 ? (
-                      evaluaciones.map((evaluacion) => {
+                    {evaluacionesFiltradas.length > 0 ? (
+                      evaluacionesFiltradas.map((evaluacion) => {
                         const stats = calcularEstadisticas(evaluacion.id);
                         const isExpanded = selectedEvaluacion?.id === evaluacion.id;
 
@@ -376,6 +418,12 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                       <div className="flex items-center">
                                         <FaUserGraduate className="w-4 h-4 mr-2 text-gray-400" />
                                         Sección {evaluacion.Seccion.nombre_seccion}
+                                      </div>
+                                    )}
+                                    {evaluacion.Profesor && (
+                                      <div className="flex items-center font-semibold" style={{ color: iconColor }}>
+                                        <FaChalkboardTeacher className="w-4 h-4 mr-2" />
+                                        {evaluacion.Profesor.nombre} {evaluacion.Profesor.apellido}
                                       </div>
                                     )}
                                   </div>

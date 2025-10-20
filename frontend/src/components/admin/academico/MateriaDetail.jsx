@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   FaTimes,
@@ -8,11 +8,13 @@ import {
   FaCheckCircle,
   FaSearch,
   FaFilter,
-  FaSpinner
+  FaSpinner,
+  FaTrash
 } from 'react-icons/fa';
 import { getMateriaStyles } from '../../../utils/materiaStyles';
+import QuitarAsignacionMateriaGrado from './modals/QuitarAsignacionMateriaGrado';
 
-const MateriaDetail = ({ materia, grados, isOpen, onClose, token }) => {
+const MateriaDetail = ({ materia, grados, isOpen, onClose, token, annoEscolar }) => {
   const [detailedGrados, setDetailedGrados] = useState([]);
   const [profesores, setProfesores] = useState([]);
   const [secciones, setSecciones] = useState([]);
@@ -20,80 +22,81 @@ const MateriaDetail = ({ materia, grados, isOpen, onClose, token }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [nivelFilter, setNivelFilter] = useState('');
   const [materiaProfesorGrado, setMateriaProfesorGrado] = useState([]);
+  const [showQuitarAsignacionModal, setShowQuitarAsignacionModal] = useState(false);
 
-  // Cargar detalles detallados
+  // Función reutilizable para cargar detalles (wrapped con useCallback)
+  const fetchDetailedData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+
+      // Obtener grados asignados a esta materia
+      const profesorGradoResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/${materia.id}/grados`,
+        config
+      );
+
+      let gradosData = Array.isArray(profesorGradoResponse.data)
+        ? profesorGradoResponse.data
+        : (profesorGradoResponse.data?.data ? profesorGradoResponse.data.data : []);
+
+      // Enriquecer cada grado con sus profesores y secciones
+      const gradosEnriquecidos = await Promise.all(
+        gradosData.map(async (grado) => {
+          try {
+            // Obtener profesores que imparten esta materia en este grado
+            const profResponse = await axios.get(
+              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/profesor/materia-grado`,
+              { ...config, params: { materiaID: materia.id, gradoID: grado.id } }
+            );
+            
+            const profs = Array.isArray(profResponse.data) 
+              ? profResponse.data
+              : (profResponse.data ? [profResponse.data] : []);
+
+            return {
+              ...grado,
+              profesoresAsignados: profs
+            };
+          } catch (err) {
+            console.warn(`Error cargando profesores para grado ${grado.id}:`, err);
+            return {
+              ...grado,
+              profesoresAsignados: []
+            };
+          }
+        })
+      );
+
+      setDetailedGrados(gradosEnriquecidos);
+
+      // Obtener profesores únicos para estadísticas
+      const profesoresUnicos = gradosEnriquecidos
+        .flatMap(g => g.profesoresAsignados)
+        .reduce((map, prof) => {
+          map.set(prof.id, prof);
+          return map;
+        }, new Map());
+      
+      setProfesores([...profesoresUnicos.values()]);
+
+      // Obtener secciones
+      const seccionesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones`,
+        config
+      );
+      setSecciones(Array.isArray(seccionesResponse.data) ? seccionesResponse.data : []);
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Error cargando detalles:', err);
+      setLoading(false);
+    }
+  }, [materia, token]);
+
+  // Cargar detalles cuando se abre el modal
   useEffect(() => {
     if (!isOpen || !materia) return;
-
-    const fetchDetailedData = async () => {
-      try {
-        setLoading(true);
-        const config = { headers: { 'Authorization': `Bearer ${token}` } };
-
-        // Obtener grados asignados a esta materia
-        const profesorGradoResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/grado/${materia.id}`,
-          config
-        );
-
-        let gradosData = Array.isArray(profesorGradoResponse.data)
-          ? profesorGradoResponse.data
-          : (profesorGradoResponse.data?.data ? profesorGradoResponse.data.data : []);
-
-        // Enriquecer cada grado con sus profesores y secciones
-        const gradosEnriquecidos = await Promise.all(
-          gradosData.map(async (grado) => {
-            try {
-              // Obtener profesores que imparten esta materia en este grado
-              const profResponse = await axios.get(
-                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas/profesor/materia-grado`,
-                { ...config, params: { materiaID: materia.id, gradoID: grado.id } }
-              );
-              
-              const profs = Array.isArray(profResponse.data) 
-                ? profResponse.data
-                : (profResponse.data ? [profResponse.data] : []);
-
-              return {
-                ...grado,
-                profesoresAsignados: profs
-              };
-            } catch (err) {
-              console.warn(`Error cargando profesores para grado ${grado.id}:`, err);
-              return {
-                ...grado,
-                profesoresAsignados: []
-              };
-            }
-          })
-        );
-
-        setDetailedGrados(gradosEnriquecidos);
-
-        // Obtener profesores únicos para estadísticas
-        const profesoresUnicos = gradosEnriquecidos
-          .flatMap(g => g.profesoresAsignados)
-          .reduce((map, prof) => {
-            map.set(prof.id, prof);
-            return map;
-          }, new Map());
-        
-        setProfesores([...profesoresUnicos.values()]);
-
-        // Obtener secciones
-        const seccionesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones`,
-          config
-        );
-        setSecciones(Array.isArray(seccionesResponse.data) ? seccionesResponse.data : []);
-
-        setLoading(false);
-      } catch (err) {
-        console.error('Error cargando detalles:', err);
-        setLoading(false);
-      }
-    };
-
     fetchDetailedData();
   }, [isOpen, materia, token]);
 
@@ -229,12 +232,21 @@ const MateriaDetail = ({ materia, grados, isOpen, onClose, token }) => {
                   </div>
                 </div>
 
-                {/* Filtros */}
+                {/* Filtros y Acciones */}
                 <div className="space-y-4">
-                  <h3 className={`text-lg font-bold ${textColor} flex items-center gap-2`}>
-                    <FaFilter className="w-5 h-5" />
-                    Filtros
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className={`text-lg font-bold ${textColor} flex items-center gap-2`}>
+                      <FaFilter className="w-5 h-5" />
+                      Filtros
+                    </h3>
+                    <button
+                      onClick={() => setShowQuitarAsignacionModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white font-medium rounded-lg hover:shadow-lg transition-all duration-200 text-sm gap-2"
+                    >
+                      <FaTrash className="w-4 h-4" />
+                      Quitar Asignaciones
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -339,6 +351,21 @@ const MateriaDetail = ({ materia, grados, isOpen, onClose, token }) => {
           </div>
         </div>
       </div>
+
+      {/* Modal para quitar asignaciones */}
+      <QuitarAsignacionMateriaGrado
+        isOpen={showQuitarAsignacionModal}
+        onClose={() => setShowQuitarAsignacionModal(false)}
+        materia={materia}
+        grados={grados}
+        gradosAsignados={detailedGrados.map(g => g.id)}
+        annoEscolar={annoEscolar}
+        onRefresh={() => {
+          // Recargar solo los datos locales sin hacer reload de la página
+          setShowQuitarAsignacionModal(false);
+          fetchDetailedData();
+        }}
+      />
 
       <style>{`
         @keyframes fade-in {

@@ -186,7 +186,7 @@ const AsignarProfesorMateriaGradoSeccion = ({
                 <FaChalkboardTeacher className="w-5 h-5 text-white" />
               </div>
               <h3 className="text-lg font-bold text-white">
-                Asignar Profesor
+                Asignar Materia a Profesor y Profesor a Seccion. 
               </h3>
             </div>
             <button

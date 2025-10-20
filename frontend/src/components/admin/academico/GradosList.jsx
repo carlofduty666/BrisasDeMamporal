@@ -118,7 +118,7 @@ const GradosList = () => {
               ),
               // Materias - solo contar
               axios.get(
-                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/grado/${grado.id}`,
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grado/${grado.id}/materias`,
                 { 
                   ...config,
                   params: { 

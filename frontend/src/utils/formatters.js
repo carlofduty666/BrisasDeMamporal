@@ -190,7 +190,7 @@ export const tipoDocumentoFormateado = {
   };
 
   // Formateador de cédula
-  // Convierte '29501851' a '29 501 851' separando por columnas posicionales
+  // Convierte '29501851' a 'V- 29 501 851' separando por columnas posicionales con prefijo
   export const formatearCedula = (cedula) => {
     if (!cedula) return '';
     
@@ -213,7 +213,7 @@ export const tipoDocumentoFormateado = {
       }
     }
     
-    return grupos.join(' ');
+    return `V- ${grupos.join(' ')}`;
   };
 
   // === Formateadores de fecha y hora adicionales ===

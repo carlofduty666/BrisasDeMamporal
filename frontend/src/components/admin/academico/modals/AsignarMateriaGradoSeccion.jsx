@@ -7,22 +7,17 @@ const AsignarMateriaGradoSeccion = ({
   onClose, 
   materia, 
   grados, 
-  secciones,
   annoEscolar,
   loading,
-  onSubmitGrado,
-  onSubmitSeccion,
-  gradosYaAsignados = [],
-  seccionesYaAsignadas = []
+  onSubmit,
+  gradosYaAsignados = []
 }) => {
   const [selectedGrados, setSelectedGrados] = useState([]);
-  const [selectedSecciones, setSelectedSecciones] = useState([]);
   const [annoEscolarID, setAnnoEscolarID] = useState(annoEscolar?.id || '');
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
 
   useEffect(() => {
     setSelectedGrados([]);
-    setSelectedSecciones([]);
     setAnnoEscolarID(annoEscolar?.id || '');
   }, [annoEscolar, isOpen]);
 
@@ -48,58 +43,30 @@ const AsignarMateriaGradoSeccion = ({
         ? prev.filter(id => id !== gradoID)
         : [...prev, gradoID]
     );
-    // Resetear secciones cuando cambia la selección de grados
-    setSelectedSecciones([]);
-  };
-
-  const handleToggleSeccion = (seccionID) => {
-    setSelectedSecciones(prev =>
-      prev.includes(seccionID)
-        ? prev.filter(id => id !== seccionID)
-        : [...prev, seccionID]
-    );
   };
 
   const handleSelectAllGrados = () => {
     if (selectedGrados.length === gradosDisponibles.length) {
       setSelectedGrados([]);
-      setSelectedSecciones([]);
     } else {
       setSelectedGrados(gradosDisponibles.map(g => g.id));
-    }
-  };
-
-  const handleSelectAllSecciones = () => {
-    if (selectedSecciones.length === seccionesParaGrados.length) {
-      setSelectedSecciones([]);
-    } else {
-      setSelectedSecciones(seccionesParaGrados.map(s => s.id));
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (selectedGrados.length === 0 && selectedSecciones.length === 0) return;
+    if (selectedGrados.length === 0) return;
 
     // Enviar múltiples asignaciones de grados
     selectedGrados.forEach(gradoID => {
-      onSubmitGrado({
+      onSubmit({
         gradoID,
         annoEscolarID
       });
     });
 
-    // Enviar múltiples asignaciones de secciones
-    selectedSecciones.forEach(seccionID => {
-      onSubmitSeccion({
-        seccionID,
-        annoEscolarID
-      });
-    });
-
     setSelectedGrados([]);
-    setSelectedSecciones([]);
   };
 
   // Filtrar grados ya asignados
@@ -107,22 +74,8 @@ const AsignarMateriaGradoSeccion = ({
     g => !gradosYaAsignados.includes(g.id)
   );
 
-  // Obtener secciones de los grados seleccionados
-  const seccionesParaGrados = selectedGrados.length > 0
-    ? secciones.filter(s =>
-        selectedGrados.includes(s.gradoID) &&
-        !seccionesYaAsignadas.includes(s.id)
-      )
-    : [];
-
-  // Secciones disponibles (no asignadas)
-  const seccionesDisponibles = secciones.filter(
-    s => !seccionesYaAsignadas.includes(s.id)
-  );
-
-  // Obtener información de grados y secciones ya asignados
+  // Obtener información de grados ya asignados
   const gradosAsignados = gradosYaAsignados.map(id => grados.find(g => g.id === id)).filter(Boolean);
-  const seccionesAsignadas = seccionesYaAsignadas.map(id => secciones.find(s => s.id === id)).filter(Boolean);
 
   // Agrupar grados disponibles por nivel
   const gradosPorNivel = gradosDisponibles.reduce((acc, grado) => {
@@ -137,18 +90,6 @@ const AsignarMateriaGradoSeccion = ({
     const nivel = grado.Niveles?.nombre_nivel || 'Sin Nivel';
     if (!acc[nivel]) acc[nivel] = [];
     acc[nivel].push(grado);
-    return acc;
-  }, {});
-
-  // Agrupar secciones por nivel y grado
-  const seccionesPorNivelGrado = seccionesParaGrados.reduce((acc, seccion) => {
-    const grado = grados.find(g => g.id === seccion.gradoID);
-    const nivel = grado?.Niveles?.nombre_nivel || 'Sin Nivel';
-    const nombreGrado = grado?.nombre_grado || 'Grado desconocido';
-    
-    const key = `${nivel}-${nombreGrado}`;
-    if (!acc[key]) acc[key] = { nivel, grado: nombreGrado, secciones: [] };
-    acc[key].secciones.push(seccion);
     return acc;
   }, {});
 
@@ -173,7 +114,7 @@ const AsignarMateriaGradoSeccion = ({
                 <FaLayerGroup className="w-5 h-5 text-white" />
               </div>
               <h3 className="text-lg font-bold text-white">
-                Asignar a Grado y Sección
+                Asignar Materia a Grado
               </h3>
             </div>
             <button
@@ -193,7 +134,7 @@ const AsignarMateriaGradoSeccion = ({
             </p>
 
             {/* Asignaciones ya hechas */}
-            {(gradosAsignados.length > 0 || seccionesAsignadas.length > 0) && (
+            {gradosAsignados.length > 0 && (
               <div className="mb-8 space-y-4">
                 {/* Grados asignados - Agrupados por nivel */}
                 {gradosAsignados.length > 0 && (
@@ -220,47 +161,7 @@ const AsignarMateriaGradoSeccion = ({
                   </div>
                 )}
 
-                {/* Secciones asignadas - Agrupadas por nivel/grado */}
-                {seccionesAsignadas.length > 0 && (
-                  <div className="p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                    <h4 className="text-sm font-semibold text-green-800 mb-4 flex items-center gap-2">
-                      <FaBook className="text-green-600" />
-                      Secciones Asignadas
-                    </h4>
-                    <div className="space-y-4">
-                      {seccionesAsignadas.reduce((acc, seccion) => {
-                        const grado = grados.find(g => g.id === seccion.gradoID);
-                        const nivel = grado?.Niveles?.nombre_nivel || 'Sin Nivel';
-                        const key = `${nivel}-${grado?.nombre_grado}`;
-                        if (!acc[key]) acc[key] = { nivel, grado: grado?.nombre_grado, secciones: [] };
-                        acc[key].secciones.push(seccion);
-                        return acc;
-                      }, {})}
-                      {Object.entries(seccionesAsignadas.reduce((acc, seccion) => {
-                        const grado = grados.find(g => g.id === seccion.gradoID);
-                        const nivel = grado?.Niveles?.nombre_nivel || 'Sin Nivel';
-                        const key = `${nivel}-${grado?.nombre_grado}`;
-                        if (!acc[key]) acc[key] = { nivel, grado: grado?.nombre_grado, secciones: [] };
-                        acc[key].secciones.push(seccion);
-                        return acc;
-                      }, {})).map(([key, { nivel, grado, secciones }]) => (
-                        <div key={key} className="pl-4 border-l-4 border-green-400">
-                          <p className="text-xs font-bold text-green-700 mb-2">
-                            {formatearNombreNivel(nivel)} - {formatearNombreGrado(grado)}
-                          </p>
-                          <div className="space-y-1">
-                            {secciones.map(seccion => (
-                              <div key={seccion.id} className="flex items-center gap-2 text-sm text-green-700">
-                                <FaCheck className="w-3 h-3 text-green-600" />
-                                <span>{seccion.nombre_seccion}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
               </div>
             )}
 
@@ -312,56 +213,7 @@ const AsignarMateriaGradoSeccion = ({
                 </div>
               </div>
 
-              {/* Selección de Secciones - Solo si hay grados seleccionados */}
-              {selectedGrados.length > 0 && (
-                <div className="space-y-3 p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <FaBook className="text-green-600" />
-                      Seleccionar Secciones <span className="text-red-500">*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleSelectAllSecciones}
-                      className="text-xs px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded font-medium transition-colors"
-                    >
-                      {selectedSecciones.length === seccionesParaGrados.length ? 'Desmarcar Todo' : 'Marcar Todo'}
-                    </button>
-                  </div>
 
-                  {/* Checkboxes de Secciones - Agrupadas por Nivel y Grado */}
-                  <div className="p-4 border-2 border-green-200 rounded-lg bg-white space-y-4">
-                    {seccionesParaGrados.length === 0 ? (
-                      <p className="text-sm text-gray-500 text-center py-4">
-                        No hay secciones disponibles para los grados seleccionados
-                      </p>
-                    ) : (
-                      Object.entries(seccionesPorNivelGrado).map(([key, { nivel, grado, secciones }]) => (
-                        <div key={key} className="space-y-2">
-                          <p className="text-xs font-bold text-green-700 px-2">
-                            {formatearNombreNivel(nivel)} - {formatearNombreGrado(grado)}
-                          </p>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-2 border-l-4 border-green-300">
-                            {secciones.map((seccion) => (
-                              <label key={seccion.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedSecciones.includes(seccion.id)}
-                                  onChange={() => handleToggleSeccion(seccion.id)}
-                                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-2 focus:ring-green-500"
-                                />
-                                <span className="text-sm text-gray-700">
-                                  {seccion.nombre_seccion}
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* Buttons */}
               <div className="flex gap-3 pt-4 border-t-2 border-gray-200">
@@ -374,10 +226,10 @@ const AsignarMateriaGradoSeccion = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || (selectedGrados.length === 0 && selectedSecciones.length === 0)}
+                  disabled={loading || selectedGrados.length === 0}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Asignando...' : `Asignar (${selectedGrados.length + selectedSecciones.length})`}
+                  {loading ? 'Asignando...' : `Asignar Materia a ${selectedGrados.length} Grado(s)`}
                 </button>
               </div>
             </form>

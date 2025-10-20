@@ -15,11 +15,14 @@ import {
   FaChartBar,
   FaCalendarAlt,
   FaUser,
-  FaClipboardList
+  FaClipboardList,
+  FaPlus
 } from 'react-icons/fa';
 import { formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
 import { getMateriaStyles, MateriaCard } from '../../../utils/materiaStyles';
 import MateriaDetailModal from './MateriaDetailModal';
+import AsignarProfesorGrado from './modals/AsignarProfesorGrado';
+import QuitarProfesorGrado from './modals/QuitarProfesorGrado';
 
 const GradoDetail = () => {
   const { id } = useParams();
@@ -48,6 +51,14 @@ const GradoDetail = () => {
   
   // Estado para almacenar representantes de estudiantes
   const [representantes, setRepresentantes] = useState({});
+
+  // Estados para modal de AsignarProfesorGrado
+  const [showAsignProfesorGradoModal, setShowAsignProfesorGradoModal] = useState(false);
+  const [todosLosProfesores, setTodosLosProfesores] = useState([]);
+
+  // Estados para modal de QuitarProfesorGrado
+  const [showQuitarProfesorGradoModal, setShowQuitarProfesorGradoModal] = useState(false);
+  const [selectedProfesor, setSelectedProfesor] = useState(null);
 
   const token = localStorage.getItem('token');
 
@@ -218,7 +229,7 @@ const GradoDetail = () => {
       // Cargar materias
       try {
         const materiasResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/grado/${id}`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grado/${id}/materias`,
           { 
             ...config,
             params: { 
@@ -256,6 +267,59 @@ const GradoDetail = () => {
       } catch (error) {
         console.error('Error al cargar materias:', error);
         setMaterias([]);
+      }
+
+      // Cargar todos los profesores para el modal de AsignarProfesorGrado
+      try {
+        const profesoresResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/personas`,
+          { ...config, params: { tipo: 'profesor' } }
+        );
+        
+        let profesoresData = [];
+        if (Array.isArray(profesoresResponse.data)) {
+          profesoresData = profesoresResponse.data.filter(p => p.tipo === 'profesor');
+        } else if (profesoresResponse.data?.tipo === 'profesor') {
+          profesoresData = [profesoresResponse.data];
+        }
+        
+        // Cargar materias para cada profesor
+        const profesoresConMaterias = await Promise.all(
+          profesoresData.map(async (profesor) => {
+            try {
+              const materiasResponse = await axios.get(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/profesor/${profesor.id}`,
+                config
+              );
+              
+              // Obtener materias de este grado que el profesor tiene
+              const materiasEnGrado = materiasResponse.data.filter(m => 
+                m.gradosImpartidos && m.gradosImpartidos.some(g => g.id === parseInt(id))
+              );
+              const otrasMateria = materiasResponse.data.filter(m => 
+                !m.gradosImpartidos || !m.gradosImpartidos.some(g => g.id === parseInt(id))
+              );
+              
+              return {
+                ...profesor,
+                materiasAsignadas: materiasEnGrado.map(m => m.asignatura),
+                otrasMateriasAsignadas: otrasMateria.map(m => m.asignatura)
+              };
+            } catch (error) {
+              console.error(`Error al cargar materias para profesor ${profesor.id}:`, error);
+              return {
+                ...profesor,
+                materiasAsignadas: [],
+                otrasMateriasAsignadas: []
+              };
+            }
+          })
+        );
+        
+        setTodosLosProfesores(profesoresConMaterias);
+      } catch (error) {
+        console.error('Error al cargar profesores:', error);
+        setTodosLosProfesores([]);
       }
 
       setLoading(false);
@@ -333,6 +397,34 @@ const GradoDetail = () => {
       setDeleteLoading(false);
       setShowDeleteModal(false);
     }
+  };
+
+  const handleAsignProfesorGrado = async (form) => {
+    // El modal maneja los mensajes de éxito/error
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/asignar-profesor-grado`,
+      form,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    
+    // Refrescar profesores del grado después de la asignación
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${id}/profesores`,
+        { 
+          headers: { 'Authorization': `Bearer ${token}` },
+          params: { 
+            annoEscolarID: annoEscolar?.id,
+            tipo: 'profesor'
+          }
+        }
+      );
+      setProfesores(response.data);
+    } catch (error) {
+      console.warn('Error al refrescar profesores:', error);
+    }
+    
+    return response;
   };
 
   if (loading) {
@@ -761,13 +853,52 @@ const GradoDetail = () => {
           {/* Profesores Tab */}
           {activeTab === 'profesores' && (
             <div className="space-y-4">
-              {profesores.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {profesores.map((profesor) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Tarjeta para Asignar Profesor a Grado */}
+                <button
+                  onClick={() => setShowAsignProfesorGradoModal(true)}
+                  className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border-2 border-dashed border-purple-300 hover:shadow-lg hover:border-purple-400 transition-all duration-200 cursor-pointer transform hover:-translate-y-1 flex flex-col items-center justify-center min-h-[200px] group"
+                >
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center mb-4 group-hover:shadow-lg transition-all">
+                    <FaPlus className="text-2xl text-white font-bold" />
+                  </div>
+                  <p className="text-sm font-semibold text-purple-900 text-center">
+                    Asignar Profesor a Grado
+                  </p>
+                  <p className="text-xs text-purple-600 text-center mt-1">
+                    Agregar un nuevo profesor a este grado
+                  </p>
+                </button>
+
+                {profesores.map((profesor) => (
+                  <div
+                    key={profesor.id}
+                    className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-6 border border-emerald-200 hover:shadow-lg hover:border-emerald-300 transition-all duration-200 transform hover:-translate-y-1 relative group"
+                  >
+                    {/* Botón de eliminar - Posicionado en la esquina superior derecha */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedProfesor(profesor);
+                        setShowQuitarProfesorGradoModal(true);
+                      }}
+                      className="absolute top-3 right-3 p-2 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:shadow-lg hover:from-indigo-600 hover:to-indigo-700"
+                      title="Quitar profesor del grado"
+                    >
+                      <FaTrash className="w-4 h-4" />
+                    </button>
+
+                    {/* Contenido clickeable que lleva al perfil del profesor */}
                     <Link
-                      key={profesor.id}
                       to={`/admin/profesores/${profesor.id}`}
-                      className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-6 border border-emerald-200 hover:shadow-lg hover:border-emerald-300 transition-all duration-200 cursor-pointer transform hover:-translate-y-1"
+                      onClick={(e) => {
+                        // Prevenir navegación si se hace clic en el botón de eliminar
+                        if (e.target.closest('button')) {
+                          e.preventDefault();
+                        }
+                      }}
+                      className="block cursor-pointer"
                     >
                       <div className="flex items-center space-x-4 mb-4">
                         <div className="flex-shrink-0">
@@ -813,9 +944,11 @@ const GradoDetail = () => {
                         )}
                       </div>
                     </Link>
-                  ))}
-                </div>
-              ) : (
+                  </div>
+                ))}
+              </div>
+
+              {profesores.length === 0 && (
                 <div className="text-center py-12">
                   <FaChalkboardTeacher className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500 text-lg font-medium">No hay profesores asignados</p>
@@ -881,7 +1014,7 @@ const GradoDetail = () => {
                           </div>
                           
                           {/* Información por sección */}
-                          {secciones.length > 0 && (
+                          {/* {secciones.length > 0 && (
                             <div className={`flex items-center justify-between bg-white/40 rounded-lg px-3 py-2`}>
                               <div className="flex items-center">
                                 <FaUsers className={`w-4 h-4 mr-2 ${iconColor}`} />
@@ -891,7 +1024,7 @@ const GradoDetail = () => {
                                 {secciones.length}
                               </span>
                             </div>
-                          )}
+                          )} */}
                         </div>
 
                         {/* Profesores asignados */}
@@ -987,6 +1120,35 @@ const GradoDetail = () => {
           onClose={() => setSelectedMateria(null)}
         />
       )}
+
+      {/* Modal para asignar profesor a grado */}
+      <AsignarProfesorGrado
+        isOpen={showAsignProfesorGradoModal}
+        onClose={() => setShowAsignProfesorGradoModal(false)}
+        materia={null}
+        grados={[grado]}
+        profesores={todosLosProfesores}
+        secciones={secciones}
+        annoEscolar={annoEscolar}
+        loading={loading}
+        onSubmit={handleAsignProfesorGrado}
+        profesoresYaAsignados={[]}
+        preselectedGradoID={parseInt(id)}
+        showMateria={false}
+      />
+
+      {/* Modal para quitar profesor del grado */}
+      <QuitarProfesorGrado
+        isOpen={showQuitarProfesorGradoModal}
+        onClose={() => {
+          setShowQuitarProfesorGradoModal(false);
+          setSelectedProfesor(null);
+        }}
+        profesor={selectedProfesor}
+        grado={grado}
+        annoEscolar={annoEscolar}
+        onRefresh={fetchGradoDetails}
+      />
     </div>
   );
 };

@@ -737,6 +737,55 @@ const gradosController = {
             console.error(err);
             res.status(400).json({ message: err.message });
         }
+    },
+    
+    // Eliminar profesor de grado
+    eliminarProfesorDeGrado: async (req, res) => {
+        try {
+            const { gradoID, profesorID, annoEscolarID } = req.params;
+            
+            // Validar que la asignación existe
+            const asignacion = await db.Profesor_Materia_Grados.findOne({
+                where: { gradoID, profesorID, annoEscolarID }
+            });
+            
+            if (!asignacion) {
+                return res.status(404).json({ message: 'Asignación no encontrada' });
+            }
+            
+            // Contar evaluaciones creadas por este profesor en este grado
+            const evaluacionesCount = await db.Evaluaciones.count({
+                where: {
+                    profesorID: profesorID,
+                    gradoID: gradoID
+                }
+            });
+            
+            if (evaluacionesCount > 0) {
+                return res.status(409).json({ 
+                    message: 'No se puede eliminar el profesor del grado porque hay evaluaciones registradas',
+                    evaluacionesCount: evaluacionesCount,
+                    suggestion: 'Revise y elimine las evaluaciones registradas antes de quitar la asignación'
+                });
+            }
+            
+            // Si no hay evaluaciones, proceder a eliminar todas las asignaciones del profesor en este grado
+            const deleted = await db.Profesor_Materia_Grados.destroy({
+                where: { gradoID, profesorID, annoEscolarID }
+            });
+            
+            if (deleted === 0) {
+                return res.status(404).json({ message: 'Error al eliminar la asignación' });
+            }
+            
+            res.json({ 
+                message: 'Profesor eliminado del grado correctamente',
+                deleted: true 
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: err.message });
+        }
     }
 };
 

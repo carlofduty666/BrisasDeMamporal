@@ -25,6 +25,7 @@ router.post('/grados/transferir-estudiante', authMiddleware.verifyToken, gradosC
 router.put('/grados/:id', authMiddleware.verifyToken, gradosController.updateGrado);
 
 router.delete('/grados/:gradoID/estudiantes/:estudianteID/:annoEscolarID', authMiddleware.verifyToken, gradosController.eliminarEstudianteDeGrado);
+router.delete('/grados/:gradoID/profesores/:profesorID/:annoEscolarID', authMiddleware.verifyToken, gradosController.eliminarProfesorDeGrado);
 router.delete('/grados/:id', authMiddleware.verifyToken, gradosController.deleteGrado);
 
 module.exports = router;

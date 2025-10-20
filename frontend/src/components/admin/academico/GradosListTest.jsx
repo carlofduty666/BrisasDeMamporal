@@ -246,7 +246,7 @@ const GradosList = () => {
       // Cargar materias
       try {
         const materiasResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/materias/grado/${grado.id}`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grado/${grado.id}/materias`,
           { 
             headers: { 'Authorization': `Bearer ${token}` },
             params: { 
