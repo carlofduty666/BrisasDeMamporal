@@ -723,6 +723,161 @@ const gradosController = {
         res.status(500).json({ message: err.message });
       }
     },
+
+    // Transferir múltiples estudiantes entre grados
+    transferirEstudiantesMasivo: async (req, res) => {
+      const t = await db.sequelize.transaction();
+      
+      try {
+        const { estudiantesIDs, gradoOrigenID, gradoDestinoID, annoEscolarID } = req.body;
+        
+        // Validaciones
+        if (!estudiantesIDs || !Array.isArray(estudiantesIDs) || estudiantesIDs.length === 0) {
+          await t.rollback();
+          return res.status(400).json({ message: 'Se requiere al menos un estudiante para transferir' });
+        }
+        
+        if (!gradoDestinoID) {
+          await t.rollback();
+          return res.status(400).json({ message: 'Se requiere un grado de destino' });
+        }
+        
+        if (!annoEscolarID) {
+          await t.rollback();
+          return res.status(400).json({ message: 'Se requiere el ID del año escolar' });
+        }
+        
+        // Verificar que el grado destino existe
+        const gradoDestino = await Grados.findByPk(gradoDestinoID, { transaction: t });
+        if (!gradoDestino) {
+          await t.rollback();
+          return res.status(404).json({ message: 'Grado destino no encontrado' });
+        }
+        
+        const transferencias = [];
+        const errores = [];
+        
+        for (const estudianteID of estudiantesIDs) {
+          try {
+            // Verificar que el estudiante existe
+            const estudiante = await db.Personas.findByPk(estudianteID, { transaction: t });
+            if (!estudiante || estudiante.tipo !== 'estudiante') {
+              errores.push({ estudianteID, error: 'Estudiante no encontrado o tipo inválido' });
+              continue;
+            }
+            
+            // Verificar si el estudiante está asignado al grado origen
+            const asignacionOrigen = await db.Grado_Personas.findOne({
+              where: { personaID: estudianteID, gradoID: gradoOrigenID, annoEscolarID },
+              transaction: t
+            });
+            
+            if (!asignacionOrigen) {
+              errores.push({ estudianteID, error: 'No está asignado al grado origen' });
+              continue;
+            }
+            
+            // Verificar si ya está en el grado destino
+            const existingAssignment = await db.Grado_Personas.findOne({
+              where: { personaID: estudianteID, gradoID: gradoDestinoID, annoEscolarID },
+              transaction: t
+            });
+            
+            if (existingAssignment) {
+              errores.push({ estudianteID, error: 'Ya está asignado al grado destino' });
+              continue;
+            }
+            
+            // Buscar sección destino con cupos disponibles
+            const seccionesDestino = await Secciones.findAll({
+              where: { gradoID: gradoDestinoID },
+              transaction: t
+            });
+            
+            if (!seccionesDestino || seccionesDestino.length === 0) {
+              errores.push({ estudianteID, error: 'No hay secciones disponibles en el grado destino' });
+              continue;
+            }
+            
+            let seccionFinal = null;
+            for (const seccion of seccionesDestino) {
+              const estudiantesInscritos = await db.Seccion_Personas.count({
+                where: { seccionID: seccion.id, annoEscolarID },
+                transaction: t
+              });
+              
+              const capacidad = seccion.capacidad || 30;
+              if (estudiantesInscritos < capacidad) {
+                seccionFinal = seccion.id;
+                break;
+              }
+            }
+            
+            if (!seccionFinal) {
+              errores.push({ estudianteID, error: 'No hay cupos disponibles en ninguna sección' });
+              continue;
+            }
+            
+            // Eliminar del grado origen
+            await db.Grado_Personas.destroy({
+              where: { personaID: estudianteID, gradoID: gradoOrigenID, annoEscolarID },
+              transaction: t
+            });
+            
+            // Asignar al grado destino
+            await db.Grado_Personas.create({
+              personaID: estudianteID,
+              gradoID: gradoDestinoID,
+              annoEscolarID
+            }, { transaction: t });
+            
+            // Eliminar de cualquier sección anterior
+            await db.Seccion_Personas.destroy({
+              where: { personaID: estudianteID, annoEscolarID },
+              transaction: t
+            });
+            
+            // Asignar a la nueva sección
+            await db.Seccion_Personas.create({
+              personaID: estudianteID,
+              seccionID: seccionFinal,
+              annoEscolarID
+            }, { transaction: t });
+            
+            // Actualizar inscripción si existe
+            const inscripcion = await db.Inscripciones.findOne({
+              where: { estudianteID, annoEscolarID },
+              transaction: t
+            });
+            
+            if (inscripcion) {
+              await inscripcion.update({
+                gradoID: gradoDestinoID,
+                seccionID: seccionFinal
+              }, { transaction: t });
+            }
+            
+            transferencias.push({ estudianteID, seccionAsignada: seccionFinal });
+            
+          } catch (err) {
+            errores.push({ estudianteID, error: err.message });
+          }
+        }
+        
+        await t.commit();
+        
+        res.status(200).json({
+          message: `${transferencias.length} estudiante(s) transferido(s) correctamente`,
+          transferencias,
+          errores: errores.length > 0 ? errores : undefined
+        });
+        
+      } catch (err) {
+        await t.rollback();
+        console.error('Error al transferir estudiantes masivamente:', err);
+        res.status(500).json({ message: err.message });
+      }
+    },
     
     updateGrado: async (req, res) => {
         try {

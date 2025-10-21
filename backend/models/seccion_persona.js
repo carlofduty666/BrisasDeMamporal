@@ -76,7 +76,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Seccion_Personas',
-    timestamps: false // Agregar esta línea para habilitar timestamps, lo cual es necesario para que las columnas createdAt y updatedAt se generen automáticamente
+    timestamps: true // Habilitado para rastrear transferencias de estudiantes
   });
   return Seccion_Personas;
 };

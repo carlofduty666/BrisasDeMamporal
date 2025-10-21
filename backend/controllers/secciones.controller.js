@@ -584,6 +584,135 @@ const seccionesController = {
     }
   },
   
+  // Transferir múltiples estudiantes entre secciones (masivo)
+  transferirEstudiantesMasivoSecciones: async (req, res) => {
+    const transaction = await db.sequelize.transaction();
+    
+    try {
+      const { estudiantesIDs, seccionOrigenID, seccionDestinoID, annoEscolarID } = req.body;
+      
+      if (!estudiantesIDs || !Array.isArray(estudiantesIDs) || estudiantesIDs.length === 0) {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'Se requiere al menos un estudiante para transferir' });
+      }
+      
+      if (!seccionDestinoID) {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'Se requiere una sección de destino' });
+      }
+      
+      if (!annoEscolarID) {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'Se requiere el ID del año escolar' });
+      }
+      
+      // Verificar que la sección de destino existe
+      const seccionDestino = await db.Secciones.findByPk(seccionDestinoID, { transaction });
+      if (!seccionDestino) {
+        await transaction.rollback();
+        return res.status(404).json({ message: 'Sección de destino no encontrada' });
+      }
+      
+      // Verificar capacidad de la sección destino
+      const estudiantesEnSeccionDestino = await db.Seccion_Personas.count({
+        where: {
+          seccionID: seccionDestinoID,
+          annoEscolarID
+        },
+        transaction
+      });
+      
+      if (estudiantesEnSeccionDestino + estudiantesIDs.length > seccionDestino.capacidad) {
+        await transaction.rollback();
+        return res.status(400).json({ 
+          message: `La sección destino no tiene capacidad suficiente. Capacidad: ${seccionDestino.capacidad}, Ocupados: ${estudiantesEnSeccionDestino}, Solicitados: ${estudiantesIDs.length}` 
+        });
+      }
+      
+      const transferencias = [];
+      const errores = [];
+      
+      // Procesar cada estudiante
+      for (const estudianteID of estudiantesIDs) {
+        try {
+          // Verificar que el estudiante existe
+          const estudiante = await db.Personas.findOne({
+            where: { id: estudianteID, tipo: 'estudiante' },
+            transaction
+          });
+          
+          if (!estudiante) {
+            errores.push({ estudianteID, error: 'Estudiante no encontrado' });
+            continue;
+          }
+          
+          // Buscar la asignación actual del estudiante
+          const asignacionActual = await db.Seccion_Personas.findOne({
+            where: {
+              personaID: estudianteID,
+              annoEscolarID
+            },
+            transaction
+          });
+          
+          if (!asignacionActual) {
+            errores.push({ estudianteID, error: 'No tiene sección asignada' });
+            continue;
+          }
+          
+          // Si ya está en la sección destino, no hacemos nada
+          if (asignacionActual.seccionID === seccionDestinoID) {
+            errores.push({ estudianteID, error: 'Ya está asignado a la sección destino' });
+            continue;
+          }
+          
+          // Eliminar asignación actual
+          await asignacionActual.destroy({ transaction });
+          
+          // Crear nueva asignación
+          await db.Seccion_Personas.create({
+            personaID: estudianteID,
+            seccionID: seccionDestinoID,
+            annoEscolarID
+          }, { transaction });
+          
+          // Actualizar la inscripción si existe
+          const inscripcion = await db.Inscripciones.findOne({
+            where: {
+              estudianteID,
+              annoEscolarID
+            },
+            transaction
+          });
+          
+          if (inscripcion) {
+            await inscripcion.update({
+              seccionID: seccionDestinoID
+            }, { transaction });
+          }
+          
+          transferencias.push(estudianteID);
+          
+        } catch (err) {
+          errores.push({ estudianteID, error: err.message });
+        }
+      }
+      
+      await transaction.commit();
+      
+      res.status(200).json({
+        message: `${transferencias.length} estudiante(s) transferido(s) correctamente a la sección ${seccionDestino.nombre_seccion}`,
+        estudiantesTransferidos: transferencias,
+        errores: errores.length > 0 ? errores : undefined
+      });
+      
+    } catch (err) {
+      await transaction.rollback();
+      console.error('Error al transferir estudiantes masivamente entre secciones:', err);
+      res.status(500).json({ message: err.message });
+    }
+  },
+
   // Eliminar estudiante de sección
   removeEstudianteFromSeccion: async (req, res) => {
     try {

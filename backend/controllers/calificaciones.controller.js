@@ -1476,6 +1476,118 @@ getHistorialCalificacion: async (req, res) => {
     console.error('Error al obtener historial de calificación:', error);
     res.status(500).json({ message: error.message });
   }
+},
+
+getCalificacionesConHistorialSeccion: async (req, res) => {
+      try {
+        const { estudianteID, annoEscolarID } = req.params;
+        
+        if (!estudianteID) {
+          return res.status(400).json({ message: 'Se requiere el ID del estudiante' });
+        }
+        
+        // Obtener la sección actual del estudiante
+        const seccionActual = await db.Seccion_Personas.findOne({
+          where: { 
+            personaID: estudianteID,
+            ...(annoEscolarID ? { annoEscolarID } : {})
+          },
+          order: [['updatedAt', 'DESC']],
+          include: [
+            {
+              model: db.Secciones,
+              as: 'secciones',
+              attributes: ['id', 'nombre_seccion', 'gradoID']
+            }
+          ]
+        });
+        
+        // Obtener todas las calificaciones del estudiante
+        const calificaciones = await Calificaciones.findAll({
+          where: { 
+            personaID: estudianteID,
+            ...(annoEscolarID ? { annoEscolarID } : {})
+          },
+          include: [
+            {
+              model: Evaluaciones,
+              as: 'Evaluaciones',
+              include: [
+                { model: db.Materias, as: 'Materias', attributes: ['id', 'asignatura'] },
+                { model: db.Secciones, as: 'Seccion', attributes: ['id', 'nombre_seccion'] },
+                { model: db.Personas, as: 'Profesor', attributes: ['id', 'nombre', 'apellido'] }
+              ]
+            },
+            {
+              model: db.Personas,
+              as: 'Personas',
+              attributes: ['id', 'nombre', 'apellido', 'cedula']
+            }
+          ],
+          order: [['createdAt', 'DESC']]
+        });
+        
+        // Procesar las calificaciones para detectar las de secciones anteriores
+        const calificacionesProcesadas = calificaciones.map(cal => {
+          const esDeSeccionAnterior = 
+            seccionActual && 
+            cal.createdAt < seccionActual.updatedAt &&
+            cal.Evaluaciones.seccionID !== seccionActual.seccionID;
+          
+          const resultado = {
+            id: cal.id,
+            calificacion: cal.calificacion,
+            observaciones: cal.observaciones,
+            evaluacion: {
+              id: cal.Evaluaciones.id,
+              nombre: cal.Evaluaciones.nombreEvaluacion,
+              tipo: cal.Evaluaciones.tipoEvaluacion,
+              lapso: cal.Evaluaciones.lapso,
+              fecha: cal.Evaluaciones.fechaEvaluacion
+            },
+            materia: {
+              id: cal.Evaluaciones.Materias.id,
+              nombre: cal.Evaluaciones.Materias.asignatura
+            },
+            esDeSeccionAnterior,
+            seccionHistorico: null,
+            profesorAnterior: null,
+            fechaTransferencia: null
+          };
+          
+          if (esDeSeccionAnterior) {
+            resultado.seccionHistorico = {
+              id: cal.Evaluaciones.Seccion.id,
+              nombre: cal.Evaluaciones.Seccion.nombre_seccion
+            };
+            resultado.profesorAnterior = {
+              id: cal.Evaluaciones.Profesor.id,
+              nombre: cal.Evaluaciones.Profesor.nombre,
+              apellido: cal.Evaluaciones.Profesor.apellido
+            };
+            resultado.fechaTransferencia = seccionActual.updatedAt;
+          }
+          
+          return resultado;
+        });
+        
+        res.status(200).json({
+          estudiante: {
+            id: estudianteID,
+            nombre: calificaciones[0]?.Personas?.nombre || '',
+            apellido: calificaciones[0]?.Personas?.apellido || ''
+          },
+          seccionActual: seccionActual ? {
+            id: seccionActual.seccionID,
+            nombre: seccionActual.secciones?.nombre_seccion,
+            fechaAsignacion: seccionActual.updatedAt
+          } : null,
+          calificaciones: calificacionesProcesadas
+        });
+      } catch (error) {
+        console.error('Error al obtener calificaciones con histórico:', error);
+        res.status(500).json({ message: error.message });
+      }
 }
 };
 
@@ -1563,6 +1675,9 @@ async function actualizarNotaLapso(estudianteID, materiaID, gradoID, seccionID, 
       throw error;
     }
 };
+
+    // Obtener calificaciones con histórico de secciones anteriores
+
 
 
   

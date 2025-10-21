@@ -16,13 +16,15 @@ import {
   FaCalendarAlt,
   FaUser,
   FaClipboardList,
-  FaPlus
+  FaPlus,
+  FaArrowRight
 } from 'react-icons/fa';
 import { formatearNombreGrado, formatearCedula } from '../../../utils/formatters';
 import { getMateriaStyles, MateriaCard } from '../../../utils/materiaStyles';
 import MateriaDetailModal from './MateriaDetailModal';
 import AsignarProfesorGrado from './modals/AsignarProfesorGrado';
 import QuitarProfesorGrado from './modals/QuitarProfesorGrado';
+import TransferirEstudiantesSeccionModal from './modals/TransferirEstudiantesSeccionModal';
 
 const GradoDetail = () => {
   const { id } = useParams();
@@ -59,6 +61,9 @@ const GradoDetail = () => {
   // Estados para modal de QuitarProfesorGrado
   const [showQuitarProfesorGradoModal, setShowQuitarProfesorGradoModal] = useState(false);
   const [selectedProfesor, setSelectedProfesor] = useState(null);
+
+  // Estados para modal de transferencia de estudiantes
+  const [showTransferirEstudiantesModal, setShowTransferirEstudiantesModal] = useState(false);
 
   const token = localStorage.getItem('token');
 
@@ -756,8 +761,8 @@ const GradoDetail = () => {
           {/* Estudiantes Tab */}
           {activeTab === 'estudiantes' && (
             <div className="space-y-6">
-              {/* Filtros */}
-              <div className="flex flex-col md:flex-row gap-4">
+              {/* Filtros y Botones */}
+              <div className="flex flex-col md:flex-row gap-4 items-end">
                 <div className="flex-1">
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -786,6 +791,13 @@ const GradoDetail = () => {
                     ))}
                   </select>
                 </div>
+                <button
+                  onClick={() => setShowTransferirEstudiantesModal(true)}
+                  className="px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl font-medium hover:shadow-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 flex items-center gap-2 whitespace-nowrap"
+                >
+                  <FaArrowRight className="w-4 h-4" />
+                  Transferir
+                </button>
               </div>
 
               {/* Lista de estudiantes por sección */}
@@ -1148,6 +1160,18 @@ const GradoDetail = () => {
         grado={grado}
         annoEscolar={annoEscolar}
         onRefresh={fetchGradoDetails}
+      />
+
+      {/* Modal para transferir estudiantes entre secciones */}
+      <TransferirEstudiantesSeccionModal
+        isOpen={showTransferirEstudiantesModal}
+        onClose={() => setShowTransferirEstudiantesModal(false)}
+        estudiantes={estudiantes}
+        secciones={secciones}
+        gradoID={parseInt(id)}
+        annoEscolarID={annoEscolar?.id}
+        onTransferComplete={fetchGradoDetails}
+        token={token}
       />
     </div>
   );

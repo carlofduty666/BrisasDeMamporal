@@ -20,6 +20,7 @@ router.post('/grados', authMiddleware.verifyToken, gradosController.createGrado)
 router.post('/grados/asignar-estudiante', authMiddleware.verifyToken, gradosController.asignarEstudianteAGrado);
 router.post('/grados/:gradoID/asignar-profesor', authMiddleware.verifyToken, gradosController.asignarProfesor);
 router.post('/grados/transferir-estudiante', authMiddleware.verifyToken, gradosController.transferirEstudianteDeGrado);
+router.post('/grados/transferir-estudiantes-masivo', authMiddleware.verifyToken, gradosController.transferirEstudiantesMasivo);
 
 
 router.put('/grados/:id', authMiddleware.verifyToken, gradosController.updateGrado);
