@@ -26,7 +26,7 @@ import {
   FaCheckCircle,
   FaExclamationCircle
 } from 'react-icons/fa';
-import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha, calcularEdad } from '../../utils/formatters.js';
+import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha, calcularEdad, formatearCedula } from '../../utils/formatters.js';
 
 
 const DetallesEstudiante = () => {
@@ -903,7 +903,7 @@ const DetallesEstudiante = () => {
                             <div className="space-y-3">
                               <div className="bg-gray-50 rounded-lg p-3">
                                 <div className="text-xs font-medium text-gray-600 mb-1">Cédula</div>
-                                <div className="text-sm font-semibold text-gray-900">{profesor.cedula}</div>
+                                <div className="text-sm font-semibold text-gray-900">{formatearCedula(profesor.cedula)}</div>
                               </div>
                               
                               {profesor.materia?.descripcion && (

@@ -15,10 +15,13 @@ import {
   FaBook,
   FaDownload,
   FaEye,
-  FaClock
+  FaClock,
+  FaHistory,
+  FaArrowRight,
+  FaInfoCircle
 } from 'react-icons/fa';
 import { getMateriaStyles } from '../../../utils/materiaStyles';
-import { formatearNombreGrado } from '../../../utils/formatters'
+import { formatearNombreGrado, formatearCedula } from '../../../utils/formatters'
 
 const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
   const [loading, setLoading] = useState(true);
@@ -29,7 +32,11 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
   const [selectedLapso, setSelectedLapso] = useState('');
   const [selectedProfesor, setSelectedProfesor] = useState('');
   const [selectedEvaluacion, setSelectedEvaluacion] = useState(null);
-  const [activeView, setActiveView] = useState('evaluaciones'); // 'evaluaciones' o 'calificaciones'
+  const [activeView, setActiveView] = useState('evaluaciones'); // 'evaluaciones', 'estadisticas', o 'historico'
+  const [historicalCalificaciones, setHistoricalCalificaciones] = useState({});
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
+  const [seccionesEstudiantes, setSeccionesEstudiantes] = useState({});
+  const [loadingSeccionesEstudiantes, setLoadingSeccionesEstudiantes] = useState(false);
   
   const token = localStorage.getItem('token');
   const { bgColor, textColor, iconColor, Icon } = getMateriaStyles(materia.asignatura, 'full');
@@ -99,6 +106,11 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
         ...prev,
         [evaluacionID]: response.data
       }));
+
+      // Cargar las secciones de los estudiantes
+      if (response.data && response.data.length > 0) {
+        cargarSeccionesEstudiantes(response.data);
+      }
     } catch (error) {
       console.error('Error al cargar calificaciones:', error);
       console.error('Detalles del error:', error.response?.data);
@@ -109,6 +121,116 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
     setSelectedEvaluacion(evaluacion);
     if (!calificaciones[evaluacion.id]) {
       fetchCalificacionesByEvaluacion(evaluacion.id);
+    } else {
+      // Si ya tenemos las calificaciones, cargar las secciones de los estudiantes
+      cargarSeccionesEstudiantes(calificaciones[evaluacion.id]);
+    }
+  };
+
+  const fetchSeccionEstudiante = async (estudianteID) => {
+    try {
+      const config = {
+        headers: { 'Authorization': `Bearer ${token}` }
+      };
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/secciones/estudiante/${estudianteID}`,
+        {
+          ...config,
+          params: { annoEscolarID: annoEscolar.id }
+        }
+      );
+      
+      // Obtener la primera sección (la actual)
+      if (response.data && response.data.length > 0) {
+        setSeccionesEstudiantes(prev => ({
+          ...prev,
+          [estudianteID]: response.data[0]
+        }));
+      } else {
+        setSeccionesEstudiantes(prev => ({
+          ...prev,
+          [estudianteID]: null
+        }));
+      }
+    } catch (error) {
+      console.error(`Error al obtener sección del estudiante ${estudianteID}:`, error);
+      setSeccionesEstudiantes(prev => ({
+        ...prev,
+        [estudianteID]: null
+      }));
+    }
+  };
+
+  const cargarSeccionesEstudiantes = async (calificacionesData) => {
+    try {
+      setLoadingSeccionesEstudiantes(true);
+      // Obtener las secciones de todos los estudiantes en paralelo
+      await Promise.all(
+        calificacionesData.map(calificacion => 
+          fetchSeccionEstudiante(calificacion.personaID)
+        )
+      );
+    } catch (error) {
+      console.error('Error al cargar secciones de estudiantes:', error);
+    } finally {
+      setLoadingSeccionesEstudiantes(false);
+    }
+  };
+
+  const fetchCalificacionesConHistorial = async (estudianteID) => {
+    try {
+      const config = {
+        headers: { 'Authorization': `Bearer ${token}` }
+      };
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/calificaciones/historialseccion/${estudianteID}/${annoEscolar.id}`,
+        config
+      );
+      
+      setHistoricalCalificaciones(prev => ({
+        ...prev,
+        [estudianteID]: response.data
+      }));
+    } catch (error) {
+      console.error('Error al cargar histórico de calificaciones:', error);
+      setHistoricalCalificaciones(prev => ({
+        ...prev,
+        [estudianteID]: null
+      }));
+    }
+  };
+
+  const cargarHistoricoCompleto = async () => {
+    try {
+      setLoadingHistorico(true);
+      const config = {
+        headers: { 'Authorization': `Bearer ${token}` }
+      };
+
+      // Obtener todos los estudiantes del grado
+      const estudiantesResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/grados/${grado.id}/estudiantes`,
+        { 
+          ...config,
+          params: { 
+            annoEscolarID: annoEscolar.id,
+            tipo: 'estudiante'
+          }
+        }
+      );
+
+      // Obtener histórico para cada estudiante
+      await Promise.all(
+        estudiantesResponse.data.map(estudiante => 
+          fetchCalificacionesConHistorial(estudiante.id)
+        )
+      );
+    } catch (error) {
+      console.error('Error al cargar histórico completo:', error);
+    } finally {
+      setLoadingHistorico(false);
     }
   };
 
@@ -175,6 +297,45 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
     return stats;
   };
 
+  // Función para obtener los colores según la calificación
+  const getCalificacionColor = (nota) => {
+    const notaNum = parseFloat(nota);
+    
+    if (isNaN(notaNum) || notaNum === 0) {
+      // Rojo: No presentó
+      return {
+        bg: 'bg-red-100',
+        text: 'text-red-700',
+        border: 'border-red-300',
+        display: 'NP'
+      };
+    } else if (notaNum > 15) {
+      // Verde: Excelente (> 15)
+      return {
+        bg: 'bg-green-100',
+        text: 'text-green-700',
+        border: 'border-green-300',
+        display: notaNum
+      };
+    } else if (notaNum >= 10 && notaNum <= 15) {
+      // Amarillo: Bien (10-15)
+      return {
+        bg: 'bg-yellow-100',
+        text: 'text-yellow-700',
+        border: 'border-yellow-300',
+        display: notaNum
+      };
+    } else if (notaNum < 10) {
+      // Naranja: Bajo (< 10)
+      return {
+        bg: 'bg-orange-100',
+        text: 'text-orange-700',
+        border: 'border-orange-300',
+        display: notaNum
+      };
+    }
+  };
+
   const lapsos = [1, 2, 3];
 
   // Filtrar evaluaciones por profesor seleccionado
@@ -239,7 +400,7 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
           {/* Tabs de navegación */}
           <div className={`${bgColor} bg-opacity-10 border-b-2`} style={{ borderColor: iconColor }}>
             <div className="px-6">
-              <nav className="flex space-x-2">
+              <nav className="flex space-x-2 flex-wrap">
                 <button
                   onClick={() => setActiveView('evaluaciones')}
                   className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg ${
@@ -263,6 +424,23 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                 >
                   <FaChartLine className="inline-block w-4 h-4 mr-2" />
                   Estadísticas
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveView('historico');
+                    if (Object.keys(historicalCalificaciones).length === 0) {
+                      cargarHistoricoCompleto();
+                    }
+                  }}
+                  className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg ${
+                    activeView === 'historico'
+                      ? `${bgColor} ${textColor} shadow-md transform -translate-y-0.5`
+                      : 'bg-transparent text-gray-600 hover:bg-white/50'
+                  }`}
+                  style={activeView === 'historico' ? { borderBottom: `3px solid ${iconColor}` } : {}}
+                >
+                  <FaHistory className="inline-block w-4 h-4 mr-2" />
+                  Histórico de Secciones
                 </button>
               </nav>
             </div>
@@ -482,7 +660,7 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                         <div className="flex items-center text-sm">
                                           <FaExclamationTriangle className="w-4 h-4 mr-1 text-yellow-500" />
                                           <span className="font-semibold text-yellow-700">{stats.noPresentaron}</span>
-                                          <span className="text-gray-500 ml-1">no presentó{stats.noPresentaron !== 1 ? 'ron' : ''}</span>
+                                          <span className="text-gray-500 ml-1">{stats.noPresentaron === 1 ? 'No presentó' : 'No presentaron'}</span>
                                         </div>
                                       )}
                                       <div className="flex items-center text-sm">
@@ -527,6 +705,9 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                         {calificaciones[evaluacion.id].map((calificacion) => {
                                           const nota = parseFloat(calificacion.calificacion || calificacion.nota);
                                           const noPresento = isNaN(nota) || nota === 0;
+                                          const seccionActual = seccionesEstudiantes[calificacion.personaID];
+                                          const fueTransferido = seccionActual && evaluacion.Seccion && 
+                                                                seccionActual.id !== evaluacion.Seccion.id;
                                           
                                           return (
                                           <div 
@@ -543,21 +724,76 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                                   {calificacion.Personas?.nombre} {calificacion.Personas?.apellido}
                                                 </p>
                                                 <p className="text-xs text-gray-500">
-                                                  C.I: {calificacion.Personas?.cedula}
+                                                  C.I: {formatearCedula(calificacion.Personas?.cedula)}
                                                 </p>
                                               </div>
                                               <div className="ml-3">
-                                                <span className={`inline-flex items-center justify-center w-14 h-14 rounded-xl text-lg font-bold shadow-md ${
-                                                  noPresento
-                                                    ? 'bg-yellow-100 text-yellow-700 border-2 border-yellow-300'
-                                                    : nota >= 10 
-                                                      ? 'bg-green-100 text-green-700 border-2 border-green-300' 
-                                                      : 'bg-red-100 text-red-700 border-2 border-red-300'
-                                                }`}>
-                                                  {noPresento ? 'NP' : (calificacion.calificacion || calificacion.nota)}
-                                                </span>
+                                                {(() => {
+                                                  const colorInfo = getCalificacionColor(calificacion.calificacion || calificacion.nota);
+                                                  // Mapear colores consistentes: fondo, texto y borde
+                                                  const colorMap = {
+                                                    'bg-red-100': {
+                                                      bg: '#FEE2E2',      // Rojo muy claro
+                                                      text: '#B91C1C',    // Rojo oscuro
+                                                      border: '#EF4444'   // Rojo medio
+                                                    },
+                                                    'bg-green-100': {
+                                                      bg: '#DCFCE7',      // Verde muy claro
+                                                      text: '#166534',    // Verde oscuro
+                                                      border: '#22C55E'   // Verde medio
+                                                    },
+                                                    'bg-yellow-100': {
+                                                      bg: '#FEFCE8',      // Amarillo muy claro
+                                                      text: '#713F12',    // Amarillo oscuro
+                                                      border: '#EABB08'   // Amarillo medio
+                                                    },
+                                                    'bg-orange-100': {
+                                                      bg: '#FFEDD5',      // Naranja muy claro
+                                                      text: '#92400E',    // Naranja oscuro
+                                                      border: '#F97316'   // Naranja medio
+                                                    }
+                                                  };
+                                                  const colors = colorMap[colorInfo.bg];
+                                                  return (
+                                                    <span 
+                                                      className="inline-flex items-center justify-center w-14 h-14 rounded-xl text-lg font-bold shadow-md border-2"
+                                                      style={{
+                                                        backgroundColor: colors.bg,
+                                                        color: colors.text,
+                                                        borderColor: colors.border
+                                                      }}>
+                                                      {colorInfo.display}
+                                                    </span>
+                                                  );
+                                                })()}
                                               </div>
                                             </div>
+
+                                            {/* Mostrar sección actual y aviso de transferencia */}
+                                            {seccionActual && (
+                                              <div className="mt-2 pt-2 border-t">
+                                                <p className="text-xs text-gray-500">
+                                                  Sección actual: <span className="font-semibold text-gray-700">{seccionActual.nombre_seccion}</span>
+                                                </p>
+                                              </div>
+                                            )}
+
+                                            {fueTransferido && (
+                                              <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-2">
+                                                <div className="flex-shrink-0">
+                                                  <FaArrowRight className="w-4 h-4 text-orange-600 mt-0.5" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <p className="text-xs font-semibold text-orange-800">
+                                                    ⚠️ Este alumno fue transferido a la sección <span className="font-bold">{seccionActual?.nombre_seccion}</span>
+                                                  </p>
+                                                  <p className="text-xs text-orange-700 mt-0.5">
+                                                    Esta calificación es de su sección anterior: <span className="font-semibold">{evaluacion.Seccion?.nombre_seccion}</span>
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            )}
+                                            
                                             {calificacion.observaciones && (
                                               <p className="mt-2 text-xs text-gray-600 italic border-t pt-2">
                                                 {calificacion.observaciones}
@@ -774,7 +1010,7 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                     </div>
                                     {stats.noPresentaron > 0 && (
                                       <div>
-                                        <p className="text-gray-600">No {stats.noPresentaron === 1 ? 'presentó' : 'presentaron'}</p>
+                                        <p className="text-gray-600">{stats.noPresentaron === 1 ? 'No presentó' : 'No presentaron'}</p>
                                         <p className="text-lg font-bold text-yellow-600">{stats.noPresentaron}</p>
                                       </div>
                                     )}
@@ -805,6 +1041,202 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                         </p>
                         <p className="text-gray-400 text-sm mt-2">
                           Las estadísticas se mostrarán cuando haya evaluaciones registradas
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Vista de Histórico de Secciones */}
+                {activeView === 'historico' && (
+                  <div className="space-y-6">
+                    {loadingHistorico ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                      </div>
+                    ) : Object.keys(historicalCalificaciones).length > 0 ? (
+                      <div className="space-y-4">
+                        {/* Información instructiva */}
+                        <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-6">
+                          <div className="flex items-start">
+                            <FaInfoCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                            <div>
+                              <h4 className="text-sm font-semibold text-blue-900 mb-1">
+                                Histórico de Cambios de Sección
+                              </h4>
+                              <p className="text-sm text-blue-700">
+                                Esta pestaña muestra los estudiantes que han cambiado de sección en este año escolar y sus calificaciones en ambas secciones.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Estudiantes con histórico */}
+                        {Object.entries(historicalCalificaciones).map(([estudianteId, historico]) => {
+                          if (!historico || !historico.calificaciones || historico.calificaciones.length === 0) {
+                            return null;
+                          }
+
+                          const estudiante = historico.Personas;
+                          const seccionActual = historico.seccionActual;
+                          const calificacionesProcesadas = historico.calificaciones;
+
+                          // Separar calificaciones actuales de históricas
+                          const calificacionesActuales = calificacionesProcesadas.filter(c => !c.esDeSeccionAnterior);
+                          const calificacionesHistoricas = calificacionesProcesadas.filter(c => c.esDeSeccionAnterior);
+
+                          if (calificacionesHistoricas.length === 0) {
+                            return null;
+                          }
+
+                          return (
+                            <div 
+                              key={estudianteId}
+                              className={`rounded-2xl border-2 overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200 ${bgColor} bg-opacity-5`}
+                              style={{ borderColor: iconColor }}
+                            >
+                              {/* Header del estudiante */}
+                              <div className={`px-6 py-4 border-b-2 ${bgColor} bg-opacity-10`} style={{ borderColor: iconColor }}>
+                                <div className="flex items-center space-x-4">
+                                  <div className="flex-shrink-0">
+                                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center">
+                                      <span className="text-white font-semibold text-sm">
+                                        {estudiante?.nombre?.charAt(0)}{estudiante?.apellido?.charAt(0)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-gray-900">
+                                      {estudiante?.nombre} {estudiante?.apellido}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      C.I: {formatearCedula(estudiante?.cedula)}
+                                    </p>
+                                  </div>
+                                  {seccionActual && (
+                                    <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${bgColor} ${textColor}`}>
+                                      Sección: {seccionActual.nombre}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Contenido de calificaciones */}
+                              <div className="px-6 py-4">
+                                {/* Calificaciones de Sección Anterior */}
+                                {calificacionesHistoricas.length > 0 && (
+                                  <div className="mb-6">
+                                    <div className="flex items-center mb-4">
+                                      <FaHistory className={`w-5 h-5 mr-2 ${textColor}`} style={{ color: iconColor }} />
+                                      <h5 className={`text-lg font-bold ${textColor}`}>
+                                        Calificaciones de Sección Anterior
+                                      </h5>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 ml-4 pl-4 border-l-4" style={{ borderColor: '#fbbf24' }}>
+                                      {calificacionesHistoricas.map((calif, idx) => {
+                                        const nota = parseFloat(calif.calificacion || 0);
+                                        const noPresento = nota === 0;
+                                        return (
+                                          <div 
+                                            key={idx}
+                                            className="bg-yellow-50 rounded-lg p-3 border border-yellow-200 hover:shadow-md transition-all"
+                                          >
+                                            <p className="text-xs font-semibold text-gray-600 mb-1">
+                                              {calif.Evaluaciones?.Materias?.asignatura || 'Materia'}
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-xs text-gray-600">
+                                                {calif.Evaluaciones?.nombreEvaluacion}
+                                              </span>
+                                              <span className={`inline-flex items-center justify-center w-10 h-10 rounded-lg text-sm font-bold ${
+                                                noPresento
+                                                  ? 'bg-yellow-100 text-yellow-700'
+                                                  : nota >= 10 
+                                                    ? 'bg-green-100 text-green-700' 
+                                                    : 'bg-red-100 text-red-700'
+                                              }`}>
+                                                {noPresento ? 'NP' : nota}
+                                              </span>
+                                            </div>
+                                            <p className="text-xs text-yellow-600 mt-2 font-medium">
+                                              Lapso {calif.Evaluaciones?.lapso}
+                                            </p>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Calificaciones Actuales */}
+                                {calificacionesActuales.length > 0 && (
+                                  <div>
+                                    <div className="flex items-center mb-4">
+                                      <FaCheckCircle className={`w-5 h-5 mr-2 ${textColor}`} style={{ color: iconColor }} />
+                                      <h5 className={`text-lg font-bold ${textColor}`}>
+                                        Calificaciones Actuales
+                                      </h5>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 ml-4 pl-4 border-l-4 border-green-500">
+                                      {calificacionesActuales.map((calif, idx) => {
+                                        const nota = parseFloat(calif.calificacion || 0);
+                                        const noPresento = nota === 0;
+                                        return (
+                                          <div 
+                                            key={idx}
+                                            className="bg-green-50 rounded-lg p-3 border border-green-200 hover:shadow-md transition-all"
+                                          >
+                                            <p className="text-xs font-semibold text-gray-600 mb-1">
+                                              {calif.Evaluaciones?.Materias?.asignatura || 'Materia'}
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-xs text-gray-600">
+                                                {calif.Evaluaciones?.nombreEvaluacion}
+                                              </span>
+                                              <span className={`inline-flex items-center justify-center w-10 h-10 rounded-lg text-sm font-bold ${
+                                                noPresento
+                                                  ? 'bg-yellow-100 text-yellow-700'
+                                                  : nota >= 10 
+                                                    ? 'bg-green-100 text-green-700' 
+                                                    : 'bg-red-100 text-red-700'
+                                              }`}>
+                                                {noPresento ? 'NP' : nota}
+                                              </span>
+                                            </div>
+                                            <p className="text-xs text-green-600 mt-2 font-medium">
+                                              Lapso {calif.Evaluaciones?.lapso}
+                                            </p>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Si no hay datos */}
+                        {Object.entries(historicalCalificaciones).filter(([_, h]) => 
+                          h && h.calificaciones && h.calificaciones.some(c => c.esDeSeccionAnterior)
+                        ).length === 0 && (
+                          <div className="text-center py-12">
+                            <FaHistory className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-500 text-lg font-medium">
+                              No hay histórico de cambios de sección
+                            </p>
+                            <p className="text-gray-400 text-sm mt-2">
+                              Todos los estudiantes han permanecido en la misma sección durante este año escolar
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <FaHistory className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 text-lg font-medium">
+                          Cargando histórico de secciones...
                         </p>
                       </div>
                     )}
