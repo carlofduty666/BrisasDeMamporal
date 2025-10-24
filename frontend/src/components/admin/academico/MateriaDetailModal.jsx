@@ -18,7 +18,11 @@ import {
   FaClock,
   FaHistory,
   FaArrowRight,
-  FaInfoCircle
+  FaInfoCircle,
+  FaFilter,
+  FaList,
+  FaThLarge,
+  FaIdCard
 } from 'react-icons/fa';
 import { getMateriaStyles } from '../../../utils/materiaStyles';
 import { formatearNombreGrado, formatearCedula } from '../../../utils/formatters'
@@ -32,11 +36,14 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
   const [selectedLapso, setSelectedLapso] = useState('');
   const [selectedProfesor, setSelectedProfesor] = useState('');
   const [selectedEvaluacion, setSelectedEvaluacion] = useState(null);
-  const [activeView, setActiveView] = useState('evaluaciones'); // 'evaluaciones', 'estadisticas', o 'historico'
+  const [activeView, setActiveView] = useState('evaluaciones'); // 'evaluaciones', 'estadisticas', o 'historico' (transferencia de secciones)
   const [historicalCalificaciones, setHistoricalCalificaciones] = useState({});
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [seccionesEstudiantes, setSeccionesEstudiantes] = useState({});
   const [loadingSeccionesEstudiantes, setLoadingSeccionesEstudiantes] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewType, setViewType] = useState('tarjetas'); // 'tarjetas' o 'lista'
+  const [profesoresData, setProfesoresData] = useState({}); // Para almacenar datos de profesores
   
   const token = localStorage.getItem('token');
   const { bgColor, textColor, iconColor, Icon } = getMateriaStyles(materia.asignatura, 'full');
@@ -354,7 +361,7 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
         ></div>
         
         {/* Modal */}
-        <div className="relative bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all w-full max-w-6xl max-h-[90vh] flex flex-col">
+        <div className="relative bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all w-full max-w-7xl max-h-[90vh] flex flex-col">
           {/* Header con tema de materia */}
           <div className={`${bgColor} px-6 py-6 border-b-4`} style={{ borderColor: iconColor }}>
             <div className="flex items-center justify-between">
@@ -397,139 +404,189 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
             )}
           </div>
 
-          {/* Tabs de navegación */}
+          {/* Tabs de navegación y Botón de Filtros */}
           <div className={`${bgColor} bg-opacity-10 border-b-2`} style={{ borderColor: iconColor }}>
             <div className="px-6">
-              <nav className="flex space-x-2 flex-wrap">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <nav className="flex space-x-2 flex-wrap">
+                  <button
+                    onClick={() => setActiveView('evaluaciones')}
+                    className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg ${
+                      activeView === 'evaluaciones'
+                        ? `${bgColor} ${textColor} shadow-md transform -translate-y-0.5`
+                        : 'bg-transparent text-gray-600 hover:bg-white/50'
+                    }`}
+                    style={activeView === 'evaluaciones' ? { borderBottom: `3px solid ${iconColor}` } : {}}
+                  >
+                    <FaClipboardList className="inline-block w-4 h-4 mr-2" />
+                    Evaluaciones ({evaluacionesFiltradas.length}{selectedProfesor && evaluaciones.length !== evaluacionesFiltradas.length ? `/${evaluaciones.length}` : ''})
+                  </button>
+                  <button
+                    onClick={() => setActiveView('estadisticas')}
+                    className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg ${
+                      activeView === 'estadisticas'
+                        ? `${bgColor} ${textColor} shadow-md transform -translate-y-0.5`
+                        : 'bg-transparent text-gray-600 hover:bg-white/50'
+                    }`}
+                    style={activeView === 'estadisticas' ? { borderBottom: `3px solid ${iconColor}` } : {}}
+                  >
+                    <FaChartLine className="inline-block w-4 h-4 mr-2" />
+                    Estadísticas
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveView('historico');
+                      if (Object.keys(historicalCalificaciones).length === 0) {
+                        cargarHistoricoCompleto();
+                      }
+                    }}
+                    className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg ${
+                      activeView === 'historico'
+                        ? `${bgColor} ${textColor} shadow-md transform -translate-y-0.5`
+                        : 'bg-transparent text-gray-600 hover:bg-white/50'
+                    }`}
+                    style={activeView === 'historico' ? { borderBottom: `3px solid ${iconColor}` } : {}}
+                  >
+                    <FaHistory className="inline-block w-4 h-4 mr-2" />
+                    Transf. de Secciones
+                  </button>
+
+                  {/* Separador visual */}
+                  <div className="hidden md:block w-px h-8 bg-gray-300"></div>
+
+                  {/* Botones de vista (solo en vista de evaluaciones) */}
+                  {activeView === 'evaluaciones' && (
+                    <>
+                      <button
+                        onClick={() => setViewType('tarjetas')}
+                        className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg flex items-center gap-2 ${
+                          viewType === 'tarjetas'
+                            ? `${bgColor} ${textColor} shadow-md transform -translate-y-0.5`
+                            : 'bg-transparent text-gray-600 hover:bg-white/50'
+                        }`}
+                        style={viewType === 'tarjetas' ? { borderBottom: `3px solid ${iconColor}` } : {}}
+                      >
+                        <FaThLarge className="w-4 h-4" />
+                        Tarjetas
+                      </button>
+                      <button
+                        onClick={() => setViewType('lista')}
+                        className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg flex items-center gap-2 ${
+                          viewType === 'lista'
+                            ? `${bgColor} ${textColor} shadow-md transform -translate-y-0.5`
+                            : 'bg-transparent text-gray-600 hover:bg-white/50'
+                        }`}
+                        style={viewType === 'lista' ? { borderBottom: `3px solid ${iconColor}` } : {}}
+                      >
+                        <FaList className="w-4 h-4" />
+                        Lista
+                      </button>
+                    </>
+                  )}
+                </nav>
+
+                {/* Botón para mostrar/ocultar filtros */}
                 <button
-                  onClick={() => setActiveView('evaluaciones')}
-                  className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg ${
-                    activeView === 'evaluaciones'
-                      ? `${bgColor} ${textColor} shadow-md transform -translate-y-0.5`
-                      : 'bg-transparent text-gray-600 hover:bg-white/50'
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
+                    showFilters
+                      ? `${bgColor} ${textColor} shadow-md`
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
-                  style={activeView === 'evaluaciones' ? { borderBottom: `3px solid ${iconColor}` } : {}}
                 >
-                  <FaClipboardList className="inline-block w-4 h-4 mr-2" />
-                  Evaluaciones ({evaluacionesFiltradas.length}{selectedProfesor && evaluaciones.length !== evaluacionesFiltradas.length ? `/${evaluaciones.length}` : ''})
+                  <FaFilter className="w-4 h-4" />
+                  Filtros
                 </button>
-                <button
-                  onClick={() => setActiveView('estadisticas')}
-                  className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg ${
-                    activeView === 'estadisticas'
-                      ? `${bgColor} ${textColor} shadow-md transform -translate-y-0.5`
-                      : 'bg-transparent text-gray-600 hover:bg-white/50'
-                  }`}
-                  style={activeView === 'estadisticas' ? { borderBottom: `3px solid ${iconColor}` } : {}}
-                >
-                  <FaChartLine className="inline-block w-4 h-4 mr-2" />
-                  Estadísticas
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveView('historico');
-                    if (Object.keys(historicalCalificaciones).length === 0) {
-                      cargarHistoricoCompleto();
-                    }
-                  }}
-                  className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-200 rounded-t-lg ${
-                    activeView === 'historico'
-                      ? `${bgColor} ${textColor} shadow-md transform -translate-y-0.5`
-                      : 'bg-transparent text-gray-600 hover:bg-white/50'
-                  }`}
-                  style={activeView === 'historico' ? { borderBottom: `3px solid ${iconColor}` } : {}}
-                >
-                  <FaHistory className="inline-block w-4 h-4 mr-2" />
-                  Histórico de Secciones
-                </button>
-              </nav>
+              </div>
             </div>
           </div>
 
-          {/* Filtros */}
-          <div className={`${bgColor} bg-opacity-5 px-6 py-4 border-b-2`} style={{ borderColor: iconColor }}>
-            <div className="flex flex-wrap gap-4 mb-4">
-              <div className="flex-1 min-w-[200px]">
-                <label className={`block text-sm font-semibold mb-2 ${textColor}`}>
-                  <FaUserGraduate className="inline-block w-4 h-4 mr-1" />
-                  Sección
-                </label>
-                <select
-                  value={selectedSeccion}
-                  onChange={(e) => setSelectedSeccion(e.target.value)}
-                  className="block w-full pl-3 pr-10 py-2.5 text-base border-2 focus:outline-none rounded-xl font-medium transition-all duration-200 hover:shadow-md"
-                  style={{ 
-                    borderColor: selectedSeccion ? iconColor : '#d1d5db',
-                    backgroundColor: selectedSeccion ? `${iconColor}10` : 'white'
-                  }}
-                >
-                  <option value="">Todas las secciones</option>
-                  {secciones.map((seccion) => (
-                    <option key={seccion.id} value={seccion.id}>
-                      {seccion.nombre_seccion}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex-1 min-w-[200px]">
-                <label className={`block text-sm font-semibold mb-2 ${textColor}`}>
-                  <FaCalendarAlt className="inline-block w-4 h-4 mr-1" />
-                  Lapso
-                </label>
-                <select
-                  value={selectedLapso}
-                  onChange={(e) => setSelectedLapso(e.target.value)}
-                  className="block w-full pl-3 pr-10 py-2.5 text-base border-2 focus:outline-none rounded-xl font-medium transition-all duration-200 hover:shadow-md"
-                  style={{ 
-                    borderColor: selectedLapso ? iconColor : '#d1d5db',
-                    backgroundColor: selectedLapso ? `${iconColor}10` : 'white'
-                  }}
-                >
-                  <option value="">Todos los lapsos</option>
-                  {lapsos.map((lapso) => (
-                    <option key={lapso} value={lapso}>
-                      Lapso {lapso}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Filtro de Profesor */}
-            {materia.profesoresAsignados && materia.profesoresAsignados.length > 0 && (
-              <div>
-                <label className={`block text-sm font-semibold mb-2 ${textColor}`}>
-                  <FaChalkboardTeacher className="inline-block w-4 h-4 mr-1" />
-                  Filtrar por Profesor
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setSelectedProfesor('')}
-                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
-                      !selectedProfesor
-                        ? `${bgColor} ${textColor} shadow-md`
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+          {/* Filtros - Colapsable */}
+          {showFilters && (
+            <div className={`${bgColor} bg-opacity-5 px-6 py-4 border-b-2 animate-in fade-in slide-in-from-top-2 duration-200`} style={{ borderColor: iconColor }}>
+              <div className="flex flex-wrap gap-4 mb-4">
+                <div className="flex-1 min-w-[200px]">
+                  <label className={`block text-sm font-semibold mb-2 ${textColor}`}>
+                    <FaUserGraduate className="inline-block w-4 h-4 mr-1" />
+                    Sección
+                  </label>
+                  <select
+                    value={selectedSeccion}
+                    onChange={(e) => setSelectedSeccion(e.target.value)}
+                    className="block w-full pl-3 pr-10 py-2.5 text-base border-2 focus:outline-none rounded-xl font-medium transition-all duration-200 hover:shadow-md"
+                    style={{ 
+                      borderColor: selectedSeccion ? iconColor : '#d1d5db',
+                      backgroundColor: selectedSeccion ? `${iconColor}10` : 'white'
+                    }}
                   >
-                    Todos
-                  </button>
-                  {materia.profesoresAsignados.map((profesor) => (
+                    <option value="">Todas las secciones</option>
+                    {secciones.map((seccion) => (
+                      <option key={seccion.id} value={seccion.id}>
+                        {seccion.nombre_seccion}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className={`block text-sm font-semibold mb-2 ${textColor}`}>
+                    <FaCalendarAlt className="inline-block w-4 h-4 mr-1" />
+                    Lapso
+                  </label>
+                  <select
+                    value={selectedLapso}
+                    onChange={(e) => setSelectedLapso(e.target.value)}
+                    className="block w-full pl-3 pr-10 py-2.5 text-base border-2 focus:outline-none rounded-xl font-medium transition-all duration-200 hover:shadow-md"
+                    style={{ 
+                      borderColor: selectedLapso ? iconColor : '#d1d5db',
+                      backgroundColor: selectedLapso ? `${iconColor}10` : 'white'
+                    }}
+                  >
+                    <option value="">Todos los lapsos</option>
+                    {lapsos.map((lapso) => (
+                      <option key={lapso} value={lapso}>
+                        Lapso {lapso}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Filtro de Profesor */}
+              {materia.profesoresAsignados && materia.profesoresAsignados.length > 0 && (
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${textColor}`}>
+                    <FaChalkboardTeacher className="inline-block w-4 h-4 mr-1" />
+                    Filtrar por Profesor
+                  </label>
+                  <div className="flex flex-wrap gap-2">
                     <button
-                      key={profesor.id}
-                      onClick={() => setSelectedProfesor(profesor.id.toString())}
+                      onClick={() => setSelectedProfesor('')}
                       className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
-                        selectedProfesor == profesor.id
+                        !selectedProfesor
                           ? `${bgColor} ${textColor} shadow-md`
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {profesor.nombre} {profesor.apellido}
+                      Todos
                     </button>
-                  ))}
+                    {materia.profesoresAsignados.map((profesor) => (
+                      <button
+                        key={profesor.id}
+                        onClick={() => setSelectedProfesor(profesor.id.toString())}
+                        className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                          selectedProfesor == profesor.id
+                            ? `${bgColor} ${textColor} shadow-md`
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {profesor.nombre} {profesor.apellido}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Contenido */}
           <div className="flex-1 overflow-y-auto px-6 py-6">
@@ -699,6 +756,9 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                 </h5>
                                 
                                 {calificaciones[evaluacion.id] ? (
+                                  <>
+                                  {/* VISTA EN TARJETAS */}
+                                  {viewType === 'tarjetas' && (
                                   <div className="space-y-2">
                                     {calificaciones[evaluacion.id].length > 0 ? (
                                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -709,22 +769,38 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                           const fueTransferido = seccionActual && evaluacion.Seccion && 
                                                                 seccionActual.id !== evaluacion.Seccion.id;
                                           
+                                          // Determinar el color del borde basado en la calificación
+                                          let borderColor = '#EF4444'; // Rojo por defecto (no presentó)
+                                          if (!noPresento) {
+                                            if (nota > 15) {
+                                              borderColor = '#22C55E'; // Verde (excelente > 15)
+                                            } else if (nota >= 10 && nota <= 15) {
+                                              borderColor = '#EABB08'; // Amarillo (bien 10-15)
+                                            } else if (nota < 10) {
+                                              borderColor = '#F97316'; // Naranja (bajo < 10)
+                                            }
+                                          }
+                                          
                                           return (
                                           <div 
                                             key={calificacion.id}
                                             className="bg-white rounded-xl p-3 border-2 hover:shadow-lg transition-all duration-200"
                                             style={{ 
-                                              borderColor: noPresento ? '#fbbf24' : (nota >= 10 ? '#10b981' : '#ef4444')
+                                              borderColor: borderColor
                                             }}
                                           >
                                         
                                             <div className="flex items-center justify-between">
                                               <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-semibold text-gray-900 truncate">
-                                                  {calificacion.Personas?.nombre} {calificacion.Personas?.apellido}
-                                                </p>
-                                                <p className="text-xs text-gray-500">
-                                                  C.I: {formatearCedula(calificacion.Personas?.cedula)}
+                                                <div className="flex items-center gap-2 mb-1">
+                                                  <FaUserGraduate className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                                  <p className="text-sm font-semibold text-gray-900 truncate">
+                                                    {calificacion.Personas?.nombre} {calificacion.Personas?.apellido}
+                                                  </p>
+                                                </div>
+                                                <p className="text-xs text-gray-500 flex items-center gap-1">
+                                                  <FaIdCard className="w-3 h-3 flex-shrink-0" />
+                                                  {formatearCedula(calificacion.Personas?.cedula)}
                                                 </p>
                                               </div>
                                               <div className="ml-3">
@@ -772,7 +848,8 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                             {/* Mostrar sección actual y aviso de transferencia */}
                                             {seccionActual && (
                                               <div className="mt-2 pt-2 border-t">
-                                                <p className="text-xs text-gray-500">
+                                                <p className="text-xs text-gray-500 flex items-center gap-1">
+                                                  <FaUserGraduate className="w-3 h-3" />
                                                   Sección actual: <span className="font-semibold text-gray-700">{seccionActual.nombre_seccion}</span>
                                                 </p>
                                               </div>
@@ -795,7 +872,8 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                             )}
                                             
                                             {calificacion.observaciones && (
-                                              <p className="mt-2 text-xs text-gray-600 italic border-t pt-2">
+                                              <p className="mt-2 text-xs text-gray-600 italic border-t pt-2 flex items-start gap-1">
+                                                <FaFileAlt className="w-3 h-3 mt-0.5 flex-shrink-0" />
                                                 {calificacion.observaciones}
                                               </p>
                                             )}
@@ -812,6 +890,143 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                       </div>
                                     )}
                                   </div>
+                                  )}
+
+                                  {/* VISTA EN LISTA */}
+                                  {viewType === 'lista' && (
+                                    <div className="overflow-x-auto">
+                                      {calificaciones[evaluacion.id].length > 0 ? (
+                                        <div className="min-w-full">
+                                          {/* Header de la tabla */}
+                                          <div className="grid gap-3 mb-3 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border-2" style={{ borderColor: `${iconColor}40`, gridTemplateColumns: 'minmax(140px, 1fr) minmax(200px, 1.5fr) minmax(150px, 1fr) minmax(180px, 1.5fr) minmax(120px, 1fr) minmax(200px, 1.5fr)' }}>
+                                            <div className="flex items-center font-bold text-gray-700 text-sm">
+                                              <FaIdCard className="w-4 h-4 mr-2" style={{ color: iconColor }} />
+                                              Cédula
+                                            </div>
+                                            <div className="flex items-center font-bold text-gray-700 text-sm">
+                                              <FaUserGraduate className="w-4 h-4 mr-2" style={{ color: iconColor }} />
+                                              Nombre
+                                            </div>
+                                            <div className="flex items-center font-bold text-gray-700 text-sm">
+                                              <FaUserGraduate className="w-4 h-4 mr-2" style={{ color: iconColor }} />
+                                              Sección
+                                            </div>
+                                            <div className="flex items-center font-bold text-gray-700 text-sm">
+                                              <FaChalkboardTeacher className="w-4 h-4 mr-2" style={{ color: iconColor }} />
+                                              Profesor
+                                            </div>
+                                            <div className="flex items-center font-bold text-gray-700 text-sm">
+                                              <FaPercentage className="w-4 h-4 mr-2" style={{ color: iconColor }} />
+                                              Calificación
+                                            </div>
+                                            <div className="flex items-center font-bold text-gray-700 text-sm">
+                                              <FaFileAlt className="w-4 h-4 mr-2" style={{ color: iconColor }} />
+                                              Observación
+                                            </div>
+                                          </div>
+
+                                          {/* Filas de datos */}
+                                          <div className="space-y-2 max-h-96 overflow-y-auto">
+                                            {calificaciones[evaluacion.id].map((calificacion, idx) => {
+                                              const nota = parseFloat(calificacion.calificacion || calificacion.nota);
+                                              const noPresento = isNaN(nota) || nota === 0;
+                                              const seccionActual = seccionesEstudiantes[calificacion.personaID];
+                                              
+                                              let borderColor = '#EF4444'; // Rojo por defecto (no presentó)
+                                              if (!noPresento) {
+                                                if (nota > 15) {
+                                                  borderColor = '#22C55E'; // Verde (excelente > 15)
+                                                } else if (nota >= 10 && nota <= 15) {
+                                                  borderColor = '#EABB08'; // Amarillo (bien 10-15)
+                                                } else if (nota < 10) {
+                                                  borderColor = '#F97316'; // Naranja (bajo < 10)
+                                                }
+                                              }
+
+                                              // Mapear colores consistentes
+                                              const colorMap = {
+                                                '#EF4444': { bg: '#FEE2E2', text: '#B91C1C', border: '#EF4444', display: 'NP' },
+                                                '#22C55E': { bg: '#DCFCE7', text: '#166534', border: '#22C55E', display: nota },
+                                                '#EABB08': { bg: '#FEFCE8', text: '#713F12', border: '#EABB08', display: nota },
+                                                '#F97316': { bg: '#FFEDD5', text: '#92400E', border: '#F97316', display: nota }
+                                              };
+                                              
+                                              const colorInfo = colorMap[borderColor] || colorMap['#EF4444'];
+
+                                              return (
+                                                <div 
+                                                  key={calificacion.id}
+                                                  className="grid gap-3 p-4 bg-white rounded-lg border-2 hover:shadow-lg transition-all duration-200"
+                                                  style={{ borderColor: borderColor, gridTemplateColumns: 'minmax(140px, 1fr) minmax(200px, 1.5fr) minmax(150px, 1fr) minmax(180px, 1.5fr) minmax(120px, 1fr) minmax(200px, 1.5fr)' }}
+                                                >
+                                                  {/* Cédula */}
+                                                  <div className="flex items-center text-sm">
+                                                    <span className="font-semibold text-gray-900">
+                                                      {formatearCedula(calificacion.Personas?.cedula)}
+                                                    </span>
+                                                  </div>
+
+                                                  {/* Nombre y Apellido */}
+                                                  <div className="flex items-center text-sm">
+                                                    <span className="text-gray-900">
+                                                      {calificacion.Personas?.nombre} {calificacion.Personas?.apellido}
+                                                    </span>
+                                                  </div>
+
+                                                  {/* Sección */}
+                                                  <div className="flex items-center text-sm">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                      seccionActual 
+                                                        ? `${bgColor} ${textColor}` 
+                                                        : 'bg-gray-100 text-gray-700'
+                                                    }`}>
+                                                      {seccionActual?.nombre_seccion || 'N/A'}
+                                                    </span>
+                                                  </div>
+
+                                                  {/* Profesor */}
+                                                  <div className="flex items-center text-sm">
+                                                    <span className="text-gray-900">
+                                                      {evaluacion.Profesor ? `${evaluacion.Profesor.nombre} ${evaluacion.Profesor.apellido}` : 'N/A'}
+                                                    </span>
+                                                  </div>
+
+                                                  {/* Calificación */}
+                                                  <div className="flex items-center justify-center">
+                                                    <span 
+                                                      className="inline-flex items-center justify-center w-12 h-12 rounded-lg text-sm font-bold border-2"
+                                                      style={{
+                                                        backgroundColor: colorInfo.bg,
+                                                        color: colorInfo.text,
+                                                        borderColor: colorInfo.border
+                                                      }}
+                                                    >
+                                                      {colorInfo.display}
+                                                    </span>
+                                                  </div>
+
+                                                  {/* Observación */}
+                                                  <div className="flex items-center text-sm">
+                                                    <span className="text-gray-600 italic truncate" title={calificacion.observaciones || 'Sin observaciones'}>
+                                                      {calificacion.observaciones || '-'}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="text-center py-8">
+                                          <FaExclamationTriangle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                                          <p className="text-sm text-gray-600">
+                                            No hay calificaciones registradas para esta evaluación
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  </>
                                 ) : (
                                   <div className="flex items-center justify-center py-8">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -1062,10 +1277,10 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                             <FaInfoCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
                             <div>
                               <h4 className="text-sm font-semibold text-blue-900 mb-1">
-                                Histórico de Cambios de Sección
+                                Transferencia de Secciones
                               </h4>
                               <p className="text-sm text-blue-700">
-                                Esta pestaña muestra los estudiantes que han cambiado de sección en este año escolar y sus calificaciones en ambas secciones.
+                                Esta vista muestra los estudiantes que han sido transferidos a diferentes secciones en este año escolar, comparando sus calificaciones en la sección anterior vs. la sección actual.
                               </p>
                             </div>
                           </div>
@@ -1096,11 +1311,11 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                               style={{ borderColor: iconColor }}
                             >
                               {/* Header del estudiante */}
-                              <div className={`px-6 py-4 border-b-2 ${bgColor} bg-opacity-10`} style={{ borderColor: iconColor }}>
-                                <div className="flex items-center space-x-4">
+                              <div className={`px-6 py-5 border-b-2 ${bgColor} bg-opacity-10`} style={{ borderColor: iconColor }}>
+                                <div className="flex items-stretch gap-4">
                                   <div className="flex-shrink-0">
-                                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center">
-                                      <span className="text-white font-semibold text-sm">
+                                    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg">
+                                      <span className="text-white font-bold text-lg">
                                         {estudiante?.nombre?.charAt(0)}{estudiante?.apellido?.charAt(0)}
                                       </span>
                                     </div>
@@ -1109,13 +1324,20 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                     <p className="text-sm font-bold text-gray-900">
                                       {estudiante?.nombre} {estudiante?.apellido}
                                     </p>
-                                    <p className="text-xs text-gray-500">
-                                      C.I: {formatearCedula(estudiante?.cedula)}
-                                    </p>
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
+                                      <span className="flex items-center">
+                                        <FaIdCard className="w-3.5 h-3.5 mr-1 text-blue-600" />
+                                        {formatearCedula(estudiante?.cedula)}
+                                      </span>
+                                    </div>
                                   </div>
                                   {seccionActual && (
-                                    <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${bgColor} ${textColor}`}>
-                                      Sección: {seccionActual.nombre}
+                                    <div className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-semibold ${bgColor} ${textColor} shadow-md whitespace-nowrap`}>
+                                      <FaCheckCircle className="w-5 h-5 flex-shrink-0" />
+                                      <div>
+                                        <p className="text-xs opacity-80 font-normal">Sección Actual</p>
+                                        <p className="font-bold">{seccionActual.nombre}</p>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -1126,41 +1348,45 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                 {/* Calificaciones de Sección Anterior */}
                                 {calificacionesHistoricas.length > 0 && (
                                   <div className="mb-6">
-                                    <div className="flex items-center mb-4">
-                                      <FaHistory className={`w-5 h-5 mr-2 ${textColor}`} style={{ color: iconColor }} />
-                                      <h5 className={`text-lg font-bold ${textColor}`}>
-                                        Calificaciones de Sección Anterior
-                                      </h5>
+                                    <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-yellow-300">
+                                      <div className="flex items-center">
+                                        <FaArrowRight className={`w-5 h-5 mr-2 text-yellow-600`} />
+                                        <h5 className={`text-lg font-bold text-yellow-800`}>
+                                          Calificaciones Previas (Sección Anterior)
+                                        </h5>
+                                      </div>
+                                      <span className="text-xs font-semibold px-3 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                                        {calificacionesHistoricas.length} calificaciones
+                                      </span>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 ml-4 pl-4 border-l-4" style={{ borderColor: '#fbbf24' }}>
                                       {calificacionesHistoricas.map((calif, idx) => {
                                         const nota = parseFloat(calif.calificacion || 0);
                                         const noPresento = nota === 0;
+                                        const esAprobado = nota >= 10;
+                                        const colorBg = noPresento ? 'bg-yellow-50' : esAprobado ? 'bg-green-50' : 'bg-orange-50';
+                                        const colorBorder = noPresento ? 'border-yellow-300' : esAprobado ? 'border-green-300' : 'border-orange-300';
+                                        const colorBadge = noPresento ? 'bg-yellow-100 text-yellow-700' : esAprobado ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
+                                        
                                         return (
                                           <div 
                                             key={idx}
-                                            className="bg-yellow-50 rounded-lg p-3 border border-yellow-200 hover:shadow-md transition-all"
+                                            className={`${colorBg} rounded-xl p-4 border-2 ${colorBorder} hover:shadow-lg transition-all duration-200`}
                                           >
-                                            <p className="text-xs font-semibold text-gray-600 mb-1">
+                                            <p className="text-xs font-bold text-gray-700 mb-2 truncate">
                                               {calif.Evaluaciones?.Materias?.asignatura || 'Materia'}
                                             </p>
+                                            <p className="text-xs text-gray-600 mb-3 truncate">
+                                              {calif.Evaluaciones?.nombreEvaluacion}
+                                            </p>
                                             <div className="flex items-center justify-between">
-                                              <span className="text-xs text-gray-600">
-                                                {calif.Evaluaciones?.nombreEvaluacion}
+                                              <span className="text-xs font-semibold text-gray-600">
+                                                Lapso {calif.Evaluaciones?.lapso}
                                               </span>
-                                              <span className={`inline-flex items-center justify-center w-10 h-10 rounded-lg text-sm font-bold ${
-                                                noPresento
-                                                  ? 'bg-yellow-100 text-yellow-700'
-                                                  : nota >= 10 
-                                                    ? 'bg-green-100 text-green-700' 
-                                                    : 'bg-red-100 text-red-700'
-                                              }`}>
+                                              <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold ${colorBadge}`}>
                                                 {noPresento ? 'NP' : nota}
                                               </span>
                                             </div>
-                                            <p className="text-xs text-yellow-600 mt-2 font-medium">
-                                              Lapso {calif.Evaluaciones?.lapso}
-                                            </p>
                                           </div>
                                         );
                                       })}
@@ -1171,41 +1397,45 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                                 {/* Calificaciones Actuales */}
                                 {calificacionesActuales.length > 0 && (
                                   <div>
-                                    <div className="flex items-center mb-4">
-                                      <FaCheckCircle className={`w-5 h-5 mr-2 ${textColor}`} style={{ color: iconColor }} />
-                                      <h5 className={`text-lg font-bold ${textColor}`}>
-                                        Calificaciones Actuales
-                                      </h5>
+                                    <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-green-300">
+                                      <div className="flex items-center">
+                                        <FaCheckCircle className={`w-5 h-5 mr-2 text-green-600`} />
+                                        <h5 className={`text-lg font-bold text-green-800`}>
+                                          Calificaciones Actuales (Sección Actual)
+                                        </h5>
+                                      </div>
+                                      <span className="text-xs font-semibold px-3 py-1 rounded-full bg-green-100 text-green-700">
+                                        {calificacionesActuales.length} calificaciones
+                                      </span>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 ml-4 pl-4 border-l-4 border-green-500">
                                       {calificacionesActuales.map((calif, idx) => {
                                         const nota = parseFloat(calif.calificacion || 0);
                                         const noPresento = nota === 0;
+                                        const esAprobado = nota >= 10;
+                                        const colorBg = noPresento ? 'bg-yellow-50' : esAprobado ? 'bg-green-50' : 'bg-orange-50';
+                                        const colorBorder = noPresento ? 'border-yellow-300' : esAprobado ? 'border-green-300' : 'border-orange-300';
+                                        const colorBadge = noPresento ? 'bg-yellow-100 text-yellow-700' : esAprobado ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
+                                        
                                         return (
                                           <div 
                                             key={idx}
-                                            className="bg-green-50 rounded-lg p-3 border border-green-200 hover:shadow-md transition-all"
+                                            className={`${colorBg} rounded-xl p-4 border-2 ${colorBorder} hover:shadow-lg transition-all duration-200`}
                                           >
-                                            <p className="text-xs font-semibold text-gray-600 mb-1">
+                                            <p className="text-xs font-bold text-gray-700 mb-2 truncate">
                                               {calif.Evaluaciones?.Materias?.asignatura || 'Materia'}
                                             </p>
+                                            <p className="text-xs text-gray-600 mb-3 truncate">
+                                              {calif.Evaluaciones?.nombreEvaluacion}
+                                            </p>
                                             <div className="flex items-center justify-between">
-                                              <span className="text-xs text-gray-600">
-                                                {calif.Evaluaciones?.nombreEvaluacion}
+                                              <span className="text-xs font-semibold text-gray-600">
+                                                Lapso {calif.Evaluaciones?.lapso}
                                               </span>
-                                              <span className={`inline-flex items-center justify-center w-10 h-10 rounded-lg text-sm font-bold ${
-                                                noPresento
-                                                  ? 'bg-yellow-100 text-yellow-700'
-                                                  : nota >= 10 
-                                                    ? 'bg-green-100 text-green-700' 
-                                                    : 'bg-red-100 text-red-700'
-                                              }`}>
+                                              <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold ${colorBadge}`}>
                                                 {noPresento ? 'NP' : nota}
                                               </span>
                                             </div>
-                                            <p className="text-xs text-green-600 mt-2 font-medium">
-                                              Lapso {calif.Evaluaciones?.lapso}
-                                            </p>
                                           </div>
                                         );
                                       })}
@@ -1222,21 +1452,21 @@ const MateriaDetailModal = ({ materia, grado, annoEscolar, onClose }) => {
                           h && h.calificaciones && h.calificaciones.some(c => c.esDeSeccionAnterior)
                         ).length === 0 && (
                           <div className="text-center py-12">
-                            <FaHistory className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <FaCheckCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                             <p className="text-gray-500 text-lg font-medium">
-                              No hay histórico de cambios de sección
+                              No hay registros de transferencia de secciones
                             </p>
                             <p className="text-gray-400 text-sm mt-2">
-                              Todos los estudiantes han permanecido en la misma sección durante este año escolar
+                              Todos los estudiantes han permanecido en la misma sección desde el inicio del año escolar
                             </p>
                           </div>
                         )}
                       </div>
                     ) : (
                       <div className="text-center py-12">
-                        <FaHistory className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
                         <p className="text-gray-500 text-lg font-medium">
-                          Cargando histórico de secciones...
+                          Cargando transferencias de secciones...
                         </p>
                       </div>
                     )}

@@ -81,6 +81,20 @@ export const horariosService = {
     }
   },
 
+  // Obtener horarios por profesor
+  async getHorariosByProfesor(profesorId, annoEscolarId = null) {
+    try {
+      let url = `/horarios?profesor_id=${profesorId}`;
+      if (annoEscolarId) {
+        url += `&anno_escolar_id=${annoEscolarId}`;
+      }
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Obtener clases actuales
   async getClasesActuales() {
     try {
@@ -95,6 +109,22 @@ export const horariosService = {
   async getProximasClases(limit = 5) {
     try {
       const response = await api.get(`/horarios/proximas-clases?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Duplicar/importar horarios de un grado/sección a otro
+  async duplicarHorarios(sourceGradoId, sourceSeccionId, targetGradoId, targetSeccionId, annoEscolarId) {
+    try {
+      const response = await api.post('/horarios/duplicar', {
+        sourceGradoId,
+        sourceSeccionId,
+        targetGradoId,
+        targetSeccionId,
+        annoEscolarId
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

@@ -1538,16 +1538,18 @@ getCalificacionesConHistorialSeccion: async (req, res) => {
             id: cal.id,
             calificacion: cal.calificacion,
             observaciones: cal.observaciones,
-            evaluacion: {
+            Evaluaciones: {
               id: cal.Evaluaciones.id,
-              nombre: cal.Evaluaciones.nombreEvaluacion,
-              tipo: cal.Evaluaciones.tipoEvaluacion,
+              nombreEvaluacion: cal.Evaluaciones.nombreEvaluacion,
+              tipoEvaluacion: cal.Evaluaciones.tipoEvaluacion,
               lapso: cal.Evaluaciones.lapso,
-              fecha: cal.Evaluaciones.fechaEvaluacion
-            },
-            materia: {
-              id: cal.Evaluaciones.Materias.id,
-              nombre: cal.Evaluaciones.Materias.asignatura
+              fechaEvaluacion: cal.Evaluaciones.fechaEvaluacion,
+              Materias: {
+                id: cal.Evaluaciones.Materias.id,
+                asignatura: cal.Evaluaciones.Materias.asignatura
+              },
+              Seccion: cal.Evaluaciones.Seccion,
+              Profesor: cal.Evaluaciones.Profesor
             },
             esDeSeccionAnterior,
             seccionHistorico: null,
@@ -1572,10 +1574,11 @@ getCalificacionesConHistorialSeccion: async (req, res) => {
         });
         
         res.status(200).json({
-          estudiante: {
+          Personas: {
             id: estudianteID,
             nombre: calificaciones[0]?.Personas?.nombre || '',
-            apellido: calificaciones[0]?.Personas?.apellido || ''
+            apellido: calificaciones[0]?.Personas?.apellido || '',
+            cedula: calificaciones[0]?.Personas?.cedula || ''
           },
           seccionActual: seccionActual ? {
             id: seccionActual.seccionID,

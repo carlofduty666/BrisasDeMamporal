@@ -12,7 +12,7 @@ import GradoDetail from '../components/admin/academico/GradoDetail';
 import EditarGrado from '../components/admin/academico/EditarGrado';
 import MateriasList from '../components/admin/academico/MateriasList';
 import SeccionesList from '../components/admin/academico/SeccionesList';
-import HorariosManagement from '../components/admin/HorariosManagement';
+import HorariosManagement from '../components/admin/HorariosManagementV2';
 import InscripcionesList from '../components/admin/inscripciones/InscripcionesList'
 import InscripcionDetail from '../components/admin/inscripciones/InscripcionDetail'
 import EstudiantesList from '../components/admin/estudiantes/EstudiantesList';
