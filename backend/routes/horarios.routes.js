@@ -32,6 +32,12 @@ router.get('/grado/:grado_id/seccion/:seccion_id',
   horariosController.getHorariosByGradoSeccion
 );
 
+// Ruta para validar conflictos sin crear
+router.post('/validar-conflictos',
+  authorizeRoles(['admin', 'owner', 'adminWeb']),
+  horariosController.validarConflictos
+);
+
 // RUTAS GENERALES CON PARÁMETROS AL FINAL
 router.get('/', authorizeRoles(['admin', 'owner', 'adminWeb']), horariosController.getHorarios);
 router.post('/', authorizeRoles(['admin', 'owner', 'adminWeb']), horariosController.createHorario);

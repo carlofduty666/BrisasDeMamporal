@@ -471,6 +471,141 @@ const horariosController = {
         error: error.message 
       });
     }
+  },
+
+  // Validar conflictos sin crear
+  async validarConflictos(req, res) {
+    try {
+      const {
+        grado_id,
+        seccion_id,
+        profesor_id,
+        dia_semana,
+        hora_inicio,
+        hora_fin,
+        horario_id // Para validar si es una actualización
+      } = req.body;
+
+      // Obtener el año escolar actual
+      const annoEscolarActual = await AnnoEscolar.getAnnoEscolarActual();
+      if (!annoEscolarActual) {
+        return res.status(400).json({ 
+          message: 'No hay un año escolar activo configurado',
+          hasConflict: false,
+          conflicts: []
+        });
+      }
+
+      const conflicts = [];
+
+      // Verificar conflictos de horario para el profesor
+      const conflictoProfesor = await Horarios.findOne({
+        where: {
+          ...(horario_id && { id: { [Op.ne]: horario_id } }),
+          profesor_id,
+          dia_semana,
+          anno_escolar_id: annoEscolarActual.id,
+          activo: true,
+          [Op.or]: [
+            {
+              hora_inicio: {
+                [Op.between]: [hora_inicio, hora_fin]
+              }
+            },
+            {
+              hora_fin: {
+                [Op.between]: [hora_inicio, hora_fin]
+              }
+            },
+            {
+              [Op.and]: [
+                { hora_inicio: { [Op.lte]: hora_inicio } },
+                { hora_fin: { [Op.gte]: hora_fin } }
+              ]
+            }
+          ]
+        },
+        include: [
+          {
+            model: Personas,
+            as: 'profesor',
+            attributes: ['id', 'nombre', 'apellido']
+          },
+          {
+            model: Materias,
+            as: 'materia',
+            attributes: ['id', 'asignatura']
+          }
+        ]
+      });
+
+      if (conflictoProfesor) {
+        conflicts.push({
+          type: 'profesor',
+          message: `Profesor ${conflictoProfesor.profesor.nombre} ${conflictoProfesor.profesor.apellido} ya tiene ${conflictoProfesor.materia.asignatura} de ${conflictoProfesor.hora_inicio} a ${conflictoProfesor.hora_fin}`,
+          conflictingHorario: conflictoProfesor
+        });
+      }
+
+      // Verificar conflictos de horario para el grado y sección
+      const conflictoGradoSeccion = await Horarios.findOne({
+        where: {
+          ...(horario_id && { id: { [Op.ne]: horario_id } }),
+          grado_id,
+          seccion_id,
+          dia_semana,
+          anno_escolar_id: annoEscolarActual.id,
+          activo: true,
+          [Op.or]: [
+            {
+              hora_inicio: {
+                [Op.between]: [hora_inicio, hora_fin]
+              }
+            },
+            {
+              hora_fin: {
+                [Op.between]: [hora_inicio, hora_fin]
+              }
+            },
+            {
+              [Op.and]: [
+                { hora_inicio: { [Op.lte]: hora_inicio } },
+                { hora_fin: { [Op.gte]: hora_fin } }
+              ]
+            }
+          ]
+        },
+        include: [
+          {
+            model: Materias,
+            as: 'materia',
+            attributes: ['id', 'asignatura']
+          }
+        ]
+      });
+
+      if (conflictoGradoSeccion) {
+        conflicts.push({
+          type: 'gradoSeccion',
+          message: `Ya existe ${conflictoGradoSeccion.materia.asignatura} de ${conflictoGradoSeccion.hora_inicio} a ${conflictoGradoSeccion.hora_fin}`,
+          conflictingHorario: conflictoGradoSeccion
+        });
+      }
+
+      res.json({
+        hasConflict: conflicts.length > 0,
+        conflicts,
+        message: conflicts.length > 0 ? 'Se encontraron conflictos' : 'Sin conflictos'
+      });
+    } catch (error) {
+      console.error('Error al validar conflictos:', error);
+      res.status(500).json({ 
+        message: 'Error interno del servidor',
+        error: error.message,
+        hasConflict: false,
+        conflicts: []
+      });
+    }
   }
 };
 

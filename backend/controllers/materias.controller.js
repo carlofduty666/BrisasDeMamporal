@@ -129,7 +129,7 @@ const materiasController = {
     getProfesoresByMateria: async (req, res) => {
       try {
         const { id } = req.params; // ID de la materia
-        const { annoEscolarID } = req.query;
+        const { annoEscolarID, gradoID } = req.query;
         
         // Validar que la materia existe
         const materia = await db.Materias.findByPk(id);
@@ -148,12 +148,20 @@ const materiasController = {
           }
         }
         
+        // Construir condición where
+        const whereCondition = {
+          materiaID: id,
+          annoEscolarID: idAnnoEscolar
+        };
+        
+        // Si se especifica gradoID, filtrar solo para ese grado
+        if (gradoID) {
+          whereCondition.gradoID = gradoID;
+        }
+        
         // Obtener asignaciones profesor-materia-grado
         const asignaciones = await db.Profesor_Materia_Grados.findAll({
-          where: {
-            materiaID: id,
-            annoEscolarID: idAnnoEscolar
-          },
+          where: whereCondition,
           include: [
             {
               model: db.Personas,
@@ -169,7 +177,27 @@ const materiasController = {
           order: [['profesorID', 'ASC']]
         });
         
-        // Agrupar por profesor
+        // Si se especifica gradoID, retornar solo lista simple de profesores
+        if (gradoID) {
+          const profesoresSimples = asignaciones.map(asignacion => ({
+            id: asignacion.profesor.id,
+            nombre: asignacion.profesor.nombre,
+            apellido: asignacion.profesor.apellido,
+            cedula: asignacion.profesor.cedula,
+            email: asignacion.profesor.email,
+            telefono: asignacion.profesor.telefono,
+            tipo: asignacion.profesor.tipo
+          }));
+          
+          // Eliminar duplicados por ID
+          const profesoresUnicos = Array.from(
+            new Map(profesoresSimples.map(p => [p.id, p])).values()
+          );
+          
+          return res.status(200).json(profesoresUnicos);
+        }
+        
+        // Agrupar por profesor (para cuando NO se especifica gradoID)
         const profesoresMap = {};
         asignaciones.forEach(asignacion => {
           const profesor = asignacion.profesor;

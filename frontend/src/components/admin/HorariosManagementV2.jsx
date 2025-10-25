@@ -41,6 +41,7 @@ const HorariosManagementV2 = () => {
   const [profesores, setProfesores] = useState([]);
   const [aulas, setAulas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [annoEscolarActual, setAnnoEscolarActual] = useState(null);
 
   // Modales
   const [showModal, setShowModal] = useState(false);
@@ -114,6 +115,20 @@ const HorariosManagementV2 = () => {
     }
   }, [formData.grado_id]);
 
+  // Cargar materias cuando cambia la sección
+  useEffect(() => {
+    if (formData.seccion_id) {
+      fetchMateriasBySeccion(formData.seccion_id);
+    }
+  }, [formData.seccion_id]);
+
+  // Cargar profesores cuando cambia la materia
+  useEffect(() => {
+    if (formData.materia_id && formData.grado_id) {
+      fetchProfesoresByMateria(formData.materia_id, formData.grado_id);
+    }
+  }, [formData.materia_id, formData.grado_id]);
+
   // Calcular disponibilidad del profesor
   useEffect(() => {
     if (formData.profesor_id && formData.dia_semana && mostrarDisponibilidad) {
@@ -156,17 +171,25 @@ const HorariosManagementV2 = () => {
       const token = localStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
-      const [horariosRes, gradosRes, materiasRes, profesoresRes] = await Promise.all([
+      const [horariosRes, gradosRes, annoRes, seccionesRes, materiasRes, profesoresRes] = await Promise.all([
         axios.get(`${import.meta.env.VITE_API_URL}/horarios`, config),
         axios.get(`${import.meta.env.VITE_API_URL}/grados`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/anno-escolar/actual`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/secciones`, config),
         axios.get(`${import.meta.env.VITE_API_URL}/materias`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/personas?tipo=profesor`, config)
+        axios.get(`${import.meta.env.VITE_API_URL}/personas/tipo/profesor`, config)
       ]);
 
       setHorarios(horariosRes.data);
       setGrados(gradosRes.data);
+      setSecciones(seccionesRes.data);
       setMaterias(materiasRes.data);
       setProfesores(profesoresRes.data);
+      
+      // Obtener el año escolar activo
+      if (annoRes.data) {
+        setAnnoEscolarActual(annoRes.data);
+      }
 
       // Extraer aulas únicas
       const aulasUnicas = [...new Set(horariosRes.data.map(h => h.aula).filter(Boolean))];
@@ -187,9 +210,45 @@ const HorariosManagementV2 = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSecciones(response.data);
+      // Limpiar materias y profesores cuando cambia el grado
+      setMaterias([]);
+      setProfesores([]);
     } catch (error) {
       console.error('Error al obtener secciones:', error);
       setSecciones([]);
+    }
+  };
+
+  const fetchMateriasBySeccion = async (seccionId) => {
+    try {
+      if (!annoEscolarActual?.id) return;
+      
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/materias/seccion/${seccionId}?annoEscolarID=${annoEscolarActual.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMaterias(response.data);
+      setProfesores([]);
+    } catch (error) {
+      console.error('Error al obtener materias:', error);
+      setMaterias([]);
+    }
+  };
+
+  const fetchProfesoresByMateria = async (materiaId, gradoId) => {
+    try {
+      if (!annoEscolarActual?.id) return;
+      
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/materias/${materiaId}/profesores?annoEscolarID=${annoEscolarActual.id}&gradoID=${gradoId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setProfesores(response.data);
+    } catch (error) {
+      console.error('Error al obtener profesores:', error);
+      setProfesores([]);
     }
   };
 
@@ -319,6 +378,8 @@ const HorariosManagementV2 = () => {
     setEditingHorario(null);
     setIsEditMode(false);
     setSecciones([]);
+    setMaterias([]);
+    setProfesores([]);
     setConflictosDetectados(null);
     setMostrarAdvertencia(false);
     setDisponibilidadProfesor([]);
@@ -544,13 +605,12 @@ const HorariosManagementV2 = () => {
         {/* Vista de contenido */}
         {viewMode === 'calendario' ? (
           <HorariosCalendar
-            horarios={filteredHorarios}
+            horarios={horarios}
             profesores={profesores}
             grados={grados}
             secciones={secciones}
             materias={materias}
-            selectedGrado={filters.grado ? parseInt(filters.grado) : null}
-            selectedSeccion={filters.seccion ? parseInt(filters.seccion) : null}
+            onHorarioChange={fetchAllData}
           />
         ) : (
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -575,22 +635,16 @@ const HorariosManagementV2 = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredHorarios.map((horario, idx) => {
-                      const grado = grados.find(g => g.id === horario.grado_id);
-                      const seccion = secciones.find(s => s.id === horario.seccion_id);
-                      const materia = materias.find(m => m.id === horario.materia_id);
-                      const profesor = profesores.find(p => p.id === horario.profesor_id);
-
-                      return (
+                    {filteredHorarios.map((horario, idx) => (
                         <tr key={horario.id} className="hover:bg-rose-50 transition-colors">
                           <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                            {formatearNombreGrado(grado?.nombre_grado)} {seccion?.nombre_seccion}
+                            {formatearNombreGrado(horario.grado?.nombre_grado)} {horario.seccion?.nombre_seccion}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-700">
-                            {materia?.asignatura}
+                            {horario.materia?.asignatura}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-700">
-                            {profesor?.nombre} {profesor?.apellido}
+                            {horario.profesor?.nombre} {horario.profesor?.apellido}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-700">
                             <span className="px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-xs font-bold">
@@ -629,8 +683,7 @@ const HorariosManagementV2 = () => {
                             </button>
                           </td>
                         </tr>
-                      );
-                    })}
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -704,7 +757,15 @@ const HorariosManagementV2 = () => {
                     </label>
                     <select
                       value={formData.seccion_id}
-                      onChange={(e) => setFormData({ ...formData, seccion_id: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, seccion_id: e.target.value });
+                        if (e.target.value) {
+                          fetchMateriasBySeccion(e.target.value);
+                        } else {
+                          setMaterias([]);
+                          setProfesores([]);
+                        }
+                      }}
                       disabled={!formData.grado_id}
                       className="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent disabled:bg-gray-100 transition-all"
                       required
@@ -725,8 +786,16 @@ const HorariosManagementV2 = () => {
                     </label>
                     <select
                       value={formData.materia_id}
-                      onChange={(e) => setFormData({ ...formData, materia_id: e.target.value })}
-                      className="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, materia_id: e.target.value });
+                        if (e.target.value && formData.grado_id) {
+                          fetchProfesoresByMateria(e.target.value, formData.grado_id);
+                        } else {
+                          setProfesores([]);
+                        }
+                      }}
+                      disabled={!formData.seccion_id}
+                      className="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent disabled:bg-gray-100 transition-all"
                       required
                     >
                       <option value="">Selecciona una materia</option>
@@ -748,10 +817,15 @@ const HorariosManagementV2 = () => {
                           setMostrarDisponibilidad(true);
                         }
                       }}
-                      className="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                      disabled={!formData.materia_id || profesores.length === 0}
+                      className="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent disabled:bg-gray-100 transition-all"
                       required
                     >
-                      <option value="">Selecciona un profesor</option>
+                      <option value="">
+                        {profesores.length === 0 && formData.materia_id 
+                          ? 'No hay profesores para esta materia en este grado' 
+                          : 'Selecciona un profesor'}
+                      </option>
                       {profesores.map(profesor => (
                         <option key={profesor.id} value={profesor.id}>
                           {profesor.nombre} {profesor.apellido}
