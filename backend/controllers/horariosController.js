@@ -540,9 +540,15 @@ const horariosController = {
       });
 
       if (conflictoProfesor) {
+        const horaInicio = conflictoProfesor.hora_inicio.substring(0, 5);
+        const horaFin = conflictoProfesor.hora_fin.substring(0, 5);
         conflicts.push({
           type: 'profesor',
-          message: `Profesor ${conflictoProfesor.profesor.nombre} ${conflictoProfesor.profesor.apellido} ya tiene ${conflictoProfesor.materia.asignatura} de ${conflictoProfesor.hora_inicio} a ${conflictoProfesor.hora_fin}`,
+          message: `Profesor ${conflictoProfesor.profesor.nombre} ${conflictoProfesor.profesor.apellido} ya tiene ${conflictoProfesor.materia.asignatura} de ${horaInicio} a ${horaFin}`,
+          profesor: `${conflictoProfesor.profesor.nombre} ${conflictoProfesor.profesor.apellido}`,
+          materia: conflictoProfesor.materia.asignatura,
+          horaInicio,
+          horaFin,
           conflictingHorario: conflictoProfesor
         });
       }
@@ -585,9 +591,14 @@ const horariosController = {
       });
 
       if (conflictoGradoSeccion) {
+        const horaInicio = conflictoGradoSeccion.hora_inicio.substring(0, 5);
+        const horaFin = conflictoGradoSeccion.hora_fin.substring(0, 5);
         conflicts.push({
           type: 'gradoSeccion',
-          message: `Ya existe ${conflictoGradoSeccion.materia.asignatura} de ${conflictoGradoSeccion.hora_inicio} a ${conflictoGradoSeccion.hora_fin}`,
+          message: `Ya ${conflictoGradoSeccion.materia.asignatura} se imparte de ${horaInicio} a ${horaFin}`,
+          materia: conflictoGradoSeccion.materia.asignatura,
+          horaInicio,
+          horaFin,
           conflictingHorario: conflictoGradoSeccion
         });
       }

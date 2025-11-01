@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { FaTimes, FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
+import { FaTimes, FaSpinner, FaExclamationTriangle, FaBook, FaChalkboardTeacher, FaClock, FaDoorOpen, FaGraduationCap, FaCalendar } from 'react-icons/fa';
+import { FaChalkboardUser } from "react-icons/fa6";
+import { formatearNombreGrado } from '../../utils/formatters';
 
 const HorariosFormModal = ({ 
   isOpen, 
@@ -9,6 +11,7 @@ const HorariosFormModal = ({
   onSubmit,
   selectedDia = null,
   selectedGrado = null,
+  selectedSeccion = null,
   grados,
   materias,
   profesores,
@@ -23,6 +26,9 @@ const HorariosFormModal = ({
   const [profesoresOptions, setProfesoresOptions] = useState([]);
   const [conflictErrors, setConflictErrors] = useState([]);
   const [annoEscolarID, setAnnoEscolarID] = useState(null);
+
+  // Detectar si se abre desde el calendario (cuando hay grado, sección y día preseleccionados)
+  const isCreatingFromCalendar = !editingHorario && selectedGrado && selectedSeccion && selectedDia;
   
   const [formData, setFormData] = useState({
     grado_id: selectedGrado || '',
@@ -82,10 +88,25 @@ const HorariosFormModal = ({
       if (editingHorario.grado_id && annoEscolarID) {
         handleGradoChange({ target: { value: editingHorario.grado_id } }, true);
       }
+    } else if (isCreatingFromCalendar && annoEscolarID) {
+      // Si se abre desde el calendario, precargar todo
+      setFormData({
+        grado_id: selectedGrado,
+        seccion_id: selectedSeccion,
+        materia_id: '',
+        profesor_id: '',
+        dia_semana: selectedDia,
+        hora_inicio: '',
+        hora_fin: '',
+        aula: '',
+        activo: true
+      });
+      // Cargar opciones de materias y profesores
+      handleSeccionChange({ target: { value: selectedSeccion } });
     } else {
       setFormData({
         grado_id: selectedGrado || '',
-        seccion_id: '',
+        seccion_id: selectedSeccion || '',
         materia_id: '',
         profesor_id: '',
         dia_semana: selectedDia || '',
@@ -95,7 +116,7 @@ const HorariosFormModal = ({
         activo: true
       });
     }
-  }, [editingHorario, isOpen, annoEscolarID]);
+  }, [editingHorario, isOpen, annoEscolarID, isCreatingFromCalendar]);
 
   // Cargar secciones cuando se selecciona grado
   const handleGradoChange = async (e, isInit = false) => {
@@ -276,7 +297,7 @@ const HorariosFormModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 flex items-center justify-center z-50 p-4 !m-0" style={{ margin: 0 }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-rose-600 to-rose-700 text-white p-6 flex justify-between items-center">
@@ -293,50 +314,93 @@ const HorariosFormModal = ({
 
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Row 1: Grado y Sección */}
+          {/* Información de contexto cuando se abre desde el calendario */}
+          {isCreatingFromCalendar && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4 space-y-3">
+              <h3 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+                <FaCalendar className="text-blue-600" />
+                Contexto de la Clase
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Grado Badge */}
+                <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-blue-200">
+                  <FaGraduationCap className="text-indigo-600 text-lg" />
+                  <div>
+                    <p className="text-xs text-gray-600">Grado</p>
+                    <p className="font-semibold text-gray-800">{formatearNombreGrado(grados.find(g => g.id === selectedGrado)?.nombre_grado) || 'N/A'}</p>
+                  </div>
+                </div>
+                
+                {/* Sección Badge */}
+                <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-blue-200">
+                  <FaDoorOpen className="text-green-600 text-lg" />
+                  <div>
+                    <p className="text-xs text-gray-600">Sección</p>
+                    <p className="font-semibold text-gray-800">{secciones.find(s => s.id === selectedSeccion)?.nombre_seccion || 'N/A'}</p>
+                  </div>
+                </div>
+                
+                {/* Día Badge */}
+                <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-blue-200">
+                  <FaClock className="text-rose-600 text-lg" />
+                  <div>
+                    <p className="text-xs text-gray-600">Día</p>
+                    <p className="font-semibold text-gray-800 capitalize">{selectedDia || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Secciones y Grados - Solo si NO es desde calendario o si es edición */}
+          {!isCreatingFromCalendar && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <FaGraduationCap className="text-indigo-600" />
+                  Grado <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.grado_id}
+                  onChange={handleGradoChange}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-rose-500 focus:outline-none transition-colors"
+                >
+                  <option value="">Selecciona un grado</option>
+                  {grados.map(grado => (
+                    <option key={grado.id} value={grado.id}>
+                      {formatearNombreGrado(grado.nombre_grado)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <FaDoorOpen className="text-green-600" />
+                  Sección <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.seccion_id}
+                  onChange={handleSeccionChange}
+                  disabled={!formData.grado_id}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-rose-500 focus:outline-none transition-colors disabled:bg-gray-100"
+                >
+                  <option value="">Selecciona una sección</option>
+                  {seccionesOptions.map(seccion => (
+                    <option key={seccion.id} value={seccion.id}>
+                      {seccion.nombre_seccion}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Row: Materia y Profesor */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Grado <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.grado_id}
-                onChange={handleGradoChange}
-                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-rose-500 focus:outline-none transition-colors"
-              >
-                <option value="">Selecciona un grado</option>
-                {grados.map(grado => (
-                  <option key={grado.id} value={grado.id}>
-                    {grado.nombre_grado}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Sección <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.seccion_id}
-                onChange={handleSeccionChange}
-                disabled={!formData.grado_id}
-                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-rose-500 focus:outline-none transition-colors disabled:bg-gray-100"
-              >
-                <option value="">Selecciona una sección</option>
-                {seccionesOptions.map(seccion => (
-                  <option key={seccion.id} value={seccion.id}>
-                    {seccion.nombre_seccion}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Row 2: Materia y Profesor */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <FaBook className="text-amber-600" />
                 Materia <span className="text-red-500">*</span>
               </label>
               <select
@@ -355,7 +419,8 @@ const HorariosFormModal = ({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <FaChalkboardTeacher className="text-purple-600" />
                 Profesor <span className="text-red-500">*</span>
               </label>
               <select
@@ -382,36 +447,40 @@ const HorariosFormModal = ({
             </div>
           </div>
 
-          {/* Row 3: Día y Horarios */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Día <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.dia_semana}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, dia_semana: e.target.value }));
-                  if (formData.hora_inicio && formData.hora_fin && formData.profesor_id) {
-                    validateConflicts({
-                      ...formData,
-                      dia_semana: e.target.value
-                    });
-                  }
-                }}
-                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-rose-500 focus:outline-none transition-colors"
-              >
-                <option value="">Selecciona un día</option>
-                {diasSemana.map(dia => (
-                  <option key={dia.value} value={dia.value}>
-                    {dia.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Row: Día y Horarios - Día solo si NO es desde calendario */}
+          <div className={`grid gap-4 ${isCreatingFromCalendar ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
+            {!isCreatingFromCalendar && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <FaCalendar className="text-rose-600" />
+                  Día <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.dia_semana}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, dia_semana: e.target.value }));
+                    if (formData.hora_inicio && formData.hora_fin && formData.profesor_id) {
+                      validateConflicts({
+                        ...formData,
+                        dia_semana: e.target.value
+                      });
+                    }
+                  }}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-rose-500 focus:outline-none transition-colors"
+                >
+                  <option value="">Selecciona un día</option>
+                  {diasSemana.map(dia => (
+                    <option key={dia.value} value={dia.value}>
+                      {dia.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <FaClock className="text-cyan-600" />
                 Hora Inicio <span className="text-red-500">*</span>
               </label>
               <input
@@ -424,7 +493,8 @@ const HorariosFormModal = ({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <FaClock className="text-cyan-600" />
                 Hora Fin <span className="text-red-500">*</span>
               </label>
               <input
@@ -437,9 +507,10 @@ const HorariosFormModal = ({
             </div>
           </div>
 
-          {/* Row 4: Aula */}
+          {/* Row: Aula */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <FaDoorOpen className="text-green-600" />
               Aula
             </label>
             <input
@@ -458,10 +529,18 @@ const HorariosFormModal = ({
                 <FaExclamationTriangle className="text-red-600 mt-1 flex-shrink-0" />
                 <div className="flex-1">
                   <h3 className="font-semibold text-red-900 mb-2">Conflictos Detectados:</h3>
-                  <ul className="space-y-1">
+                  <ul className="space-y-2">
                     {conflictErrors.map((conflict, idx) => (
                       <li key={idx} className="text-red-800 text-sm">
-                        • {conflict.message}
+                        • {conflict.type === 'profesor' ? (
+                          <>
+                            Profesor {conflict.profesor} ya tiene <span className="font-bold">{conflict.materia}</span> de <span className="font-bold">{conflict.horaInicio}</span> a <span className="font-bold">{conflict.horaFin}</span>
+                          </>
+                        ) : (
+                          <>
+                            Ya <span className="font-bold">{conflict.materia}</span> se imparte de <span className="font-bold">{conflict.horaInicio}</span> a <span className="font-bold">{conflict.horaFin}</span>
+                          </>
+                        )}
                       </li>
                     ))}
                   </ul>

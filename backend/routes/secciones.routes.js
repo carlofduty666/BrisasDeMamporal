@@ -7,11 +7,12 @@ const authMiddleware = require('../middleware/auth.middleware');
 router.get('/secciones/publicas', seccionesController.getSeccionesPublicas);
 
 // Rutas protegidas - solo lectura
+// NOTA: Las rutas más específicas deben ir primero para evitar que sean interceptadas por :id
+router.get('/secciones/grado/:gradoID', authMiddleware.verifyToken, seccionesController.getSeccionesByGrado);
+router.get('/secciones/estudiante/:id', authMiddleware.verifyToken, seccionesController.getSeccionesByEstudiante);
+router.get('/secciones/:id/estudiantes', authMiddleware.verifyToken, seccionesController.getEstudiantesBySeccion);
 router.get('/secciones', authMiddleware.verifyToken, seccionesController.getAllSecciones);
 router.get('/secciones/:id', authMiddleware.verifyToken, seccionesController.getSeccionById);
-router.get('/secciones/grado/:gradoID', authMiddleware.verifyToken, seccionesController.getSeccionesByGrado);
-router.get('/secciones/:id/estudiantes', authMiddleware.verifyToken, seccionesController.getEstudiantesBySeccion);
-router.get('/secciones/estudiante/:id', authMiddleware.verifyToken, seccionesController.getSeccionesByEstudiante);
 
 
 // Rutas protegidas - requieren permisos de administrador

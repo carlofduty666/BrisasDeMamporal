@@ -7,27 +7,34 @@ const authMiddleware = require('../middleware/auth.middleware');
 // router.get('/materias/publicas', materiaController.getMateriasPublicas);
 
 // Rutas protegidas
-router.get('/materias/profesor/:id', authMiddleware.verifyToken, materiaController.getMateriasByProfesor);
+// NOTA: Las rutas más específicas van PRIMERO para evitar ser interceptadas por :id
+
+// GET - Rutas específicas con 2 parámetros
 router.get('/materias/profesor/:profesorID/grado/:gradoID', authMiddleware.verifyToken, materiaController.getMateriasByProfesorEnGrado);
+router.get('/materias/seccion/:seccionID', authMiddleware.verifyToken, materiaController.getMateriasBySeccion);
+
+// GET - Rutas específicas con palabra clave + 1 parámetro
+router.get('/materias/profesor/:id', authMiddleware.verifyToken, materiaController.getMateriasByProfesor);
+router.get('/materias/:id/profesores', authMiddleware.verifyToken, materiaController.getProfesoresByMateria);
 router.get('/materias/:materiaID/grados', authMiddleware.verifyToken, materiaController.getGradosByMateria);
 router.get('/grado/:gradoID/materias', authMiddleware.verifyToken, materiaController.getMateriasByGrado);
-router.get('/materias/:id/profesores', authMiddleware.verifyToken, materiaController.getProfesoresByMateria);
 
-router.get('/materias/:id', authMiddleware.verifyToken, materiaController.getMateriaByID);
+// GET - Rutas genéricas
 router.get('/materias', authMiddleware.verifyToken, materiaController.getAllMaterias);
+router.get('/materias/:id', authMiddleware.verifyToken, materiaController.getMateriaByID);
 
+// POST
 router.post('/materias', authMiddleware.verifyToken, materiaController.createMateria);
 router.post('/materias/asignar-a-grado', authMiddleware.verifyToken, materiaController.asignarMateriaAGrado);
 router.post('/materias/asignar-profesor-materia', authMiddleware.verifyToken, materiaController.asignarProfesorAMateria);
 router.post('/materias/asignar-profesor-grado', authMiddleware.verifyToken, materiaController.asignarProfesorAGrado);
 
-router.delete('/materias/:id', authMiddleware.verifyToken, materiaController.deleteMateria);
+// DELETE - Rutas específicas primero
 router.delete('/materias/grado/:gradoID/:materiaID/:annoEscolarID', authMiddleware.verifyToken, materiaController.eliminarMateriaDeGrado);
 router.delete('/materias/profesor/:profesorID/:materiaID/:gradoID/:annoEscolarID', authMiddleware.verifyToken, materiaController.eliminarProfesorDeMateria);
+router.delete('/materias/:id', authMiddleware.verifyToken, materiaController.deleteMateria);
 
+// PUT
 router.put('/materias/:id', authMiddleware.verifyToken, materiaController.updateMateria);
-
-// Obtener materias por sección
-router.get('/materias/seccion/:seccionID', authMiddleware.verifyToken, materiaController.getMateriasBySeccion);
 
 module.exports = router;

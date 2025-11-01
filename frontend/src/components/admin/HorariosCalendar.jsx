@@ -15,6 +15,8 @@ const HorariosCalendar = ({
   onHorarioChange 
 }) => {
   const [selectedGrado, setSelectedGrado] = useState(null);
+  const [selectedSeccion, setSelectedSeccion] = useState(null);
+  const [selectedNivel, setSelectedNivel] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedDia, setSelectedDia] = useState(null);
   const [editingHorario, setEditingHorario] = useState(null);
@@ -22,113 +24,233 @@ const HorariosCalendar = ({
   const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
   const diasSemanaEn = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes'];
 
-  // Filtrar horarios según grado seleccionado
+  // Convertir hora a minutos desde las 00:00
+  const horaAMinutos = (horaStr) => {
+    const [h, m] = horaStr.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  // Convertir minutos a formato HH:MM
+  const minutosAHora = (minutos) => {
+    const h = Math.floor(minutos / 60);
+    const m = minutos % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
+  // Obtener niveles únicos de los grados
+  const obtenerNiveles = useMemo(() => {
+    const niveles = [...new Set(grados.map(g => {
+      if (g.Niveles?.nombre_nivel) return g.Niveles.nombre_nivel;
+      if (g.nivel) return g.nivel;
+      return 'Otros';
+    }))].sort();
+    return niveles;
+  }, [grados]);
+
+  // Obtener grados por nivel
+  const obtenerGradosPorNivel = useMemo(() => {
+    if (!selectedNivel) return [];
+    return grados.filter(g => {
+      const nivelActual = g.Niveles?.nombre_nivel || g.nivel || 'Otros';
+      return nivelActual === selectedNivel;
+    }).sort((a, b) => a.nombre_grado.localeCompare(b.nombre_grado));
+  }, [grados, selectedNivel]);
+
+  // Obtener secciones del grado seleccionado
+  const obtenerSeccionesPorGrado = useMemo(() => {
+    if (!selectedGrado) return [];
+    return secciones.filter(s => {
+      // Soportar tanto gradoID (backend retornado) como grado_id
+      const gradoId = s.gradoID !== undefined ? s.gradoID : s.grado_id;
+      return gradoId === selectedGrado;
+    }).sort((a, b) => (a.nombre_seccion || 'A').localeCompare(b.nombre_seccion || 'A'));
+  }, [secciones, selectedGrado]);
+
+  // Filtrar horarios según nivel, grado y sección seleccionados
   const horariosFiltrados = useMemo(() => {
     let filtered = [...horarios];
+    if (selectedNivel) {
+      const gradoDelNivel = grados
+        .filter(g => {
+          const nivelActual = g.Niveles?.nombre_nivel || g.nivel || 'Otros';
+          return nivelActual === selectedNivel;
+        })
+        .map(g => g.id);
+      filtered = filtered.filter(h => gradoDelNivel.includes(h.grado_id));
+    }
     if (selectedGrado) {
       filtered = filtered.filter(h => h.grado_id === selectedGrado);
     }
+    if (selectedSeccion) {
+      filtered = filtered.filter(h => h.seccion_id === selectedSeccion);
+    }
     return filtered;
-  }, [horarios, selectedGrado]);
+  }, [horarios, grados, selectedNivel, selectedGrado, selectedSeccion]);
 
-  // Obtener rango de horas
-  const obtenerRangoHoras = () => {
+  // Constante: píxeles por minuto (ajustable) - Aumentado para mejor visualización
+  const PX_PER_MINUTE = 1.2;
+  const MIN_SLOT_HEIGHT = 60; // Altura mínima de cada slot de tiempo
+
+  // Obtener todos los puntos de tiempo únicos y ordenados (en píxeles)
+  const obtenerPuntosDetiempo = useMemo(() => {
     if (horariosFiltrados.length === 0) {
-      return { inicio: 7, fin: 17 };
+      const inicio = 420; // 7:00
+      const fin = 1020; // 17:00
+      const pxCalculado = (fin - inicio) * PX_PER_MINUTE;
+      const pxReal = Math.max(pxCalculado, MIN_SLOT_HEIGHT);
+      return [
+        { minutos: inicio, hora: minutosAHora(inicio), px: 0, pxReal: 0 },
+        { minutos: fin, hora: minutosAHora(fin), px: pxCalculado, pxReal: pxReal }
+      ];
     }
 
-    const horas = horariosFiltrados.flatMap(h => {
-      const [inicioH] = h.hora_inicio.split(':').map(Number);
-      const [finH] = h.hora_fin.split(':').map(Number);
-      return [inicioH, finH];
-    });
-
-    const minHora = Math.min(...horas);
-    const maxHora = Math.max(...horas) + 1;
-
-    return {
-      inicio: Math.max(minHora - 1, 7),
-      fin: Math.min(maxHora + 1, 18)
-    };
-  };
-
-  const rangoHoras = obtenerRangoHoras();
-  const horas = Array.from({ length: rangoHoras.fin - rangoHoras.inicio }, (_, i) => rangoHoras.inicio + i);
-
-  // Obtener clases para una celda específica
-  const obtenerClasesEnCelda = (diaIndex, hora) => {
-    return horariosFiltrados.filter(horario => {
-      const dia = diasSemanaEn[diaIndex];
-      if (horario.dia_semana !== dia) return false;
-
-      const [inicioH] = horario.hora_inicio.split(':').map(Number);
-      const [finH] = horario.hora_fin.split(':').map(Number);
-
-      return hora >= inicioH && hora < finH;
-    });
-  };
-
-  // Obtener espacios libres para un día específico
-  const obtenerEspaciosLibresPorDia = (diaIndex) => {
-    const dia = diasSemanaEn[diaIndex];
-    const clasesDelDia = horariosFiltrados.filter(h => h.dia_semana === dia);
+    const puntosSet = new Set();
     
-    if (clasesDelDia.length === 0) return [];
-
-    // Ordenar clases por hora de inicio
-    const clasesOrdenadas = clasesDelDia.sort((a, b) => {
-      const [aH, aM] = a.hora_inicio.split(':').map(Number);
-      const [bH, bM] = b.hora_inicio.split(':').map(Number);
-      return aH * 60 + aM - (bH * 60 + bM);
+    horariosFiltrados.forEach(h => {
+      puntosSet.add(horaAMinutos(h.hora_inicio));
+      puntosSet.add(horaAMinutos(h.hora_fin));
     });
 
-    const espaciosLibres = [];
-    const primeraClase = clasesOrdenadas[0];
-    const ultimaClase = clasesOrdenadas[clasesOrdenadas.length - 1];
+    // Agregar límites mínimo y máximo
+    const minutosArray = Array.from(puntosSet).sort((a, b) => a - b);
+    const min = Math.max(minutosArray[0] - 30, 420); // Mínimo 7:00
+    const max = Math.min(minutosArray[minutosArray.length - 1] + 30, 1020); // Máximo 17:00
 
-    // ESPACIO LIBRE ANTES DE LA PRIMERA CLASE
-    const [primeraH, primeraM] = primeraClase.hora_inicio.split(':').map(Number);
-    if (rangoHoras.inicio < primeraH) {
-      espaciosLibres.push({
-        tipo: 'libre',
-        hora_inicio: `${String(rangoHoras.inicio).padStart(2, '0')}:00`,
-        hora_fin: `${String(primeraH).padStart(2, '0')}:${String(primeraM).padStart(2, '0')}`
+    if (!puntosSet.has(min)) puntosSet.add(min);
+    if (!puntosSet.has(max)) puntosSet.add(max);
+
+    const minutosOrdenados = Array.from(puntosSet).sort((a, b) => a - b);
+    
+    // Calcular posiciones reales considerando MIN_SLOT_HEIGHT
+    const puntosFinal = [];
+    let pxRealAcumulado = 0;
+    
+    for (let i = 0; i < minutosOrdenados.length; i++) {
+      const minutos = minutosOrdenados[i];
+      const pxCalculado = (minutos - minutosOrdenados[0]) * PX_PER_MINUTE;
+      
+      puntosFinal.push({
+        minutos,
+        hora: minutosAHora(minutos),
+        px: pxCalculado,
+        pxReal: pxRealAcumulado
+      });
+      
+      // Para el siguiente punto, sumar la altura real del slot actual
+      if (i < minutosOrdenados.length - 1) {
+        const duracionSlot = minutosOrdenados[i + 1] - minutos;
+        const alturaSlot = duracionSlot * PX_PER_MINUTE;
+        const alturaReal = Math.max(alturaSlot, MIN_SLOT_HEIGHT);
+        pxRealAcumulado += alturaReal;
+      }
+    }
+
+    return puntosFinal;
+  }, [horariosFiltrados]);
+
+  // Obtener la altura en píxeles de una clase considerando MIN_SLOT_HEIGHT
+  const obtenerAlturaClase = (horario) => {
+    const inicio = horaAMinutos(horario.hora_inicio);
+    const fin = horaAMinutos(horario.hora_fin);
+    const duracion = fin - inicio;
+    const alturaCalculada = duracion * PX_PER_MINUTE;
+    
+    // Encontrar los puntos de tiempo que contienen inicio y fin
+    let pxRealInicio = 0;
+    let pxRealFin = 0;
+    
+    for (let i = 0; i < obtenerPuntosDetiempo.length - 1; i++) {
+      const puntoActual = obtenerPuntosDetiempo[i];
+      const puntoSiguiente = obtenerPuntosDetiempo[i + 1];
+      
+      if (inicio >= puntoActual.minutos && inicio <= puntoSiguiente.minutos) {
+        const ratioEnSlot = (inicio - puntoActual.minutos) / (puntoSiguiente.minutos - puntoActual.minutos);
+        const alturaSlot = Math.max((puntoSiguiente.minutos - puntoActual.minutos) * PX_PER_MINUTE, MIN_SLOT_HEIGHT);
+        pxRealInicio = puntoActual.pxReal + ratioEnSlot * alturaSlot;
+      }
+      
+      if (fin >= puntoActual.minutos && fin <= puntoSiguiente.minutos) {
+        const ratioEnSlot = (fin - puntoActual.minutos) / (puntoSiguiente.minutos - puntoActual.minutos);
+        const alturaSlot = Math.max((puntoSiguiente.minutos - puntoActual.minutos) * PX_PER_MINUTE, MIN_SLOT_HEIGHT);
+        pxRealFin = puntoActual.pxReal + ratioEnSlot * alturaSlot;
+      }
+    }
+    
+    return Math.max(pxRealFin - pxRealInicio, 50);
+  };
+
+  // Obtener posición top en píxeles de una clase considerando MIN_SLOT_HEIGHT
+  const obtenerPosicionClase = (horario) => {
+    const inicio = horaAMinutos(horario.hora_inicio);
+    
+    // Encontrar el punto de tiempo que contiene el inicio
+    for (let i = 0; i < obtenerPuntosDetiempo.length - 1; i++) {
+      const puntoActual = obtenerPuntosDetiempo[i];
+      const puntoSiguiente = obtenerPuntosDetiempo[i + 1];
+      
+      if (inicio >= puntoActual.minutos && inicio <= puntoSiguiente.minutos) {
+        const ratioEnSlot = (inicio - puntoActual.minutos) / (puntoSiguiente.minutos - puntoActual.minutos);
+        const alturaSlot = Math.max((puntoSiguiente.minutos - puntoActual.minutos) * PX_PER_MINUTE, MIN_SLOT_HEIGHT);
+        return puntoActual.pxReal + ratioEnSlot * alturaSlot;
+      }
+    }
+    
+    return 0;
+  };
+
+  // Obtener clases para un día específico
+  const obtenerClasesPorDia = (diaIndex) => {
+    const dia = diasSemanaEn[diaIndex];
+    return horariosFiltrados
+      .filter(h => h.dia_semana === dia)
+      .sort((a, b) => horaAMinutos(a.hora_inicio) - horaAMinutos(b.hora_inicio));
+  };
+
+  // Obtener horas libres entre clases
+  const obtenerHorasLibres = (diaIndex) => {
+    const clases = obtenerClasesPorDia(diaIndex);
+    if (clases.length === 0) return [];
+
+    const tiempoInicio = obtenerPuntosDetiempo[0].minutos;
+    const tiempoFin = obtenerPuntosDetiempo[obtenerPuntosDetiempo.length - 1].minutos;
+    
+    const libres = [];
+    
+    // Espacio libre al principio si la primera clase no comienza al inicio
+    const primeraClaseInicio = horaAMinutos(clases[0].hora_inicio);
+    if (primeraClaseInicio > tiempoInicio) {
+      libres.push({
+        hora_inicio: minutosAHora(tiempoInicio),
+        hora_fin: clases[0].hora_inicio,
+        tipo: 'libre'
       });
     }
 
-    // ESPACIOS LIBRES ENTRE CLASES
-    let horaActual = null;
-    clasesOrdenadas.forEach((clase) => {
-      const [inicioH, inicioM] = clase.hora_inicio.split(':').map(Number);
-      const [finH, finM] = clase.hora_fin.split(':').map(Number);
-
-      // Si hay gap desde la última clase, agregar espacio libre
-      if (horaActual !== null && horaActual < inicioH * 60 + inicioM) {
-        const gapInicio = Math.floor(horaActual / 60);
-        const gapMinutos = horaActual % 60;
-        const gapFin = inicioH;
-        
-        espaciosLibres.push({
-          tipo: 'libre',
-          hora_inicio: `${String(gapInicio).padStart(2, '0')}:${String(gapMinutos).padStart(2, '0')}`,
-          hora_fin: `${String(gapFin).padStart(2, '0')}:${String(inicioM).padStart(2, '0')}`
+    // Espacios libres entre clases
+    for (let i = 0; i < clases.length - 1; i++) {
+      const finClaseActual = horaAMinutos(clases[i].hora_fin);
+      const inicioProximaClase = horaAMinutos(clases[i + 1].hora_inicio);
+      
+      if (finClaseActual < inicioProximaClase) {
+        libres.push({
+          hora_inicio: clases[i].hora_fin,
+          hora_fin: clases[i + 1].hora_inicio,
+          tipo: 'libre'
         });
       }
+    }
 
-      horaActual = finH * 60 + finM;
-    });
-
-    // ESPACIO LIBRE DESPUÉS DE LA ÚLTIMA CLASE
-    const [ultimaH, ultimaM] = ultimaClase.hora_fin.split(':').map(Number);
-    if (ultimaH < rangoHoras.fin) {
-      espaciosLibres.push({
-        tipo: 'libre',
-        hora_inicio: `${String(ultimaH).padStart(2, '0')}:${String(ultimaM).padStart(2, '0')}`,
-        hora_fin: `${String(rangoHoras.fin).padStart(2, '0')}:00`
+    // Espacio libre al final si la última clase no termina al final
+    const ultimaClaseFin = horaAMinutos(clases[clases.length - 1].hora_fin);
+    if (ultimaClaseFin < tiempoFin) {
+      libres.push({
+        hora_inicio: clases[clases.length - 1].hora_fin,
+        hora_fin: minutosAHora(tiempoFin),
+        tipo: 'libre'
       });
     }
 
-    return espaciosLibres;
+    return libres;
   };
 
   // Obtener información de una clase
@@ -147,11 +269,12 @@ const HorariosCalendar = ({
   };
 
   // Abrir modal para crear nuevo horario
-  const handleCreateClick = (diaIndex, hora) => {
+  const handleCreateClick = (diaIndex, horaStr) => {
     const diaSemana = diasSemanaEn[diaIndex];
     setSelectedDia(diaSemana);
     setEditingHorario(null);
     setShowModal(true);
+    // La hora se pasa como string HH:MM desde el timeline
   };
 
   // Abrir modal para editar horario
@@ -184,189 +307,247 @@ const HorariosCalendar = ({
 
   return (
     <div className="space-y-6">
-      {/* Selector de Grado */}
+      {/* Selector de Nivel */}
       <div className="bg-white rounded-2xl shadow-lg p-6">
-        <div className="flex items-center gap-4">
-          <label className="text-lg font-bold text-gray-800">Filtrar por Grado:</label>
-          <select
-            value={selectedGrado || ''}
-            onChange={(e) => setSelectedGrado(e.target.value ? Number(e.target.value) : null)}
-            className="flex-1 max-w-xs p-3 border-2 border-gray-300 rounded-lg focus:border-rose-500 focus:outline-none transition-colors"
-          >
-            <option value="">Ver todos los grados</option>
-            {grados.map(grado => (
-              <option key={grado.id} value={grado.id}>
-                {grado.nombre_grado}
-              </option>
-            ))}
-          </select>
+        <label className="block text-lg font-bold text-gray-800 mb-4">Nivel Educativo:</label>
+        <div className="flex flex-wrap gap-2">
+          {obtenerNiveles.map(nivel => (
+            <button
+              key={nivel}
+              onClick={() => {
+                setSelectedNivel(nivel);
+                setSelectedGrado(null);
+                setSelectedSeccion(null);
+              }}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                selectedNivel === nivel
+                  ? 'bg-rose-600 text-white shadow-lg'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {nivel === 'Otros' ? 'Sin Nivel' : nivel}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* Pestañas de Grados */}
+      {selectedNivel && (
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <label className="block text-lg font-bold text-gray-800 mb-4">Grado:</label>
+          <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
+            {obtenerGradosPorNivel.map(grado => (
+              <button
+                key={grado.id}
+                onClick={() => {
+                  setSelectedGrado(grado.id);
+                  setSelectedSeccion(null);
+                }}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                  selectedGrado === grado.id
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {formatearNombreGrado(grado.nombre_grado)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pestañas de Secciones */}
+      {selectedGrado && (
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <label className="block text-lg font-bold text-gray-800 mb-4">Sección:</label>
+          <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
+            {obtenerSeccionesPorGrado.map(seccion => (
+              <button
+                key={seccion.id}
+                onClick={() => setSelectedSeccion(seccion.id)}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  selectedSeccion === seccion.id
+                    ? 'bg-emerald-600 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {seccion.nombre_seccion || 'Sección'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Calendario */}
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-6 overflow-x-auto">
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-3 overflow-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
         {/* Header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+        <div className="mb-3">
+          <h2 className="text-xl font-bold text-gray-800 flex items-center">
             <FaClock className="mr-3 text-rose-600" />
             Calendario de Horarios
           </h2>
-          <p className="text-gray-600 text-sm mt-2">
-            {selectedGrado 
-              ? `Grado: ${grados.find(g => g.id === selectedGrado)?.nombre_grado}` 
-              : 'Selecciona un grado para ver los horarios'}
+          <p className="text-gray-600 text-xs mt-1">
+            {selectedGrado && selectedSeccion
+              ? `${formatearNombreGrado(grados.find(g => g.id === selectedGrado)?.nombre_grado)} - Sección ${secciones.find(s => s.id === selectedSeccion)?.nombre_seccion || 'N/A'}`
+              : selectedGrado
+              ? `${formatearNombreGrado(grados.find(g => g.id === selectedGrado)?.nombre_grado)}`
+              : selectedNivel
+              ? `Nivel: ${selectedNivel}`
+              : 'Selecciona un nivel, grado y sección'}
           </p>
         </div>
 
-        {horariosFiltrados.length === 0 ? (
-          // Tabla vacía con cuadros clickeables
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse min-w-max">
-              {/* Header */}
-              <thead>
-                <tr>
-                  <th className="bg-gradient-to-br from-rose-700 to-rose-800 text-white font-bold p-4 text-sm w-20 sticky left-0 z-20">
-                    Hora
-                  </th>
-                  {diasSemana.map((dia, index) => (
-                    <th
-                      key={index}
-                      className="bg-gradient-to-br from-rose-600 to-rose-700 text-white font-bold p-4 text-sm min-w-[150px] border-l border-rose-500/30"
-                    >
-                      {dia}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-
-              {/* Body */}
-              <tbody>
-                {horas.map((hora) => (
-                  <tr key={hora} className="border-b border-gray-200 hover:bg-gray-50/50 transition-colors">
-                    {/* Hora */}
-                    <td className="bg-gradient-to-br from-rose-50 to-rose-100 font-semibold text-rose-700 p-4 text-center text-sm sticky left-0 z-10 border-r border-rose-200">
-                      {String(hora).padStart(2, '0')}:00
-                    </td>
-
-                    {/* Días */}
-                    {diasSemana.map((_, diaIndex) => (
-                      <td
-                        key={diaIndex}
-                        className="p-3 border-l border-gray-200 min-w-[150px] align-top bg-white hover:bg-rose-50/30 transition-colors cursor-pointer"
-                        onClick={() => handleCreateClick(diaIndex, hora)}
-                      >
-                        <div className="h-20 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-rose-500 hover:bg-rose-50 transition-all">
-                          <button className="flex flex-col items-center gap-2 text-gray-500 hover:text-rose-600 transition-colors">
-                            <FaPlus size={20} />
-                            <span className="text-xs text-center">Haga click<br/>para crear</span>
-                          </button>
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {!selectedSeccion ? (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+            <p className="text-yellow-800 font-semibold">ℹ️ Por favor selecciona un nivel, grado y sección para ver el horario</p>
+          </div>
+        ) : horariosFiltrados.length === 0 ? (
+          // Vista vacía - Compacta
+          <div className="flex gap-4">
+            {diasSemana.map((dia, diaIndex) => (
+              <div
+                key={diaIndex}
+                className="flex flex-col border-2 border-dashed border-gray-300 rounded-lg min-w-[200px] h-32"
+              >
+                <div className="font-bold text-white text-sm bg-gradient-to-br from-rose-600 to-rose-700 h-10 flex items-center justify-center text-center">
+                  {dia}
+                </div>
+                <div
+                  className="flex-1 flex items-center justify-center hover:bg-yellow-50 transition-colors cursor-pointer"
+                  onClick={() => handleCreateClick(diaIndex, '08:00')}
+                >
+                  <p className="text-center text-gray-500 text-sm font-semibold px-4">
+                    Sin clases, presione para crear una
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
-          // Tabla con horarios
+          // Vista Timeline proporcional con clases
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse min-w-max">
-              {/* Header */}
-              <thead>
-                <tr>
-                  <th className="bg-gradient-to-br from-rose-700 to-rose-800 text-white font-bold p-4 text-sm w-20 sticky left-0 z-20">
-                    Hora
-                  </th>
-                  {diasSemana.map((dia, index) => (
-                    <th
-                      key={index}
-                      className="bg-gradient-to-br from-rose-600 to-rose-700 text-white font-bold p-4 text-sm min-w-[180px] border-l border-rose-500/30"
+            <div className="flex min-w-max">
+              {/* Columna de horas - Flujo normal apilado */}
+              <div className="bg-gradient-to-br from-rose-50 to-rose-100 border-r-2 border-rose-200 sticky left-0 z-10 min-w-[80px] flex flex-col">
+                <div className="font-bold text-white px-2 py-3 text-sm bg-gradient-to-br from-rose-700 to-rose-800 h-14 flex items-center justify-center sticky top-0">
+                  Hora
+                </div>
+                {obtenerPuntosDetiempo.map((punto, idx) => {
+                  const alturaSlot = idx < obtenerPuntosDetiempo.length - 1 
+                    ? obtenerPuntosDetiempo[idx + 1].pxReal - punto.pxReal
+                    : 0;
+                  return (
+                    <div
+                      key={idx}
+                      className="text-center text-xs font-bold text-rose-700 px-2 flex items-center justify-center border-t border-rose-200"
+                      style={{
+                        height: `${alturaSlot}px`,
+                        lineHeight: '1'
+                      }}
                     >
-                      {dia}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+                      {punto.hora}
+                    </div>
+                  );
+                })}
+              </div>
 
-              {/* Body */}
-              <tbody>
-                {horas.map((hora) => (
-                  <tr key={hora} className="border-b border-gray-200 hover:bg-gray-50/50 transition-colors">
-                    {/* Hora */}
-                    <td className="bg-gradient-to-br from-rose-50 to-rose-100 font-semibold text-rose-700 p-4 text-center text-sm sticky left-0 z-10 border-r border-rose-200">
-                      {String(hora).padStart(2, '0')}:00
-                    </td>
+              {/* Columna de días */}
+              <div className="flex">
+                {diasSemana.map((dia, diaIndex) => {
+                  const clasesPorDia = obtenerClasesPorDia(diaIndex);
+                  const alturaTimeline = Math.max(obtenerPuntosDetiempo[obtenerPuntosDetiempo.length - 1].pxReal, 500);
 
-                    {/* Días */}
-                    {diasSemana.map((_, diaIndex) => {
-                      const clasesEnCelda = obtenerClasesEnCelda(diaIndex, hora);
-                      const espaciosLibres = obtenerEspaciosLibresPorDia(diaIndex);
+                  return (
+                    <div key={diaIndex} className="flex flex-col border-l border-gray-200 min-w-[220px]">
+                      <div className="font-bold text-white px-1 py-1 text-sm bg-gradient-to-br from-rose-600 to-rose-700 h-14 flex items-center justify-center text-center sticky top-0 z-20">
+                        {dia}
+                      </div>
                       
-                      // Filtrar espacios libres que caen en esta hora
-                      const espaciosLibresEnEstaHora = espaciosLibres.filter((evento) => {
-                        const [inicioH, inicioM] = evento.hora_inicio.split(':').map(Number);
-                        const [finH, finM] = evento.hora_fin.split(':').map(Number);
-                        return (hora >= inicioH && hora < finH) || (inicioH === hora);
-                      });
+                      {/* Container para timeline con slots apilados */}
+                      <div
+                        className="relative w-full bg-white hover:bg-rose-50/30 transition-colors"
+                        style={{ height: `${alturaTimeline}px` }}
+                      >
+                        {/* Slots de tiempo apilados - Capa de fondo en flujo normal */}
+                        <div className="flex flex-col" style={{ height: `${alturaTimeline}px` }}>
+                          {obtenerPuntosDetiempo.map((punto, idx) => {
+                            const alturaSlot = idx < obtenerPuntosDetiempo.length - 1 
+                              ? obtenerPuntosDetiempo[idx + 1].pxReal - punto.pxReal
+                              : 0;
+                            return (
+                              <div
+                                key={`line-${idx}`}
+                                className="w-full border-t border-transparent flex-shrink-0 cursor-pointer hover:bg-blue-50/40 transition-colors"
+                                style={{
+                                  height: `${alturaSlot}px`
+                                }}
+                                onClick={() => {
+                                  setSelectedDia(diasSemanaEn[diaIndex]);
+                                  setEditingHorario(null);
+                                  setShowModal(true);
+                                }}
+                                title="Click para crear una clase"
+                              />
+                            );
+                          })}
+                        </div>
 
-                      return (
-                        <td
-                          key={diaIndex}
-                          className="p-2 border-l border-gray-200 min-w-[200px] align-top bg-white hover:bg-rose-50/30 transition-colors"
-                          onClick={() => clasesEnCelda.length === 0 && espaciosLibresEnEstaHora.length === 0 && handleCreateClick(diaIndex, hora)}
+                        {/* Clases renderizadas - Capa absoluta superpuesta */}
+                        <div
+                          className="absolute top-0 left-0 w-full cursor-pointer"
+                          style={{
+                            height: `${alturaTimeline}px`,
+                            pointerEvents: 'auto'
+                          }}
+                          onClick={() => {
+                            setSelectedDia(diasSemanaEn[diaIndex]);
+                            setEditingHorario(null);
+                            setShowModal(true);
+                          }}
                         >
-                          {clasesEnCelda.length > 0 || espaciosLibresEnEstaHora.length > 0 ? (
-                            <div className="flex flex-col gap-1">
-                              {/* Mostrar clases */}
-                              {clasesEnCelda.map((horario) => {
+                          {clasesPorDia.length > 0 ? (
+                            <>
+                              {clasesPorDia.map((horario) => {
                                 const info = obtenerInfoClase(horario);
                                 const nombreMateria = info.materia?.asignatura || 'Materia';
                                 const estilosMateria = obtenerEstilosMateria(nombreMateria);
+                                const altura = obtenerAlturaClase(horario);
+                                const posicion = obtenerPosicionClase(horario);
 
                                 return (
                                   <div
                                     key={horario.id}
-                                    className={`border-l-4 p-2 rounded-r text-xs shadow-sm hover:shadow-md transition-shadow group relative border ${estilosMateria.bgColor} ${estilosMateria.textColor}`}
-                                    style={{ borderLeftColor: estilosMateria.textColor.replace('text-', '') }}
+                                    className={`absolute left-1 right-1 p-2 rounded border-l-4 shadow-sm hover:shadow-md transition-shadow group overflow-hidden text-xs pointer-events-auto ${estilosMateria.bgColor} ${estilosMateria.textColor}`}
+                                    style={{
+                                      top: `${posicion}px`,
+                                      height: `${Math.max(altura, 50)}px`,
+                                      borderLeftColor: 'currentColor'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                    }}
                                   >
-                                    {/* Contenido */}
-                                    <div className="flex items-start justify-between mb-1">
-                                      <div className="font-semibold text-sm flex items-center gap-1">
-                                        <MateriaIcon nombreMateria={nombreMateria} size="0.9em" />
-                                        <span className="truncate">{nombreMateria}</span>
-                                      </div>
+                                  {/* Contenido */}
+                                  <div className="flex flex-col gap-0.5 h-full overflow-hidden">
+                                    <div className="font-semibold flex items-center gap-1 truncate">
+                                      <MateriaIcon nombreMateria={nombreMateria} size="0.85em" />
+                                      <span className="truncate">{nombreMateria}</span>
                                     </div>
 
-                                    <div className="flex items-center gap-1 text-xs opacity-75 mb-1">
-                                      <FaClock className="w-3 h-3" />
-                                      <span>{horario.hora_inicio} - {horario.hora_fin}</span>
+                                    <div className="flex items-center gap-1 opacity-75 text-xs truncate">
+                                      <FaClock className="w-3 h-3 flex-shrink-0" />
+                                      <span className="truncate">{horario.hora_inicio} - {horario.hora_fin}</span>
                                     </div>
 
                                     {info.profesor && (
-                                      <div className="flex items-center gap-1 text-xs opacity-75 mb-1 truncate">
-                                        <FaChalkboardTeacher className="w-3 h-3 flex-shrink-0" />
+                                      <div className="text-xs opacity-75 truncate">
                                         <span className="truncate">{info.profesor.nombre} {info.profesor.apellido}</span>
                                       </div>
                                     )}
 
-                                    {info.grado && (
-                                      <div className="flex items-center gap-1 text-xs opacity-75 mb-1">
-                                        <FaBook className="w-3 h-3 flex-shrink-0" />
-                                        <span>{info.grado.nombre_grado}</span>
-                                      </div>
-                                    )}
-
-                                    {info.seccion && (
-                                      <div className="flex items-center gap-1 text-xs opacity-75 mb-1">
-                                        <span className="font-medium">Sección: {info.seccion.nombre}</span>
-                                      </div>
-                                    )}
-
                                     {horario.aula && (
-                                      <div className="flex items-center gap-1 text-xs opacity-75">
-                                        <FaMapMarkerAlt className="w-3 h-3 flex-shrink-0" />
-                                        <span>Aula {horario.aula}</span>
+                                      <div className="text-xs opacity-75 truncate">
+                                        Aula {horario.aula}
                                       </div>
                                     )}
 
@@ -379,7 +560,7 @@ const HorariosCalendar = ({
                                         }}
                                         className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded"
                                       >
-                                        <FaEdit size={12} />
+                                        <FaEdit size={10} />
                                       </button>
                                       <button
                                         onClick={(e) => {
@@ -388,63 +569,104 @@ const HorariosCalendar = ({
                                         }}
                                         className="bg-red-500 hover:bg-red-600 text-white p-1 rounded"
                                       >
-                                        <FaTrash size={12} />
+                                        <FaTrash size={10} />
                                       </button>
                                     </div>
                                   </div>
-                                );
-                              })}
+                                </div>
+                              );
+                            })}
+
+                            {/* Horas libres renderizadas */}
+                            {obtenerHorasLibres(diaIndex).map((libre, idx) => {
+                              const inicio = horaAMinutos(libre.hora_inicio);
+                              const fin = horaAMinutos(libre.hora_fin);
                               
-                              {/* Mostrar espacios libres si existen */}
-                              {espaciosLibresEnEstaHora.map((evento, idx) => (
+                              // Calcular posición usando pxReal
+                              let pxRealInicio = 0;
+                              let pxRealFin = 0;
+                              
+                              for (let i = 0; i < obtenerPuntosDetiempo.length - 1; i++) {
+                                const puntoActual = obtenerPuntosDetiempo[i];
+                                const puntoSiguiente = obtenerPuntosDetiempo[i + 1];
+                                
+                                if (inicio >= puntoActual.minutos && inicio <= puntoSiguiente.minutos) {
+                                  const ratioEnSlot = (inicio - puntoActual.minutos) / (puntoSiguiente.minutos - puntoActual.minutos);
+                                  const alturaSlot = Math.max((puntoSiguiente.minutos - puntoActual.minutos) * PX_PER_MINUTE, MIN_SLOT_HEIGHT);
+                                  pxRealInicio = puntoActual.pxReal + ratioEnSlot * alturaSlot;
+                                }
+                                
+                                if (fin >= puntoActual.minutos && fin <= puntoSiguiente.minutos) {
+                                  const ratioEnSlot = (fin - puntoActual.minutos) / (puntoSiguiente.minutos - puntoActual.minutos);
+                                  const alturaSlot = Math.max((puntoSiguiente.minutos - puntoActual.minutos) * PX_PER_MINUTE, MIN_SLOT_HEIGHT);
+                                  pxRealFin = puntoActual.pxReal + ratioEnSlot * alturaSlot;
+                                }
+                              }
+                              
+                              const altura = pxRealFin - pxRealInicio;
+
+                              return (
                                 <div
                                   key={`libre-${idx}`}
-                                  className="border-2 border-dashed border-gray-300 p-2 rounded text-xs text-center text-gray-500 bg-gray-50 hover:bg-yellow-50 hover:border-yellow-400 transition-colors cursor-pointer group"
+                                  className="absolute left-1 right-1 rounded border-2 border-dashed border-emerald-300 bg-emerald-50/40 hover:bg-emerald-50/70 transition-colors group flex flex-col items-center justify-center cursor-pointer text-xs text-emerald-700 font-medium pointer-events-auto"
+                                  style={{
+                                    top: `${pxRealInicio}px`,
+                                    height: `${Math.max(altura, 60)}px`
+                                  }}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleCreateClick(diaIndex, hora);
+                                    setSelectedDia(diasSemanaEn[diaIndex]);
+                                    setEditingHorario(null);
+                                    setShowModal(true);
                                   }}
                                 >
-                                  <span className="flex items-center justify-center gap-1">
-                                    ⏱️ Libre: {evento.hora_inicio} - {evento.hora_fin}
-                                  </span>
+                                  <FaClock size={14} className="mb-1 opacity-60" />
+                                  <span className="opacity-75">Libre</span>
+                                  <span className="text-xs opacity-60">{libre.hora_inicio} - {libre.hora_fin}</span>
                                 </div>
-                              ))}
-                            </div>
+                              );
+                            })}
+                          </>
                           ) : (
-                            <div className="h-20 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-rose-500 hover:bg-rose-50 transition-all cursor-pointer">
-                              <button className="flex flex-col items-center gap-2 text-gray-400 hover:text-rose-600 transition-colors">
-                                <FaPlus size={16} />
-                                <span className="text-xs">Crear</span>
-                              </button>
+                            <div className="h-full w-full flex items-center justify-center cursor-pointer group" onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDia(diasSemanaEn[diaIndex]);
+                              setEditingHorario(null);
+                              setShowModal(true);
+                            }}>
+                              <div className="text-center">
+                                <FaPlus size={32} className="mx-auto mb-3 text-gray-300 group-hover:text-blue-500 transition-colors" />
+                                <p className="text-gray-500 text-sm font-medium group-hover:text-blue-600 transition-colors">Sin clases</p>
+                                <p className="text-gray-400 text-xs mt-1">Presione para crear una</p>
+                              </div>
                             </div>
                           )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
         {/* Leyenda */}
-        {horariosFiltrados.length > 0 && (
-          <div className="mt-6 p-4 bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl border border-rose-200">
-            <div className="text-xs text-gray-600 space-y-3">
-              <p className="font-semibold text-gray-800">💡 Ayuda:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Haz click en un cuadro vacío para crear una nueva clase</li>
-                <li>Haz hover sobre una clase para ver opciones de edición/eliminación</li>
-                <li>Los conflictos de horario se validarán automáticamente</li>
-                <li>Los espacios libres entre clases se muestran automáticamente con el ícono ⏱️</li>
-                <li>Cada materia tiene un color y icono único para fácil identificación</li>
-                <li>Se muestra información de: Profesor, Grado, Sección y Aula</li>
-              </ul>
-            </div>
+        <div className="mt-6 p-4 bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl border border-rose-200">
+          <div className="text-xs text-gray-600 space-y-3">
+            <p className="font-semibold text-gray-800">💡 Ayuda:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><strong>Vista Timeline Proporcional:</strong> Cada clase ocupa el espacio exacto según su duración</li>
+              <li><strong>Altura variable:</strong> Una clase de 90 minutos ocupa más espacio que una de 60 minutos</li>
+              <li><strong>Columna de horas:</strong> Muestra todos los puntos de inicio y fin de las clases</li>
+              <li><strong>Horas libres:</strong> Zonas verdes punteadas que indican espacios disponibles - click para crear una clase</li>
+              <li>Haz hover sobre una clase para ver opciones de edición/eliminación</li>
+              <li>Los conflictos de horario se validarán automáticamente en el backend</li>
+              <li>Cada materia tiene un color y icono único para fácil identificación</li>
+              <li>Se muestra información de: Materia, Hora, Profesor y Aula</li>
+            </ul>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Modal */}
@@ -458,6 +680,7 @@ const HorariosCalendar = ({
         onSubmit={handleModalSubmit}
         selectedDia={selectedDia}
         selectedGrado={selectedGrado}
+        selectedSeccion={selectedSeccion}
         grados={grados}
         materias={materias}
         profesores={profesores}
