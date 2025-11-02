@@ -39,7 +39,41 @@ const cupoController = {
         ]
       });
       
-      res.json(cupos);
+      // Deduplicar cupos por gradoID + seccionID + annoEscolarID
+      // Mantener solo registros donde la sección existe y con datos sincronizados
+      const cuposDeduplicados = {};
+      const cuposUnicos = [];
+      const cuposAEliminar = [];
+      
+      for (const cupo of cupos) {
+        // Si la sección no existe, marcar para eliminar
+        if (!cupo.Secciones) {
+          cuposAEliminar.push(cupo.id);
+          continue;
+        }
+        
+        // Verificar consistencia de datos
+        if (cupo.gradoID !== cupo.Secciones.gradoID) {
+          // Corregir inconsistencia automáticamente
+          console.warn(`⚠️ Inconsistencia detectada en Cupo ID ${cupo.id}: gradoID ${cupo.gradoID} vs seccionGradoID ${cupo.Secciones.gradoID}`);
+          cupo.gradoID = cupo.Secciones.gradoID; // Usar el gradoID correcto de la sección
+        }
+        
+        // Deduplicar por clave única
+        const clave = `${cupo.Secciones.gradoID}_${cupo.seccionID}_${cupo.annoEscolarID}`;
+        if (!cuposDeduplicados[clave]) {
+          cuposDeduplicados[clave] = true;
+          cuposUnicos.push(cupo);
+        }
+      }
+      
+      // Limpiar cupos huérfanos en background (no bloquea la respuesta)
+      if (cuposAEliminar.length > 0) {
+        Cupo.destroy({ where: { id: cuposAEliminar } })
+          .catch(err => console.error('Error al eliminar cupos huérfanos:', err.message));
+      }
+      
+      res.json(cuposUnicos);
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: err.message });
@@ -142,7 +176,17 @@ const cupoController = {
         }
       }
       
-      // Buscar cupos en la tabla Cupo
+      // Obtener TODAS las secciones del grado
+      const secciones = await Secciones.findAll({
+        where: { gradoID },
+        order: [['nombre_seccion', 'ASC']]
+      });
+      
+      if (!secciones || secciones.length === 0) {
+        return res.json([]);
+      }
+      
+      // Obtener cupos registrados para este grado y año escolar
       const cuposRegistrados = await Cupo.findAll({
         where: {
           gradoID,
@@ -156,42 +200,76 @@ const cupoController = {
         ]
       });
       
-      // Si hay cupos registrados, devolverlos
-      if (cuposRegistrados.length > 0) {
-        return res.json(cuposRegistrados);
+      // Crear un mapa de cupos registrados por seccionID
+      // Deduplicar si hay múltiples cupos para la misma sección (mantener el más reciente)
+      const mapaCupos = {};
+      
+      for (const cupo of cuposRegistrados) {
+        // Solo mantener cupos válidos (con sección existente)
+        if (!cupo.Secciones) {
+          // Marcar para eliminar en background
+          Cupo.destroy({ where: { id: cupo.id } })
+            .catch(err => console.error('Error al eliminar cupo huérfano:', err.message));
+          continue;
+        }
+        
+        // Si ya existe un cupo para esta sección, mantener el más reciente (últimas actualizaciones)
+        if (!mapaCupos[cupo.seccionID] || 
+            new Date(cupo.updatedAt) > new Date(mapaCupos[cupo.seccionID].updatedAt)) {
+          mapaCupos[cupo.seccionID] = cupo;
+        }
       }
       
-      // Si no hay cupos registrados, calcularlos dinámicamente
-      const secciones = await Secciones.findAll({
-        where: { gradoID }
-      });
-      
-      const cuposCalculados = [];
+      // Sincronizar: crear cupos faltantes y compilar resultado
+      const cuposFinales = [];
       
       for (const seccion of secciones) {
-        // Contar estudiantes inscritos en esta sección para el año escolar
-        const estudiantesInscritos = await Seccion_Personas.count({
-          where: {
+        let cupo = mapaCupos[seccion.id];
+        
+        // Si no existe cupo para esta sección, crear uno
+        if (!cupo) {
+          // Contar estudiantes inscritos en esta sección
+          const estudiantesInscritos = await Seccion_Personas.count({
+            where: {
+              seccionID: seccion.id,
+              annoEscolarID: annoEscolarActivo
+            }
+          });
+          
+          const capacidad = seccion.capacidad || 30;
+          const disponibles = capacidad - estudiantesInscritos;
+          
+          cupo = {
+            gradoID,
             seccionID: seccion.id,
-            annoEscolarID: annoEscolarActivo
+            annoEscolarID: annoEscolarActivo,
+            capacidad,
+            ocupados: estudiantesInscritos,
+            disponibles,
+            Secciones: seccion
+          };
+          
+          // Intentar guardarlo en la BD para futuras consultas (no bloquea)
+          try {
+            const cupoGuardado = await Cupo.create({
+              gradoID,
+              seccionID: seccion.id,
+              annoEscolarID: annoEscolarActivo,
+              capacidad,
+              ocupados: estudiantesInscritos,
+              disponibles
+            });
+            
+            console.log(`✅ Cupo sincronizado para sección ${seccion.nombre_seccion}`);
+          } catch (error) {
+            console.error(`⚠️ Error al sincronizar cupo para sección ${seccion.id}:`, error.message);
           }
-        });
+        }
         
-        const capacidad = seccion.capacidad || 30;
-        const disponibles = capacidad - estudiantesInscritos;
-        
-        cuposCalculados.push({
-          gradoID,
-          seccionID: seccion.id,
-          annoEscolarID: annoEscolarActivo,
-          capacidad,
-          ocupados: estudiantesInscritos,
-          disponibles,
-          seccion: seccion
-        });
+        cuposFinales.push(cupo);
       }
       
-      res.json(cuposCalculados);
+      res.json(cuposFinales);
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: err.message });
@@ -252,66 +330,73 @@ const cupoController = {
         let totalOcupados = 0;
         let totalDisponibles = 0;
         
-        // Buscar cupos registrados para este grado
-        let cuposRegistrados = [];
+        // Obtener TODAS las secciones para este grado
+        let secciones = [];
         try {
-          if (db.Cupos) {
-            cuposRegistrados = await db.Cupos.findAll({
-              where: {
-                gradoID: grado.id,
-                annoEscolarID: annoEscolarActivo
-              }
-            });
-          }
+          secciones = await db.Secciones.findAll({
+            where: { gradoID: grado.id }
+          });
         } catch (error) {
-          console.error(`Error al buscar cupos registrados para grado ${grado.id}:`, error);
+          console.error(`Error al buscar secciones para grado ${grado.id}:`, error);
         }
         
-        if (cuposRegistrados && cuposRegistrados.length > 0) {
-          // Usar cupos registrados
-          for (const cupo of cuposRegistrados) {
-            totalCapacidad += cupo.capacidad || 0;
-            totalOcupados += cupo.ocupados || 0;
-            totalDisponibles += cupo.disponibles || 0;
-          }
-        } else {
-          // Obtener secciones directamente
-          let secciones = [];
-          try {
-            secciones = await db.Secciones.findAll({
-              where: { gradoID: grado.id }
-            });
-          } catch (error) {
-            console.error(`Error al buscar secciones para grado ${grado.id}:`, error);
-          }
-          
-          if (secciones && secciones.length > 0) {
-            for (const seccion of secciones) {
-              const capacidad = seccion.capacidad || 30;
-              
-              // Contar estudiantes inscritos
-              let estudiantesInscritos = 0;
-              try {
-                estudiantesInscritos = await db.Seccion_Personas.count({
+        if (secciones && secciones.length > 0) {
+          // Procesar cada sección
+          for (const seccion of secciones) {
+            const capacidad = seccion.capacidad || 30;
+            
+            // Contar estudiantes inscritos
+            let estudiantesInscritos = 0;
+            try {
+              estudiantesInscritos = await db.Seccion_Personas.count({
+                where: {
+                  seccionID: seccion.id,
+                  annoEscolarID: annoEscolarActivo
+                }
+              });
+            } catch (error) {
+              console.error(`Error al contar estudiantes para sección ${seccion.id}:`, error);
+            }
+            
+            const disponibles = Math.max(0, capacidad - estudiantesInscritos);
+            
+            totalCapacidad += capacidad;
+            totalOcupados += estudiantesInscritos;
+            totalDisponibles += disponibles;
+            
+            // Sincronizar: asegurar que existe cupo para esta sección
+            try {
+              if (db.Cupos) {
+                const cupoExistente = await db.Cupos.findOne({
                   where: {
                     seccionID: seccion.id,
                     annoEscolarID: annoEscolarActivo
                   }
                 });
-              } catch (error) {
-                console.error(`Error al contar estudiantes para sección ${seccion.id}:`, error);
+                
+                if (!cupoExistente) {
+                  // Crear cupo faltante
+                  await db.Cupos.create({
+                    gradoID: grado.id,
+                    seccionID: seccion.id,
+                    annoEscolarID: annoEscolarActivo,
+                    capacidad,
+                    ocupados: estudiantesInscritos,
+                    disponibles
+                  });
+                  
+                  console.log(`✅ Cupo sincronizado (resumen) para sección ${seccion.nombre_seccion}`);
+                }
               }
-              
-              totalCapacidad += capacidad;
-              totalOcupados += estudiantesInscritos;
-              totalDisponibles += Math.max(0, capacidad - estudiantesInscritos);
+            } catch (error) {
+              console.error(`⚠️ Error al sincronizar cupo para sección ${seccion.id}:`, error.message);
             }
-          } else {
-            // Si no hay secciones, asignar valores predeterminados
-            totalCapacidad = 30;
-            totalOcupados = 0;
-            totalDisponibles = 30;
           }
+        } else {
+          // Si no hay secciones, asignar valores predeterminados
+          totalCapacidad = 30;
+          totalOcupados = 0;
+          totalDisponibles = 30;
         }
         
         // Añadir al array de resumen

@@ -8,7 +8,7 @@ router.get('/cupos/resumen', cuposController.getResumenCupos);
 router.get('/cupos/grado/:gradoID', cuposController.getCuposByGrado);
 
 // Rutas protegidas
-router.get('/cupos', authMiddleware.verifyToken, cuposController.getAllCupos);
+router.get('/cupos', cuposController.getAllCupos);
 router.post('/cupos', authMiddleware.verifyToken, cuposController.createCupo);
 router.delete('/cupos/:id', authMiddleware.verifyToken, cuposController.deleteCupo);
 router.put('/cupos/:id/capacidad', authMiddleware.verifyToken, cuposController.updateCapacidadCupo);

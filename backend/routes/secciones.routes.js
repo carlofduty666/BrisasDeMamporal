@@ -8,7 +8,7 @@ router.get('/secciones/publicas', seccionesController.getSeccionesPublicas);
 
 // Rutas protegidas - solo lectura
 // NOTA: Las rutas más específicas deben ir primero para evitar que sean interceptadas por :id
-router.get('/secciones/grado/:gradoID', authMiddleware.verifyToken, seccionesController.getSeccionesByGrado);
+router.get('/secciones/grado/:gradoID', seccionesController.getSeccionesByGrado);
 router.get('/secciones/estudiante/:id', authMiddleware.verifyToken, seccionesController.getSeccionesByEstudiante);
 router.get('/secciones/:id/estudiantes', authMiddleware.verifyToken, seccionesController.getEstudiantesBySeccion);
 router.get('/secciones', authMiddleware.verifyToken, seccionesController.getAllSecciones);

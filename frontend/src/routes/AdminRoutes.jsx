@@ -30,8 +30,9 @@ import ConfiguracionPagosAdmin from '../pages/admin/pagos/ConfiguracionPagosAdmi
 import EmpleadosList from '../components/admin/empleados/EmpleadosList';
 import EmpleadoDetail from '../components/admin/empleados/EmpleadoDetail';
 import EmpleadoForm from '../components/admin/empleados/EmpleadoForm';
-// import ConfiguracionSistema from '../components/admin/configuracion/ConfiguracionSistema';
+import ConfiguracionGeneral from '../components/admin/configuracion/ConfiguracionGeneral';
 import AnnoEscolarManager from '../components/admin/configuracion/AnnoEscolarManager.jsx';
+import UsuariosManager from '../components/admin/configuracion/UsuariosManager.jsx';
 
 const AdminLayoutWrapper = () => {
     const [user, setUser] = useState(null);
@@ -129,18 +130,11 @@ const AdminRoutes = () => {
           <Route path="empleados/editar/:id" element={<EmpleadoForm />} />
           
           {/* Configuración del sistema */}
-          <Route path="configuracion" element={<div className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-800">Configuración</h2>
-              <p className="text-sm text-slate-600">Administra parámetros del sistema</p>
-            </div>
-            <div>
-              {/* Manager de Años Escolares */}
-              <div className="mb-4 text-sm text-slate-600">Años escolares</div>
-              <AnnoEscolarManager />
-            </div>
-          </div>} />
+          <Route path="configuracion" element={<ConfiguracionGeneral />} />
+          <Route path="periodo-escolar" element={<AnnoEscolarManager />} />
+          <Route path="usuarios" element={<UsuariosManager />} />
         </Route>
+
       </Routes>
     );
 };

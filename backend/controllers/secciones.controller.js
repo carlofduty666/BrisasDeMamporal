@@ -218,6 +218,30 @@ const seccionesController = {
         activo: activo !== undefined ? activo : true
       });
       
+      // Obtener el año escolar activo para crear el cupo automáticamente
+      try {
+        const annoEscolarActivo = await db.AnnoEscolar.findOne({
+          where: { activo: true }
+        });
+        
+        if (annoEscolarActivo && db.Cupos) {
+          // Crear cupo automático para la nueva sección
+          await db.Cupos.create({
+            gradoID,
+            seccionID: nuevaSeccion.id,
+            annoEscolarID: annoEscolarActivo.id,
+            capacidad: capacidad || 30,
+            ocupados: 0,
+            disponibles: capacidad || 30
+          });
+          
+          console.log(`✅ Cupo creado automáticamente para sección ${nuevaSeccion.nombre_seccion}`);
+        }
+      } catch (error) {
+        console.error('⚠️ Error al crear cupo automático:', error.message);
+        // No interrumpir la respuesta si hay error en cupo
+      }
+      
       // Obtener la sección creada con sus relaciones
       const seccionConRelaciones = await Secciones.findByPk(nuevaSeccion.id, {
         include: [
@@ -280,6 +304,36 @@ const seccionesController = {
         activo: activo !== undefined ? activo : seccion.activo
       });
       
+      // Sincronizar cambios en la tabla Cupos
+      try {
+        const annoEscolarActivo = await db.AnnoEscolar.findOne({
+          where: { activo: true }
+        });
+        
+        if (annoEscolarActivo && db.Cupos) {
+          const nuevoGradoID = gradoID || seccion.gradoID;
+          const nuevaCapacidad = capacidad !== undefined ? capacidad : seccion.capacidad;
+          
+          // Actualizar cupos existentes para esta sección
+          await db.Cupos.update(
+            {
+              gradoID: nuevoGradoID,
+              capacidad: nuevaCapacidad
+            },
+            {
+              where: {
+                seccionID: id,
+                annoEscolarID: annoEscolarActivo.id
+              }
+            }
+          );
+          
+          console.log(`✅ Cupo actualizado para sección ${id}`);
+        }
+      } catch (error) {
+        console.error('⚠️ Error al actualizar cupo:', error.message);
+      }
+      
       // Obtener la sección actualizada con sus relaciones
       const seccionActualizada = await Secciones.findByPk(id, {
         include: [
@@ -321,7 +375,70 @@ const seccionesController = {
         });
       }
       
-      // Eliminar la sección
+      // Verificar si hay cupos con estudiantes ocupados en esta sección
+      if (db.Cupos) {
+        const cuposConEstudiantes = await db.Cupos.count({
+          where: {
+            seccionID: id,
+            ocupados: { [Op.gt]: 0 }
+          }
+        });
+        
+        if (cuposConEstudiantes > 0) {
+          return res.status(400).json({ 
+            message: 'No se puede eliminar la sección porque tiene estudiantes ocupados en los cupos',
+            cuposConEstudiantes
+          });
+        }
+      }
+      
+      // IMPORTANTE: Eliminar en orden de dependencias para evitar errores de restricción de clave foránea
+      // Orden: 1. Horarios 2. Cupos 3. Seccion_Personas 4. Sección
+      
+      // 1. Eliminar horarios relacionados
+      try {
+        if (db.Horarios) {
+          const horarioElim = await db.Horarios.destroy({
+            where: { seccion_id: id }
+          });
+          console.log(`✅ ${horarioElim} horario(s) eliminado(s) para sección ${id}`);
+        }
+      } catch (error) {
+        console.error('⚠️ Error al eliminar horarios relacionados:', error.message);
+        return res.status(500).json({ 
+          message: 'Error al eliminar horarios relacionados con la sección',
+          error: error.message 
+        });
+      }
+      
+      // 2. Eliminar cupos relacionados
+      try {
+        if (db.Cupos) {
+          const resultadoEliminar = await db.Cupos.destroy({
+            where: { seccionID: id }
+          });
+          
+          console.log(`✅ ${resultadoEliminar} cupo(s) eliminado(s) para sección ${id}`);
+        }
+      } catch (error) {
+        console.error('⚠️ Error al eliminar cupos relacionados:', error.message);
+        return res.status(500).json({ 
+          message: 'Error al eliminar cupos relacionados con la sección',
+          error: error.message 
+        });
+      }
+      
+      // 3. Eliminar relaciones Seccion_Personas (por si las hay)
+      try {
+        const seccionPersonasElim = await Seccion_Personas.destroy({
+          where: { seccionID: id }
+        });
+        console.log(`✅ ${seccionPersonasElim} relación(es) Seccion_Personas eliminada(s)`);
+      } catch (error) {
+        console.error('⚠️ Error al eliminar Seccion_Personas:', error.message);
+      }
+      
+      // 4. Ahora sí, eliminar la sección (sin restricciones de clave foránea)
       await seccion.destroy();
       
       res.json({ message: 'Sección eliminada correctamente' });
