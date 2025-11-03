@@ -15,6 +15,14 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'personaID',
         as: 'persona'
       });
+
+      // Many-to-Many con Permisos
+      Usuarios.belongsToMany(models.Permiso, {
+        through: 'Usuario_Permisos',
+        foreignKey: 'usuarioID',
+        otherKey: 'permisoID',
+        as: 'permisos'
+      });
     }
   }
   Usuarios.init({

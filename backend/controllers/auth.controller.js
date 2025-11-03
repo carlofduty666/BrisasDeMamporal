@@ -3,6 +3,10 @@ const jwt = require('jsonwebtoken');
 const db = require('../models');
 const Persona = db.Personas;
 const Usuario = db.Usuarios;
+const Permiso = db.Permiso;
+const Rol_Permiso = db.Rol_Permiso;
+const Usuario_Permiso = db.Usuario_Permiso;
+const Roles = db.Roles;
 const nodemailer = require('nodemailer');
 
 // Configuración de nodemailer
@@ -13,6 +17,58 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASSWORD
   }
 });
+
+// Función helper para obtener permisos de un usuario
+const obtenerPermisosUsuario = async (usuarioID, tipo) => {
+  try {
+    let permisos = [];
+
+    // Si es owner o adminWeb, tiene acceso a TODO
+    if (tipo === 'owner' || tipo === 'adminWeb') {
+      const todosPermisos = await Permiso.findAll({
+        attributes: ['id', 'nombre', 'categoria']
+      });
+      permisos = todosPermisos.map(p => p.nombre);
+    } else {
+      // Obtener permisos base del tipo de usuario (si existe rol)
+      const roles = await Roles.findAll({
+        where: { nombre: tipo },
+        include: [{
+          model: Permiso,
+          as: 'permisos',
+          through: { attributes: [] },
+          attributes: ['id', 'nombre']
+        }]
+      });
+
+      const rolesPermisos = new Set();
+      roles.forEach(rol => {
+        if (rol.permisos) {
+          rol.permisos.forEach(p => rolesPermisos.add(p.nombre));
+        }
+      });
+
+      // Obtener permisos adicionales del usuario
+      const usuarioPermisos = await Usuario_Permiso.findAll({
+        where: { usuarioID },
+        include: [{
+          model: Permiso,
+          attributes: ['nombre']
+        }]
+      });
+
+      // Combinar permisos
+      usuarioPermisos.forEach(up => rolesPermisos.add(up.Permiso.nombre));
+
+      permisos = Array.from(rolesPermisos);
+    }
+
+    return permisos;
+  } catch (error) {
+    console.error('Error al obtener permisos:', error);
+    return [];
+  }
+};
 
 // Registro de usuario
 exports.register = async (req, res) => {
@@ -167,9 +223,17 @@ exports.login = async (req, res) => {
     // Actualizar último login
     await usuario.update({ ultimoLogin: new Date() });
     
-    // Generar token
+    // Obtener permisos del usuario
+    const permisos = await obtenerPermisosUsuario(usuario.id, persona.tipo);
+    
+    // Generar token con permisos
     const token = jwt.sign(
-      { id: usuario.id, personaID: persona.id, tipo: persona.tipo },
+      { 
+        id: usuario.id, 
+        personaID: persona.id, 
+        tipo: persona.tipo,
+        permisos: permisos
+      },
       process.env.JWT_SECRET || 'secretkey',
       { expiresIn: '24h' }
     );
@@ -182,7 +246,8 @@ exports.login = async (req, res) => {
         apellido: persona.apellido,
         cedula: persona.cedula,
         email: persona.email,
-        tipo: persona.tipo
+        tipo: persona.tipo,
+        permisos: permisos
       }
     });
   } catch (error) {

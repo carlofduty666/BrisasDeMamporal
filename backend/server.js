@@ -53,6 +53,7 @@ const mensualidadesRoutes = require('./routes/mensualidades.routes');
 const contabilidadRoutes = require('./routes/contabilidad.routes');
 const rolesRoutes = require('./routes/roles.routes');
 const usuariosRoutes = require('./routes/usuarios.routes');
+const permisosRoutes = require('./routes/permisos.routes');
 
 // ruta de prueba multer
 const testRoutes = require('./routes/test.routes');
@@ -123,6 +124,7 @@ app.use('/', mensualidadesRoutes);
 app.use('/', contabilidadRoutes);
 app.use('/', rolesRoutes);
 app.use('/', usuariosRoutes);
+app.use('/api/permisos', permisosRoutes);
 // Ruta de prueba directa
 app.get('/test-horarios', (req, res) => {
   res.json({

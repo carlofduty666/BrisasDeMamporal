@@ -22,6 +22,7 @@ exports.verifyToken = async (req, res, next) => {
     req.userId = decoded.id;
     req.personaId = decoded.personaID;
     req.userType = decoded.tipo;
+    req.userPermissions = decoded.permisos || [];
     
     next();
   } catch (error) {
@@ -85,6 +86,36 @@ exports.authorizeRoles = (allowedRoles) => {
     if (!hasPermission) {
       return res.status(403).json({ 
         message: 'Acceso denegado. No tienes permisos para acceder a este recurso' 
+      });
+    }
+
+    next();
+  };
+};
+
+// Middleware para verificar permisos específicos
+exports.requirePermission = (requiredPermissions) => {
+  return (req, res, next) => {
+    if (!req.userType) {
+      return res.status(401).json({ message: 'Usuario no autenticado' });
+    }
+
+    // Si es owner o adminWeb, tiene todos los permisos
+    if (req.userType === 'owner' || req.userType === 'adminWeb') {
+      return next();
+    }
+
+    const userPermissions = req.userPermissions || [];
+    const permissions = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
+
+    const hasPermission = permissions.some(permission => 
+      userPermissions.includes(permission)
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({ 
+        message: 'Acceso denegado. No tienes permisos para acceder a este recurso',
+        requiredPermissions: permissions
       });
     }
 
