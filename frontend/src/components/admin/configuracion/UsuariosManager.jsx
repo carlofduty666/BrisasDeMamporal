@@ -24,7 +24,13 @@ import {
 import { FaShield } from "react-icons/fa6";
 import * as usuariosService from '../../../services/usuarios.service';
 import * as permisosService from '../../../services/permisos.service';
+import * as authService from '../../../services/auth.service';
 import { toast } from 'react-toastify';
+import { formatearCedula } from '../../../utils/formatters';
+import ModalRestablecerPassword from './modal/ModalRestablecerPassword';
+import ModalEliminarUsuario from './modal/ModalEliminarUsuario';
+import ModalGestionarPermisos from './modal/ModalGestionarPermisos';
+import ModalCambiarEstado from './modal/ModalCambiarEstado';
 
 const ROLE_COLORS = {
   'owner': { bg: 'bg-purple-100', text: 'text-purple-800', badge: 'bg-purple-600' },
@@ -43,6 +49,15 @@ const ROLE_LABELS = {
   'estudiante': 'Estudiante',
   'representante': 'Representante'
 };
+
+const ESTADO_COLORS = {
+  'activo': { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', label: 'Activo' },
+  'suspendido': { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', label: 'Suspendido' },
+  'desactivado': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', label: 'Desactivado' },
+  'inactivo': { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', label: 'Inactivo' }
+};
+
+const ESTADOS = ['activo', 'suspendido', 'desactivado', 'inactivo'];
 
 const UsuariosManager = () => {
   const navigate = useNavigate();
@@ -73,6 +88,35 @@ const UsuariosManager = () => {
   const [usuarioPermisosActuales, setUsuarioPermisosActuales] = useState([]);
   const [permisosSeleccionados, setPermisosSeleccionados] = useState(new Set());
   const [cargandoPermisos, setCargandoPermisos] = useState(false);
+
+  // Estados para modal de estado de usuario
+  const [showModalEstado, setShowModalEstado] = useState(false);
+  const [usuarioEstadoSeleccionado, setUsuarioEstadoSeleccionado] = useState(null);
+  const [estadoNuevo, setEstadoNuevo] = useState('activo');
+  const [cargandoEstado, setCargandoEstado] = useState(false);
+
+  // Estado para usuario actual
+  const [usuarioActual, setUsuarioActual] = useState(null);
+
+  // Obtener usuario actual en el montaje del componente
+  useEffect(() => {
+    const user = authService.getCurrentUser();
+    setUsuarioActual(user);
+  }, []);
+
+  // Función para verificar si el usuario actual es administrador
+  const esAdministrador = () => {
+    if (!usuarioActual || !usuarioActual.persona_roles) return false;
+    const rolesAdmin = ['owner', 'adminWeb', 'administrativo'];
+    return usuarioActual.persona_roles.some(r => rolesAdmin.includes(r.rol?.nombre));
+  };
+
+  // Función para verificar si un usuario puede tener permisos gestionados
+  const puedeTenerPermisos = (usuario) => {
+    if (!usuario || !usuario.persona) return false;
+    const tiposAdmin = ['owner', 'adminWeb', 'administrativo'];
+    return tiposAdmin.includes(usuario.persona.tipo);
+  };
 
   // Cargar usuarios y permisos
   useEffect(() => {
@@ -246,6 +290,44 @@ const UsuariosManager = () => {
     }
   };
 
+  // Manejar modal de estado de usuario
+  const handleAbrirModalEstado = (usuario) => {
+    setUsuarioEstadoSeleccionado(usuario);
+    setEstadoNuevo(usuario.estado || 'activo');
+    setShowModalEstado(true);
+  };
+
+  const handleCerrarModalEstado = () => {
+    setShowModalEstado(false);
+    setUsuarioEstadoSeleccionado(null);
+    setEstadoNuevo('activo');
+  };
+
+  const handleGuardarEstado = async () => {
+    try {
+      if (estadoNuevo === usuarioEstadoSeleccionado.estado) {
+        toast.info('El estado es el mismo');
+        return;
+      }
+
+      setCargandoEstado(true);
+      await usuariosService.cambiarEstadoUsuario(usuarioEstadoSeleccionado.id, estadoNuevo);
+      
+      toast.success(`Estado cambió a ${ESTADO_COLORS[estadoNuevo].label}`);
+      handleCerrarModalEstado();
+      
+      // Recargar usuarios
+      const usuariosActualizados = await usuariosService.getAllUsuarios();
+      setUsuarios(usuariosActualizados);
+      setFiltrados(usuariosActualizados);
+    } catch (err) {
+      console.error('Error al cambiar estado:', err);
+      toast.error(err.message || 'Error al cambiar estado');
+    } finally {
+      setCargandoEstado(false);
+    }
+  };
+
   const formatearFecha = (fecha) => {
     if (!fecha) return 'Nunca';
     return new Date(fecha).toLocaleDateString('es-VE', {
@@ -397,7 +479,7 @@ const UsuariosManager = () => {
                             <p className="font-semibold text-gray-900">
                               {usuario.persona?.nombre} {usuario.persona?.apellido}
                             </p>
-                            <p className="text-xs text-gray-500">{usuario.persona?.cedula}</p>
+                            <p className="text-xs text-gray-500">{formatearCedula(usuario.persona?.cedula)}</p>
                           </div>
                         </div>
                       </td>
@@ -413,17 +495,9 @@ const UsuariosManager = () => {
                         <p className="text-gray-700">{usuario.persona?.telefono || '-'}</p>
                       </td>
                       <td className="px-6 py-4">
-                        {usuario.verificado ? (
-                          <span className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
-                            <FaCheckCircle className="w-3.5 h-3.5" />
-                            Verificado
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm font-medium">
-                            <FaExclamationCircle className="w-3.5 h-3.5" />
-                            Pendiente
-                          </span>
-                        )}
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium border ${ESTADO_COLORS[usuario.estado]?.bg} ${ESTADO_COLORS[usuario.estado]?.border} ${ESTADO_COLORS[usuario.estado]?.text}`}>
+                          {ESTADO_COLORS[usuario.estado]?.label || usuario.estado}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-gray-700 text-sm">{formatearFecha(usuario.ultimoLogin)}</p>
@@ -440,9 +514,21 @@ const UsuariosManager = () => {
                             </button>
                           )}
                           <button
+                            onClick={() => handleAbrirModalEstado(usuario)}
+                            className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors duration-200"
+                            title="Cambiar estado del usuario"
+                          >
+                            <FaClock className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => handleAbrirModalPermisos(usuario)}
-                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-200"
-                            title="Gestionar permisos"
+                            disabled={!puedeTenerPermisos(usuario)}
+                            className={`p-2 rounded-lg transition-colors duration-200 ${
+                              puedeTenerPermisos(usuario)
+                                ? 'text-purple-600 hover:bg-purple-50'
+                                : 'text-gray-400 cursor-not-allowed opacity-50'
+                            }`}
+                            title={puedeTenerPermisos(usuario) ? "Gestionar permisos" : "Solo administradores pueden gestionar permisos"}
                           >
                             <FaShieldAlt className="w-4 h-4" />
                           </button>
@@ -517,7 +603,7 @@ const UsuariosManager = () => {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <FaIdCard className="w-4 h-4 text-gray-400" />
-                    <span>{usuario.persona?.cedula}</span>
+                    <span>{formatearCedula(usuario.persona?.cedula)}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <FaEnvelope className="w-4 h-4 text-gray-400" />
@@ -536,6 +622,16 @@ const UsuariosManager = () => {
                 {/* Divider */}
                 <div className="h-px bg-gray-200 mb-4"></div>
 
+                {/* Estado Badge */}
+                <div className="mb-4 p-3 rounded-lg border" style={{
+                  backgroundColor: ESTADO_COLORS[usuario.estado]?.bg,
+                  borderColor: ESTADO_COLORS[usuario.estado]?.border?.replace('border-', '')
+                }}>
+                  <p className={`text-xs font-semibold ${ESTADO_COLORS[usuario.estado]?.text}`}>
+                    Estado: {ESTADO_COLORS[usuario.estado]?.label || usuario.estado}
+                  </p>
+                </div>
+
                 {/* Actions */}
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2">
@@ -549,8 +645,21 @@ const UsuariosManager = () => {
                       </button>
                     )}
                     <button
+                      onClick={() => handleAbrirModalEstado(usuario)}
+                      className="flex-1 px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 font-medium text-sm transition-colors duration-200 flex items-center justify-center gap-2"
+                    >
+                      <FaClock className="w-4 h-4" />
+                      Estado
+                    </button>
+                    <button
                       onClick={() => handleAbrirModalPermisos(usuario)}
-                      className="flex-1 px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 font-medium text-sm transition-colors duration-200 flex items-center justify-center gap-2"
+                      disabled={!puedeTenerPermisos(usuario)}
+                      className={`flex-1 px-3 py-2 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center gap-2 ${
+                        puedeTenerPermisos(usuario)
+                          ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                      }`}
+                      title={puedeTenerPermisos(usuario) ? "Gestionar permisos" : "Solo administradores pueden gestionar permisos"}
                     >
                       <FaShieldAlt className="w-4 h-4" />
                       Permisos
@@ -585,228 +694,49 @@ const UsuariosManager = () => {
       )}
 
       {/* Modal Restablecer Contraseña */}
-      {showModalPassword && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-amber-50 rounded-xl">
-                <FaKey className="w-6 h-6 text-amber-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">Restablecer Contraseña</h2>
-            </div>
-
-            {usuarioSeleccionado && (
-              <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <p className="text-sm text-gray-600 mb-1">Usuario:</p>
-                <p className="font-semibold text-gray-900">
-                  {usuarioSeleccionado.persona?.nombre} {usuarioSeleccionado.persona?.apellido}
-                </p>
-                <p className="text-sm text-gray-600">{usuarioSeleccionado.email}</p>
-              </div>
-            )}
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nueva Contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={mostrarPassword ? 'text' : 'password'}
-                  value={passwordNueva}
-                  onChange={(e) => setPasswordNueva(e.target.value)}
-                  className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Ingresa la nueva contraseña"
-                />
-                <button
-                  onClick={() => setMostrarPassword(!mostrarPassword)}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                >
-                  {mostrarPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={generarPasswordTemporal}
-              className="w-full mb-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors duration-200"
-            >
-              Generar Contraseña Temporal
-            </button>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleCerrarModalPassword}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors duration-200"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleRestablecerPassword}
-                disabled={cargandoPassword || !passwordNueva.trim()}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-lg hover:from-amber-700 hover:to-amber-800 font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {cargandoPassword ? (
-                  <>
-                    <FaSpinner className="w-4 h-4 animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <FaCheck className="w-4 h-4" />
-                    Restablecer
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ModalRestablecerPassword
+        isOpen={showModalPassword}
+        usuario={usuarioSeleccionado}
+        passwordNueva={passwordNueva}
+        loading={cargandoPassword}
+        onClose={handleCerrarModalPassword}
+        onPasswordChange={setPasswordNueva}
+        onGeneratePassword={generarPasswordTemporal}
+        onSubmit={handleRestablecerPassword}
+      />
 
       {/* Modal Eliminar */}
-      {showModalDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-red-50 rounded-xl">
-                <FaExclamationCircle className="w-6 h-6 text-red-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">Eliminar Usuario</h2>
-            </div>
-
-            {usuarioParaEliminar && (
-              <>
-                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">Usuario a eliminar:</p>
-                  <p className="font-semibold text-gray-900">
-                    {usuarioParaEliminar.persona?.nombre} {usuarioParaEliminar.persona?.apellido}
-                  </p>
-                  <p className="text-sm text-gray-600">{usuarioParaEliminar.email}</p>
-                </div>
-
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-                  <p className="text-sm text-red-700">
-                    Esta acción no se puede deshacer. El usuario será eliminado permanentemente del sistema.
-                  </p>
-                </div>
-              </>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleCerrarModalDelete}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors duration-200"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleEliminarUsuario}
-                disabled={cargandoDelete}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {cargandoDelete ? (
-                  <>
-                    <FaSpinner className="w-4 h-4 animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  <>
-                    <FaTrash className="w-4 h-4" />
-                    Eliminar
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ModalEliminarUsuario
+        isOpen={showModalDelete}
+        usuario={usuarioParaEliminar}
+        loading={cargandoDelete}
+        onClose={handleCerrarModalDelete}
+        onSubmit={handleEliminarUsuario}
+      />
 
       {/* Modal Gestionar Permisos */}
-      {showModalPermisos && usuarioPermisosSeleccionado && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-96 overflow-y-auto p-6 border border-gray-200">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <FaShieldAlt className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Gestionar Permisos</h2>
-                <p className="text-sm text-gray-600">
-                  {usuarioPermisosSeleccionado.persona?.nombre} {usuarioPermisosSeleccionado.persona?.apellido}
-                </p>
-              </div>
-            </div>
+      <ModalGestionarPermisos
+        isOpen={showModalPermisos}
+        usuario={usuarioPermisosSeleccionado}
+        permisos={allPermisos}
+        permisosSeleccionados={permisosSeleccionados}
+        loading={cargandoPermisos}
+        onClose={handleCerrarModalPermisos}
+        onTogglePermiso={handleTogglePermiso}
+        onSubmit={handleGuardarPermisos}
+      />
 
-            {/* Tipo de usuario */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <p className="text-sm text-gray-600 mb-2">Tipo de usuario:</p>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${ROLE_COLORS[usuarioPermisosSeleccionado.persona?.tipo]?.bg} ${ROLE_COLORS[usuarioPermisosSeleccionado.persona?.tipo]?.text}`}>
-                {ROLE_LABELS[usuarioPermisosSeleccionado.persona?.tipo]}
-              </span>
-            </div>
-
-            {/* Permisos por categoría */}
-            <div className="space-y-4 mb-6">
-              {['academico', 'estudiantes', 'representantes', 'profesores', 'empleados', 'pagos', 'nomina', 'reportes', 'configuracion', 'usuarios'].map(categoria => {
-                const permisosCategoria = allPermisos.filter(p => p.categoria === categoria);
-                if (permisosCategoria.length === 0) return null;
-
-                return (
-                  <div key={categoria} className="border border-gray-200 rounded-xl p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3 capitalize">
-                      {categoria}
-                    </h3>
-                    <div className="space-y-2">
-                      {permisosCategoria.map(permiso => (
-                        <label key={permiso.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={permisosSeleccionados.has(permiso.id)}
-                            onChange={() => handleTogglePermiso(permiso.id)}
-                            className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{permiso.nombre}</p>
-                            {permiso.descripcion && (
-                              <p className="text-xs text-gray-600">{permiso.descripcion}</p>
-                            )}
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Botones */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleCerrarModalPermisos}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors duration-200"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleGuardarPermisos}
-                disabled={cargandoPermisos}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {cargandoPermisos ? (
-                  <>
-                    <FaSpinner className="w-4 h-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <FaCheck className="w-4 h-4" />
-                    Guardar Cambios
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal Cambiar Estado */}
+      <ModalCambiarEstado
+        isOpen={showModalEstado}
+        usuario={usuarioEstadoSeleccionado}
+        estadoActual={usuarioEstadoSeleccionado?.estado || 'activo'}
+        estadoNuevo={estadoNuevo}
+        loading={cargandoEstado}
+        onClose={handleCerrarModalEstado}
+        onEstadoChange={setEstadoNuevo}
+        onSubmit={handleGuardarEstado}
+      />
     </div>
   );
 };

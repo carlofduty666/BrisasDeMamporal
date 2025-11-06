@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha, formatearFechaParaInput } from '../../utils/formatters';
+import { tipoDocumentoFormateado, formatearNombreGrado, formatearFecha, formatearFechaParaInput, formatearCedula } from '../../utils/formatters';
 import { 
   FaUserGraduate, 
   FaUsers, 
@@ -1252,7 +1252,7 @@ const NuevoEstudiante = () => {
                         
                         <div className="bg-white p-3 rounded-lg">
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">Cédula</label>
-                          <div className="mt-1 text-sm font-medium text-gray-900">{formData.representante.cedula}</div>
+                          <div className="mt-1 text-sm font-medium text-gray-900">{formatearCedula(formData.representante.cedula)}</div>
                         </div>
                         
                         <div className="bg-white p-3 rounded-lg">
@@ -1658,7 +1658,7 @@ const NuevoEstudiante = () => {
                   <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="bg-white p-3 rounded-lg">
                       <dt className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cédula/Documento</dt>
-                      <dd className="mt-1 text-sm font-bold text-gray-900">{formData.estudiante.cedula}</dd>
+                      <dd className="mt-1 text-sm font-bold text-gray-900">{formatearCedula(formData.estudiante.cedula)}</dd>
                     </div>
                     <div className="bg-white p-3 rounded-lg">
                       <dt className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nombre Completo</dt>
@@ -1690,7 +1690,7 @@ const NuevoEstudiante = () => {
                   <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="bg-white p-3 rounded-lg">
                       <dt className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cédula/Documento</dt>
-                      <dd className="mt-1 text-sm font-bold text-gray-900">{formData.representante.cedula}</dd>
+                      <dd className="mt-1 text-sm font-bold text-gray-900">{formatearCedula(formData.representante.cedula)}</dd>
                     </div>
                     <div className="bg-white p-3 rounded-lg">
                       <dt className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nombre Completo</dt>

@@ -234,6 +234,26 @@ export const tipoDocumentoFormateado = {
     });
   };
 
+  // Formateador de nombres de permisos
+  export const formatearNombrePermiso = (nombrePermiso) => {
+    if (!nombrePermiso) return '';
+    
+    // Reemplazar guiones bajos con espacios y capitalizar
+    return nombrePermiso
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Obtener el tipo de permiso basado en el prefijo
+  export const obtenerTipoPermiso = (nombrePermiso) => {
+    if (!nombrePermiso) return 'default';
+    
+    const prefijo = nombrePermiso.split('_')[0].toLowerCase();
+    return prefijo;
+  };
+
   // const formatDate = (dateString) => {
   //   if (!dateString) return 'N/A';
   //   const date = new Date(dateString);

@@ -22,6 +22,8 @@ module.exports = (sequelize, DataTypes) => {
     usuarioID: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
+      autoIncrement: false,
       references: {
         model: 'Usuarios',
         key: 'id'
@@ -31,6 +33,8 @@ module.exports = (sequelize, DataTypes) => {
     permisoID: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
+      autoIncrement: false,
       references: {
         model: 'Permisos',
         key: 'id'

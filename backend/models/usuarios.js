@@ -65,6 +65,12 @@ module.exports = (sequelize, DataTypes) => {
     ultimoLogin: {
       type: DataTypes.DATE,
       allowNull: true
+    },
+    estado: {
+      type: DataTypes.ENUM('activo', 'suspendido', 'desactivado', 'inactivo'),
+      defaultValue: 'activo',
+      allowNull: false,
+      comment: 'Estado del usuario: activo, suspendido, desactivado, inactivo'
     }
   }, {
     sequelize,

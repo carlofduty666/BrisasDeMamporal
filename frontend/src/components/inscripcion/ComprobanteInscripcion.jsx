@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { formatearFecha, formatearNombreGrado } from '../../utils/formatters';
+import { formatearFecha, formatearNombreGrado, formatearCedula } from '../../utils/formatters';
 import { jwtDecode } from "jwt-decode";
 
 const ComprobanteInscripcion = () => {
@@ -221,7 +221,7 @@ const ComprobanteInscripcion = () => {
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Cédula:</span>
-                <p className="mt-1">{estudiante?.cedula}</p>
+                <p className="mt-1">{formatearCedula(estudiante?.cedula)}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Fecha de Nacimiento:</span>
@@ -339,7 +339,7 @@ const ComprobanteInscripcion = () => {
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Cédula:</span>
-                <p className="mt-1">{representante?.cedula}</p>
+                <p className="mt-1">{formatearCedula(representante?.cedula)}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Teléfono:</span>

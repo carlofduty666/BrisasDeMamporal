@@ -68,6 +68,15 @@ export const verificarUsuario = async (id) => {
   }
 };
 
+export const cambiarEstadoUsuario = async (id, estado) => {
+  try {
+    const response = await api.put(`/usuarios/${id}/estado`, { estado });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al cambiar estado del usuario' };
+  }
+};
+
 export const deleteUsuario = async (id) => {
   try {
     const response = await api.delete(`/usuarios/${id}`);

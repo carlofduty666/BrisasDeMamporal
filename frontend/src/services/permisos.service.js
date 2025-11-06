@@ -1,11 +1,9 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import api from './api';
 
 // Obtener todos los permisos
 export const getAllPermisos = async () => {
   try {
-    const response = await axios.get(`${API_URL}/api/permisos`);
+    const response = await api.get('/permisos');
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: error.message };
@@ -15,7 +13,7 @@ export const getAllPermisos = async () => {
 // Obtener permisos por categoría
 export const getPermisosByCategoria = async (categoria) => {
   try {
-    const response = await axios.get(`${API_URL}/api/permisos/categoria/${categoria}`);
+    const response = await api.get(`/permisos/categoria/${categoria}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: error.message };
@@ -25,7 +23,7 @@ export const getPermisosByCategoria = async (categoria) => {
 // Obtener permisos de un rol
 export const getPermisosByRol = async (rolID) => {
   try {
-    const response = await axios.get(`${API_URL}/api/permisos/rol/${rolID}`);
+    const response = await api.get(`/permisos/rol/${rolID}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: error.message };
@@ -35,7 +33,7 @@ export const getPermisosByRol = async (rolID) => {
 // Obtener permisos de un usuario (combinados)
 export const getPermisosByUsuario = async (usuarioID) => {
   try {
-    const response = await axios.get(`${API_URL}/api/permisos/usuario/${usuarioID}`);
+    const response = await api.get(`/permisos/usuario/${usuarioID}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: error.message };
@@ -45,7 +43,7 @@ export const getPermisosByUsuario = async (usuarioID) => {
 // Crear permiso
 export const crearPermiso = async (permisoData) => {
   try {
-    const response = await axios.post(`${API_URL}/api/permisos`, permisoData);
+    const response = await api.post('/permisos', permisoData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: error.message };
@@ -55,7 +53,7 @@ export const crearPermiso = async (permisoData) => {
 // Asignar permiso a un usuario
 export const asignarPermisoUsuario = async (usuarioID, permisoID) => {
   try {
-    const response = await axios.post(`${API_URL}/api/permisos/usuario/asignar`, {
+    const response = await api.post('/permisos/usuario/asignar', {
       usuarioID,
       permisoID
     });
@@ -68,7 +66,7 @@ export const asignarPermisoUsuario = async (usuarioID, permisoID) => {
 // Remover permiso de un usuario
 export const removerPermisoUsuario = async (usuarioID, permisoID) => {
   try {
-    const response = await axios.delete(`${API_URL}/api/permisos/usuario/remover`, {
+    const response = await api.delete('/permisos/usuario/remover', {
       data: { usuarioID, permisoID }
     });
     return response.data;
@@ -80,7 +78,7 @@ export const removerPermisoUsuario = async (usuarioID, permisoID) => {
 // Asignar múltiples permisos a un usuario
 export const asignarMultiplesPermisosUsuario = async (usuarioID, permisoIDs) => {
   try {
-    const response = await axios.post(`${API_URL}/api/permisos/usuario/asignar-multiples`, {
+    const response = await api.post('/permisos/usuario/asignar-multiples', {
       usuarioID,
       permisoIDs
     });
@@ -93,7 +91,7 @@ export const asignarMultiplesPermisosUsuario = async (usuarioID, permisoIDs) => 
 // Asignar permisos a un rol
 export const asignarPermisosRol = async (rolID, permisoIDs) => {
   try {
-    const response = await axios.post(`${API_URL}/api/permisos/rol/asignar`, {
+    const response = await api.post('/permisos/rol/asignar', {
       rolID,
       permisoIDs
     });

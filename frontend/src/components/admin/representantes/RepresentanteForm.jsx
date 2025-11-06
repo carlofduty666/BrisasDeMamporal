@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { FaArrowLeft, FaUpload, FaSave, FaUserPlus, FaCheck, FaEdit } from 'react-icons/fa';
 import AdminLayout from '../layout/AdminLayout';
+import { formatearCedula } from '../../../utils/formatters';
 
 const RepresentanteForm = () => {
   const { id } = useParams();
@@ -1188,7 +1189,7 @@ const RepresentanteForm = () => {
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
                     <div className="sm:col-span-1">
                       <dt className="text-sm font-medium text-gray-500">Cédula/Documento</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{formData.cedula}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">{formatearCedula(formData.cedula)}</dd>
                     </div>
                     <div className="sm:col-span-1">
                       <dt className="text-sm font-medium text-gray-500">Nombre Completo</dt>
@@ -1226,7 +1227,7 @@ const RepresentanteForm = () => {
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
                     <div className="sm:col-span-1">
                       <dt className="text-sm font-medium text-gray-500">Cédula/Documento</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{estudianteData.cedula}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">{formatearCedula(estudianteData.cedula)}</dd>
                     </div>
                     <div className="sm:col-span-1">
                       <dt className="text-sm font-medium text-gray-500">Nombre Completo</dt>

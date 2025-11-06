@@ -44,7 +44,7 @@ const LoginForm = () => {
       const userData = response.data.user;
       if (userData.tipo === 'representante') {
         navigate('/dashboard/representante');
-      } else if (userData.tipo === 'adminWeb' ||userData.tipo === 'owner') {
+      } else if (userData.tipo === 'adminWeb' || userData.tipo === 'owner' || userData.tipo === 'administrativo') {
         navigate('/admin/dashboard');
       } else if (userData.tipo === 'profesor') {
         navigate('/profesor/dashboard');
@@ -277,7 +277,7 @@ const LoginForm = () => {
       </div>
 
       {/* Estilos de animación personalizados */}
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in-down {
           0% {
             opacity: 0;

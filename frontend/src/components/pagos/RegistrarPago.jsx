@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { formatearCedula } from '../../utils/formatters';
 
 const RegistrarPago = () => {
   const { inscripcionId } = useParams();
@@ -164,7 +165,7 @@ const RegistrarPago = () => {
             <div className="bg-gray-50 p-4 rounded-md">
               <h2 className="text-lg font-medium text-gray-900">Información del Estudiante</h2>
               <p className="mt-1 text-sm text-gray-600">
-                {estudiante?.nombre} {estudiante?.apellido} - C.I.: {estudiante?.cedula}
+                {estudiante?.nombre} {estudiante?.apellido} - C.I.: {formatearCedula(estudiante?.cedula)}
               </p>
               <p className="mt-1 text-sm text-gray-600">
                 Monto a pagar: ${aranceles.find(a => a.id === parseInt(formData.arancelID))?.monto || 'No seleccionado'}

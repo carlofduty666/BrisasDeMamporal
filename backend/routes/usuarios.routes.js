@@ -24,6 +24,9 @@ router.put('/usuarios/:id/restablecer-password', authMiddleware.verifyToken, usu
 // Verificar usuario
 router.put('/usuarios/:id/verificar', authMiddleware.verifyToken, usuariosController.verificarUsuario);
 
+// Cambiar estado del usuario (activo, suspendido, desactivado, inactivo)
+router.put('/usuarios/:id/estado', authMiddleware.verifyToken, usuariosController.cambiarEstadoUsuario);
+
 // Eliminar usuario
 router.delete('/usuarios/:id', authMiddleware.verifyToken, usuariosController.deleteUsuario);
 

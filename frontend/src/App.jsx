@@ -148,6 +148,7 @@ function App() {
 
         <Route path="/register" element={<RegisterForm key="register" />} />
         <Route path="/registro-profesor" element={<RegisterForm />} />
+        <Route path="/registro-empleado-admin" element={<RegisterForm />} />
         <Route path="/verificacion-email" element={<EmailVerification />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/recuperar-password" element={<ForgotPassword />} />
@@ -210,7 +211,7 @@ function App() {
         <Route 
             path="/admin/*" 
             element={
-              <ProtectedRoute allowedRoles={['adminWeb', 'owner']}>
+              <ProtectedRoute allowedRoles={['adminWeb', 'owner', 'administrativo']}>
                 <AdminRoutes />
               </ProtectedRoute>
             } 

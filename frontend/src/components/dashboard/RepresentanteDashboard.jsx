@@ -22,6 +22,7 @@ import {
 } from 'react-icons/fa';
 import EstudianteProgresoModal from '../estudiante/EstudianteProgresoModal';
 import ClasesActuales from '../ClasesActuales';
+import { formatearCedula } from '../../utils/formatters';
 
 const RepresentanteDashboard = () => {
   const [representante, setRepresentante] = useState(null);
@@ -767,7 +768,7 @@ const handleVerProgreso = (estudiante) => {
                                 <h3 className="text-lg font-bold text-white">
                                   {estudiante.nombre} {estudiante.apellido}
                                 </h3>
-                                <p className="text-white/80 text-sm">C.I: {estudiante.cedula}</p>
+                                <p className="text-white/80 text-sm">C.I: {formatearCedula(estudiante.cedula)}</p>
                               </div>
                             </div>
                             {estadoInscripcion && (

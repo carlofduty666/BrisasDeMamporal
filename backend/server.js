@@ -124,7 +124,7 @@ app.use('/', mensualidadesRoutes);
 app.use('/', contabilidadRoutes);
 app.use('/', rolesRoutes);
 app.use('/', usuariosRoutes);
-app.use('/api/permisos', permisosRoutes);
+app.use('/permisos', permisosRoutes);
 // Ruta de prueba directa
 app.get('/test-horarios', (req, res) => {
   res.json({

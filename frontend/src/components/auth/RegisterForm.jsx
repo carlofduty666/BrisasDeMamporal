@@ -9,6 +9,20 @@ const RegisterForm = () => {
   
   // Determinar el tipo de registro basado en la URL
   const isProfesorRegister = location.pathname === '/registro-profesor';
+  const isEmpleadoAdminRegister = location.pathname === '/registro-empleado-admin';
+  const isPersonalRegister = isProfesorRegister || isEmpleadoAdminRegister;
+  
+  // Determinar el tipo de personal y textos según la ruta
+  const tipoPersonal = isProfesorRegister ? 'profesor' : isEmpleadoAdminRegister ? 'administrativo' : null;
+  const getTitulo = () => {
+    if (isProfesorRegister) return 'Registro de Profesor';
+    if (isEmpleadoAdminRegister) return 'Registro de Personal Administrativo';
+    return 'Registro de Representante';
+  };
+  const getIconoTitulo = () => {
+    if (isProfesorRegister || isEmpleadoAdminRegister) return <FaUserTie className="w-6 h-6 sm:w-8 sm:h-8" />;
+    return <FaUser className="w-6 h-6 sm:w-8 sm:h-8" />;
+  };
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -24,9 +38,9 @@ const RegisterForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [profesorEncontrado, setProfesorEncontrado] = useState(null);
+  const [personalEncontrado, setPersonalEncontrado] = useState(null);
   const [buscando, setBuscando] = useState(false);
-  const [paso, setPaso] = useState(isProfesorRegister ? 1 : 2); // Paso 1: Verificar cédula, Paso 2: Completar registro
+  const [paso, setPaso] = useState(isPersonalRegister ? 1 : 2); // Paso 1: Verificar cédula, Paso 2: Completar registro
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [focusedInput, setFocusedInput] = useState('');
@@ -39,8 +53,8 @@ const RegisterForm = () => {
     });
   };
 
-  // Función para buscar al profesor por cédula (solo para registro de profesores)
-  const buscarProfesor = async () => {
+  // Función para buscar personal por cédula (profesor, empleado administrativo, etc)
+  const buscarPersonal = async () => {
     if (!formData.cedula) {
       setError('Por favor, ingrese su número de cédula');
       return;
@@ -51,28 +65,28 @@ const RegisterForm = () => {
       setError('');
       
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/personas/verificar-profesor/${formData.cedula}`
+        `${import.meta.env.VITE_API_URL}/personas/verificar-personal/${tipoPersonal}/${formData.cedula}`
       );
       
       if (response.data.existe && !response.data.yaRegistrado) {
-        setProfesorEncontrado(response.data.profesor);
+        setPersonalEncontrado(response.data.persona);
         // Pre-llenar el email si está disponible
-        if (response.data.profesor.email) {
+        if (response.data.persona.email) {
           setFormData({
             ...formData,
-            email: response.data.profesor.email,
-            nombre: response.data.profesor.nombre,
-            apellido: response.data.profesor.apellido
+            email: response.data.persona.email,
+            nombre: response.data.persona.nombre,
+            apellido: response.data.persona.apellido
           });
         }
         setPaso(2); // Avanzar al paso de completar registro
       } else if (response.data.yaRegistrado) {
-        setError('Este profesor ya tiene una cuenta registrada. Por favor, inicie sesión o recupere su contraseña.');
+        setError(`Este ${tipoPersonal} ya tiene una cuenta registrada. Por favor, inicie sesión o recupere su contraseña.`);
       } else {
-        setError('No se encontró profesor registrado con esta cédula. Por favor, contacte a la administración.');
+        setError(`No se encontró ${tipoPersonal} registrado con esta cédula. Por favor, contacte a la administración.`);
       }
     } catch (err) {
-      console.error('Error al verificar profesor:', err);
+      console.error('Error al verificar personal:', err);
       setError(err.response?.data?.message || 'Error al verificar. Por favor, intente nuevamente.');
     } finally {
       setBuscando(false);
@@ -94,18 +108,23 @@ const RegisterForm = () => {
       
       let response;
       
-      if (isProfesorRegister) {
-        // Registro de profesor (vinculando a persona existente)
-        if (!profesorEncontrado) {
-          setError('Debe verificar su cédula primero');
+      if (isPersonalRegister) {
+        // Registro de personal (profesor, empleado administrativo, etc - vinculando a persona existente)
+        if (!personalEncontrado) {
+          setError(`Debe verificar su cédula primero`);
           setLoading(false);
           return;
         }
         
+        // Determinar el endpoint según el tipo
+        const endpoint = isProfesorRegister 
+          ? '/auth/register-profesor'
+          : '/auth/register-empleado-admin';
+        
         response = await axios.post(
-          `${import.meta.env.VITE_API_URL}/auth/register-profesor`,
+          `${import.meta.env.VITE_API_URL}${endpoint}`,
           {
-            personaID: profesorEncontrado.id,
+            personaID: personalEncontrado.id,
             email: formData.email,
             password: formData.password
           }
@@ -163,17 +182,10 @@ const RegisterForm = () => {
         {/* Header con animación */}
         <div className="sm:mx-auto sm:w-full sm:max-w-md animate-fade-in-down">
           <h2 className="text-center text-2xl sm:text-3xl md:text-4xl font-extrabold text-white mb-2 drop-shadow-lg">
-            {isProfesorRegister ? (
-              <span className="flex items-center justify-center gap-2">
-                <FaUserTie className="w-6 h-6 sm:w-8 sm:h-8" />
-                Registro de Profesor
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                <FaUser className="w-6 h-6 sm:w-8 sm:h-8" />
-                Registro de Representante
-              </span>
-            )}
+            <span className="flex items-center justify-center gap-2">
+              {getIconoTitulo()}
+              {getTitulo()}
+            </span>
           </h2>
           <p className="text-center text-slate-300 text-sm sm:text-base">
             ¿Ya tiene una cuenta?{' '}
@@ -184,11 +196,22 @@ const RegisterForm = () => {
               Inicie sesión aquí
             </Link>
           </p>
-          {!isProfesorRegister && (
+          {!isPersonalRegister && (
             <p className="mt-2 text-center text-xs sm:text-sm text-slate-400">
               ¿Es Profesor?{' '}
               <Link 
                 to="/registro-profesor" 
+                className="font-semibold text-slate-300 hover:text-white transition-colors duration-300 underline decoration-slate-500 hover:decoration-white"
+              >
+                Regístrese aquí
+              </Link>
+            </p>
+          )}
+          {!isPersonalRegister && (
+            <p className="mt-1 text-center text-xs sm:text-sm text-slate-400">
+              ¿Es Personal Administrativo?{' '}
+              <Link 
+                to="/registro-empleado-admin" 
                 className="font-semibold text-slate-300 hover:text-white transition-colors duration-300 underline decoration-slate-500 hover:decoration-white"
               >
                 Regístrese aquí
@@ -220,8 +243,8 @@ const RegisterForm = () => {
               </div>
             )}
             
-            {/* Paso 1: Verificar cédula (solo para profesores) */}
-            {isProfesorRegister && paso === 1 && (
+            {/* Paso 1: Verificar cédula (solo para personal) */}
+            {isPersonalRegister && paso === 1 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <FaSearch className="w-5 h-5" />
@@ -258,7 +281,7 @@ const RegisterForm = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={buscarProfesor}
+                    onClick={buscarPersonal}
                     disabled={buscando || !formData.cedula}
                     className="group relative w-full sm:w-auto flex justify-center items-center py-3 px-6 border-2 border-transparent rounded-xl text-sm font-semibold text-white 
                     bg-gradient-to-r from-slate-700 to-slate-800 
@@ -293,13 +316,13 @@ const RegisterForm = () => {
             {/* Paso 2: Formulario de registro */}
             {paso === 2 && (
               <form className="space-y-4" onSubmit={handleSubmit}>
-                {/* Mostrar información del profesor encontrado (solo para profesores) */}
-                {isProfesorRegister && profesorEncontrado && (
+                {/* Mostrar información del personal encontrado (para personal) */}
+                {isPersonalRegister && personalEncontrado && (
                   <div className="bg-green-500/20 backdrop-blur-md border border-green-500/50 p-4 rounded-xl mb-4">
                     <p className="text-green-100 flex items-center gap-2">
                       <FaCheckCircle className="w-5 h-5" />
                       <span>
-                        Profesor verificado: <strong>{profesorEncontrado.nombre} {profesorEncontrado.apellido}</strong>
+                        {isProfesorRegister ? 'Profesor' : 'Personal Administrativo'} verificado: <strong>{personalEncontrado.nombre} {personalEncontrado.apellido}</strong>
                       </span>
                     </p>
                     <p className="text-sm text-green-200 mt-1">
@@ -309,7 +332,7 @@ const RegisterForm = () => {
                 )}
 
                 {/* Campos de nombre y apellido (solo para representantes) */}
-                {!isProfesorRegister && (
+                {!isPersonalRegister && (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="transform transition-all duration-300 hover:translate-x-1">
                       <label htmlFor="nombre" className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
@@ -372,7 +395,7 @@ const RegisterForm = () => {
                 )}
 
                 {/* Campo de cédula (solo para representantes) */}
-                {!isProfesorRegister && (
+                {!isPersonalRegister && (
                   <div className="transform transition-all duration-300 hover:translate-x-1">
                     <label htmlFor="cedula" className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
                       Cédula/Documento
@@ -425,7 +448,7 @@ const RegisterForm = () => {
                       onFocus={() => setFocusedInput('email')}
                       onBlur={() => setFocusedInput('')}
                       placeholder="tu@email.com"
-                      readOnly={isProfesorRegister && profesorEncontrado?.email}
+                      readOnly={isPersonalRegister && personalEncontrado?.email}
                       className="appearance-none block w-full pl-12 pr-4 py-3 bg-white/10 border-2 border-slate-600/50 rounded-xl text-white placeholder-slate-400 
                       focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-400 
                       hover:border-slate-500 hover:bg-white/15
@@ -436,7 +459,7 @@ const RegisterForm = () => {
                 </div>
 
                 {/* Campos adicionales solo para representantes */}
-                {!isProfesorRegister && (
+                {!isPersonalRegister && (
                   <>
                     <div className="transform transition-all duration-300 hover:translate-x-1">
                       <label htmlFor="telefono" className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
