@@ -6,7 +6,9 @@ import {
   FaCog, FaHome, FaSignOutAlt, FaChevronDown, FaChevronUp,
   FaGraduationCap, FaChalkboard, FaClock
 } from 'react-icons/fa';
-import { logout } from '../../../services/auth.service';
+import { logout, getCurrentUser } from '../../../services/auth.service';
+// import * as permisosService from '../../../services/permisos.service';
+// import { tienePermisoRuta } from '../../../utils/permisosMapping';
 
 const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
   const [showAcademicoSubmenu, setShowAcademicoSubmenu] = useState(false);
