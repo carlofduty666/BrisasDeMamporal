@@ -34,7 +34,7 @@ exports.verifyToken = async (req, res, next) => {
 };
 
 exports.isAdmin = (req, res, next) => {
-  if (req.userType !== 'adminWeb' && req.userType !== 'owner') {
+  if (req.userType !== 'adminWeb' && req.userType !== 'owner' && req.userType !== 'administrativo') {
     return res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador' });
   }
   next();

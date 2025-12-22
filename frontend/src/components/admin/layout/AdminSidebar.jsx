@@ -7,13 +7,20 @@ import {
   FaGraduationCap, FaChalkboard, FaClock
 } from 'react-icons/fa';
 import { logout, getCurrentUser } from '../../../services/auth.service';
-// import * as permisosService from '../../../services/permisos.service';
-// import { tienePermisoRuta } from '../../../utils/permisosMapping';
+import { tienePermiso } from '../../../utils/permisosMapping';
 
 const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
   const [showAcademicoSubmenu, setShowAcademicoSubmenu] = useState(false);
   const location = useLocation();
   const [activeSection, setActiveSection] = useState('');
+  const [permisos, setPermisos] = useState([]);
+
+  useEffect(() => {
+    const usuario = getCurrentUser();
+    if (usuario && usuario.permisos) {
+      setPermisos(usuario.permisos);
+    }
+  }, []);
 
   // Función para determinar el color según la ruta - Paleta elegante y moderna
   const getColorForRoute = (route) => {
@@ -231,6 +238,19 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
  
   const isOwner = userRole === 'owner' || userRole === 'adminWeb';
   
+  // Función auxiliar para verificar permisos (si es owner, siempre true)
+  const puedeAcceder = (ruta) => {
+    if (isOwner) return true;
+    return tienePermiso(permisos, ruta);
+  };
+  
+  // Verificar si el usuario tiene permisos para alguna sección académica
+  const tienePermisosAcademicos = 
+    puedeAcceder('/admin/academico/grados') ||
+    puedeAcceder('/admin/academico/materias') ||
+    puedeAcceder('/admin/academico/secciones') ||
+    puedeAcceder('/admin/academico/horarios');
+  
   // Obtener el color actual basado en la sección activa
   const currentColors = getColorForRoute(activeSection);
   
@@ -332,15 +352,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/estudiantes"
-              onClick={handleLinkClick}
+              onClick={(e) => {
+                if (!puedeAcceder('/admin/estudiantes')) {
+                  e.preventDefault();
+                  return;
+                }
+                handleLinkClick();
+              }}
               className={({ isActive }) => 
                 `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
-                  isActive
-                    ? 'bg-white/20 border border-white/30'
-                    : 'hover:bg-white/10'
+                  !puedeAcceder('/admin/estudiantes')
+                    ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                    : isActive
+                      ? 'bg-white/20 border border-white/30'
+                      : 'hover:bg-white/10'
                 }`
               }
-              title='Estudiantes'
+              title={!puedeAcceder('/admin/estudiantes') ? 'Sin permisos' : 'Estudiantes'}
             >
               {({ isActive }) => (
                 <>
@@ -361,15 +389,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/profesores"
-              onClick={handleLinkClick}
+              onClick={(e) => {
+                if (!puedeAcceder('/admin/profesores')) {
+                  e.preventDefault();
+                  return;
+                }
+                handleLinkClick();
+              }}
               className={({ isActive }) => 
                 `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
-                  isActive
-                    ? 'bg-white/20 border border-white/30'
-                    : 'hover:bg-white/10'
+                  !puedeAcceder('/admin/profesores')
+                    ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                    : isActive
+                      ? 'bg-white/20 border border-white/30'
+                      : 'hover:bg-white/10'
                 }`
               }
-              title='Profesores'
+              title={!puedeAcceder('/admin/profesores') ? 'Sin permisos' : 'Profesores'}
             >
               {({ isActive }) => (
                 <>
@@ -390,15 +426,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/representantes"
-              onClick={handleLinkClick}
+              onClick={(e) => {
+                if (!puedeAcceder('/admin/representantes')) {
+                  e.preventDefault();
+                  return;
+                }
+                handleLinkClick();
+              }}
               className={({ isActive }) => 
                 `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
-                  isActive
-                    ? 'bg-white/20 border border-white/30'
-                    : 'hover:bg-white/10'
+                  !puedeAcceder('/admin/representantes')
+                    ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                    : isActive
+                      ? 'bg-white/20 border border-white/30'
+                      : 'hover:bg-white/10'
                 }`
               }
-              title='Representantes'
+              title={!puedeAcceder('/admin/representantes') ? 'Sin permisos' : 'Representantes'}
             >
               {({ isActive }) => (
                 <>
@@ -419,15 +463,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/empleados"
-              onClick={handleLinkClick}
+              onClick={(e) => {
+                if (!puedeAcceder('/admin/empleados')) {
+                  e.preventDefault();
+                  return;
+                }
+                handleLinkClick();
+              }}
               className={({ isActive }) => 
                 `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
-                  isActive
-                    ? 'bg-white/20 border border-white/30'
-                    : 'hover:bg-white/10'
+                  !puedeAcceder('/admin/empleados')
+                    ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                    : isActive
+                      ? 'bg-white/20 border border-white/30'
+                      : 'hover:bg-white/10'
                 }`
               }
-              title='Empleados'
+              title={!puedeAcceder('/admin/empleados') ? 'Sin permisos' : 'Empleados'}
             >
               {({ isActive }) => (
                 <>
@@ -448,15 +500,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/pagos"
-              onClick={handleLinkClick}
+              onClick={(e) => {
+                if (!puedeAcceder('/admin/pagos')) {
+                  e.preventDefault();
+                  return;
+                }
+                handleLinkClick();
+              }}
               className={({ isActive }) => 
                 `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
-                  isActive
-                    ? 'bg-white/20 border border-white/30'
-                    : 'hover:bg-white/10'
+                  !puedeAcceder('/admin/pagos')
+                    ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                    : isActive
+                      ? 'bg-white/20 border border-white/30'
+                      : 'hover:bg-white/10'
                 }`
               }
-              title='Pagos'
+              title={!puedeAcceder('/admin/pagos') ? 'Sin permisos' : 'Pagos'}
             >
               {({ isActive }) => (
                 <>
@@ -507,15 +567,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/inscripciones"
-              onClick={handleLinkClick}
+              onClick={(e) => {
+                if (!puedeAcceder('/admin/inscripciones')) {
+                  e.preventDefault();
+                  return;
+                }
+                handleLinkClick();
+              }}
               className={({ isActive }) => 
                 `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
-                  isActive
-                    ? 'bg-white/20 border border-white/30'
-                    : 'hover:bg-white/10'
+                  !puedeAcceder('/admin/inscripciones')
+                    ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                    : isActive
+                      ? 'bg-white/20 border border-white/30'
+                      : 'hover:bg-white/10'
                 }`
               }
-              title='Inscripciones'
+              title={!puedeAcceder('/admin/inscripciones') ? 'Sin permisos' : 'Inscripciones'}
             >
               {({ isActive }) => (
                 <>
@@ -537,18 +605,20 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             <div>
               <button
                 onClick={() => {
-                  // Si el sidebar está cerrado, abrirlo primero
+                  if (!tienePermisosAcademicos) return;
                   if (!isOpen) {
                     toggleSidebar();
                   }
-                  // Luego alternar el submenu
                   setShowAcademicoSubmenu(!showAcademicoSubmenu);
                 }}
                 className={`group flex items-center ${isOpen ? 'justify-between p-3' : 'justify-center p-2'} w-full rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
-                  activeSection.includes('/admin/academico')
-                    ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
-                    : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
+                  !tienePermisosAcademicos
+                    ? 'opacity-40 cursor-not-allowed'
+                    : activeSection.includes('/admin/academico')
+                      ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
+                      : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
                 }`}
+                title={!tienePermisosAcademicos ? 'Sin permisos' : 'Académico'}
               >
                 <div className="flex items-center">
                   <div className={`p-2 rounded-lg ${activeSection.includes('/admin/academico') ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-all duration-300`}>
@@ -570,20 +640,28 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
                 {activeSection.includes('/admin/academico') && <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-xl"></div>}
               </button>
               
-              {showAcademicoSubmenu && isOpen && (
+              {showAcademicoSubmenu && isOpen && tienePermisosAcademicos && (
                 <ul className="mt-3 space-y-2 pl-4 border-l border-white/20 ml-6">
                   <li>
                     <NavLink
                       to="/admin/academico/grados"
-                      onClick={handleLinkClick}
+                      onClick={(e) => {
+                        if (!puedeAcceder('/admin/academico/grados')) {
+                          e.preventDefault();
+                          return;
+                        }
+                        handleLinkClick();
+                      }}
                       className={({ isActive }) => 
                         `group flex items-center p-2.5 rounded-lg transition-all duration-300 text-white/90 relative overflow-hidden ${
-                          isActive
-                            ? 'bg-white/15 backdrop-blur-md shadow-md border border-white/20 text-white'
-                            : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:text-white'
+                          !puedeAcceder('/admin/academico/grados')
+                            ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                            : isActive
+                              ? 'bg-white/15 backdrop-blur-md shadow-md border border-white/20 text-white'
+                              : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:text-white'
                         }`
                       }
-                      title='Grados'
+                      title={!puedeAcceder('/admin/academico/grados') ? 'Sin permisos' : 'Grados'}
                     >
                       {({ isActive }) => (
                         <>
@@ -601,15 +679,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
                   <li>
                     <NavLink
                       to="/admin/academico/materias"
-                      onClick={handleLinkClick}
+                      onClick={(e) => {
+                        if (!puedeAcceder('/admin/academico/materias')) {
+                          e.preventDefault();
+                          return;
+                        }
+                        handleLinkClick();
+                      }}
                       className={({ isActive }) => 
                         `group flex items-center p-2.5 rounded-lg transition-all duration-300 text-white/90 relative overflow-hidden ${
-                          isActive
-                            ? 'bg-white/15 backdrop-blur-md shadow-md border border-white/20 text-white'
-                            : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:text-white'
+                          !puedeAcceder('/admin/academico/materias')
+                            ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                            : isActive
+                              ? 'bg-white/15 backdrop-blur-md shadow-md border border-white/20 text-white'
+                              : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:text-white'
                         }`
                       }
-                      title='Materias'
+                      title={!puedeAcceder('/admin/academico/materias') ? 'Sin permisos' : 'Materias'}
                     >
                       {({ isActive }) => (
                         <>
@@ -627,15 +713,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
                   <li>
                     <NavLink
                       to="/admin/academico/secciones"
-                      onClick={handleLinkClick}
+                      onClick={(e) => {
+                        if (!puedeAcceder('/admin/academico/secciones')) {
+                          e.preventDefault();
+                          return;
+                        }
+                        handleLinkClick();
+                      }}
                       className={({ isActive }) => 
                         `group flex items-center p-2.5 rounded-lg transition-all duration-300 text-white/90 relative overflow-hidden ${
-                          isActive
-                            ? 'bg-white/15 backdrop-blur-md shadow-md border border-white/20 text-white'
-                            : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:text-white'
+                          !puedeAcceder('/admin/academico/secciones')
+                            ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                            : isActive
+                              ? 'bg-white/15 backdrop-blur-md shadow-md border border-white/20 text-white'
+                              : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:text-white'
                         }`
                       }
-                      title='Secciones'
+                      title={!puedeAcceder('/admin/academico/secciones') ? 'Sin permisos' : 'Secciones'}
                     >
                       {({ isActive }) => (
                         <>
@@ -653,15 +747,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
                   <li>
                     <NavLink
                       to="/admin/academico/horarios"
-                      onClick={handleLinkClick}
+                      onClick={(e) => {
+                        if (!puedeAcceder('/admin/academico/horarios')) {
+                          e.preventDefault();
+                          return;
+                        }
+                        handleLinkClick();
+                      }}
                       className={({ isActive }) => 
                         `group flex items-center p-2.5 rounded-lg transition-all duration-300 text-white/90 relative overflow-hidden ${
-                          isActive
-                            ? 'bg-white/15 backdrop-blur-md shadow-md border border-white/20 text-white'
-                            : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:text-white'
+                          !puedeAcceder('/admin/academico/horarios')
+                            ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                            : isActive
+                              ? 'bg-white/15 backdrop-blur-md shadow-md border border-white/20 text-white'
+                              : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:text-white'
                         }`
                       }
-                      title='Horarios'
+                      title={!puedeAcceder('/admin/academico/horarios') ? 'Sin permisos' : 'Horarios'}
                     >
                       {({ isActive }) => (
                         <>
@@ -684,15 +786,23 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
           <li>
             <NavLink
               to="/admin/cupos"
-              onClick={handleLinkClick}
+              onClick={(e) => {
+                if (!puedeAcceder('/admin/cupos')) {
+                  e.preventDefault();
+                  return;
+                }
+                handleLinkClick();
+              }}
               className={({ isActive }) => 
                 `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-colors duration-200 text-white relative ${
-                  isActive
-                    ? 'bg-white/20 border border-white/30'
-                    : 'hover:bg-white/10'
+                  !puedeAcceder('/admin/cupos')
+                    ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                    : isActive
+                      ? 'bg-white/20 border border-white/30'
+                      : 'hover:bg-white/10'
                 }`
               }
-              title='Cupos'
+              title={!puedeAcceder('/admin/cupos') ? 'Sin permisos' : 'Cupos'}
             >
               {({ isActive }) => (
                 <>
@@ -710,36 +820,42 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
             </NavLink>
           </li>
           
-          {isOwner && (
-            <li>
-              <NavLink
-                to="/admin/configuracion"
-                onClick={handleLinkClick}
-                className={({ isActive }) => 
-                  `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
-                    isActive
+          <li>
+            <NavLink
+              to="/admin/configuracion"
+              onClick={(e) => {
+                if (!puedeAcceder('/admin/configuracion')) {
+                  e.preventDefault();
+                  return;
+                }
+                handleLinkClick();
+              }}
+              className={({ isActive }) => 
+                `group flex items-center ${isOpen ? 'p-3' : 'p-2 justify-center'} rounded-xl transition-all duration-300 text-white relative overflow-hidden ${
+                  !puedeAcceder('/admin/configuracion')
+                    ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                    : isActive
                       ? 'bg-white/20 backdrop-blur-md shadow-lg border border-white/30'
                       : 'hover:bg-white/10 hover:backdrop-blur-md hover:scale-105 hover:shadow-lg'
-                  }`
-                }
-                title='Configuración'
-              >
-                {({ isActive }) => (
-                  <>
-                    <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
-                      <FaCog className="w-4 h-4" />
-                    </div>
-                    {isOpen && (
-                      <span className="ml-3 font-medium transition-colors duration-200">
-                        Configuración
-                      </span>
-                    )}
-                    {isActive && <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-xl"></div>}
-                  </>
-                )}
-              </NavLink>
-            </li>
-          )}
+                }`
+              }
+              title={!puedeAcceder('/admin/configuracion') ? 'Sin permisos' : 'Configuración'}
+            >
+              {({ isActive }) => (
+                <>
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'group-hover:bg-white/10'} transition-colors duration-200`}>
+                    <FaCog className="w-4 h-4" />
+                  </div>
+                  {isOpen && (
+                    <span className="ml-3 font-medium transition-colors duration-200">
+                      Configuración
+                    </span>
+                  )}
+                  {isActive && <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-xl"></div>}
+                </>
+              )}
+            </NavLink>
+          </li>
         </ul>
       </nav>
       

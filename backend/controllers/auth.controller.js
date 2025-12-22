@@ -28,39 +28,60 @@ const obtenerPermisosUsuario = async (usuarioID, tipo) => {
       const todosPermisos = await Permiso.findAll({
         attributes: ['id', 'nombre', 'categoria']
       });
-      permisos = todosPermisos.map(p => p.nombre);
+      permisos = todosPermisos.map(p => ({ id: p.id, nombre: p.nombre, categoria: p.categoria }));
     } else {
       // Obtener permisos base del tipo de usuario (si existe rol)
+      console.log(`🔍 Buscando rol: ${tipo}`);
       const roles = await Roles.findAll({
         where: { nombre: tipo },
         include: [{
           model: Permiso,
           as: 'permisos',
           through: { attributes: [] },
-          attributes: ['id', 'nombre']
+          attributes: ['id', 'nombre', 'categoria']
         }]
       });
 
-      const rolesPermisos = new Set();
+      console.log(`📋 Roles encontrados: ${roles.length}`);
+      if (roles.length > 0) {
+        console.log(`✓ Rol: ${roles[0].nombre}, Permisos: ${roles[0].permisos ? roles[0].permisos.length : 0}`);
+      }
+
+      const permisosMap = new Map();
       roles.forEach(rol => {
         if (rol.permisos) {
-          rol.permisos.forEach(p => rolesPermisos.add(p.nombre));
+          rol.permisos.forEach(p => {
+            permisosMap.set(p.nombre, { id: p.id, nombre: p.nombre, categoria: p.categoria });
+          });
         }
       });
+
+      console.log(`📦 Permisos en Map: ${permisosMap.size}`);
 
       // Obtener permisos adicionales del usuario
       const usuarioPermisos = await Usuario_Permiso.findAll({
         where: { usuarioID },
         include: [{
           model: Permiso,
-          attributes: ['nombre']
+          as: 'permiso',
+          attributes: ['id', 'nombre', 'categoria']
         }]
       });
 
-      // Combinar permisos
-      usuarioPermisos.forEach(up => rolesPermisos.add(up.Permiso.nombre));
+      console.log(`👤 Permisos adicionales del usuario: ${usuarioPermisos.length}`);
 
-      permisos = Array.from(rolesPermisos);
+      // Combinar permisos
+      usuarioPermisos.forEach(up => {
+        if (up.permiso) {
+          permisosMap.set(up.permiso.nombre, { 
+            id: up.permiso.id, 
+            nombre: up.permiso.nombre, 
+            categoria: up.permiso.categoria 
+          });
+        }
+      });
+
+      permisos = Array.from(permisosMap.values());
     }
 
     return permisos;
@@ -453,7 +474,8 @@ exports.login = async (req, res) => {
     res.status(200).json({
       token,
       user: {
-        id: persona.id,
+        id: usuario.id,
+        personaID: persona.id,
         nombre: persona.nombre,
         apellido: persona.apellido,
         cedula: persona.cedula,

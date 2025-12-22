@@ -6,7 +6,10 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // Many-to-Many con Roles a través de Rol_Permiso
       Permiso.belongsToMany(models.Roles, {
-        through: 'Rol_Permisos',
+        through: {
+          model: 'Rol_Permisos',
+          timestamps: false
+        },
         foreignKey: 'permisoID',
         otherKey: 'rolID',
         as: 'roles'
