@@ -1,8 +1,9 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../components/admin/layout/AdminSidebar';
 import AdminHeader from '../components/admin/layout/AdminHeader';
+import ProtectedRoute from '../components/admin/ProtectedRoute';
+import ViewProtectedRoute from '../components/admin/ViewProtectedRoute';
 import { getCurrentUser } from '../services/auth.service';
 
 import AdminDashboard from '../components/admin/AdminDashboard';
@@ -87,52 +88,50 @@ const AdminRoutes = () => {
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           
           {/* Dashboard */}
-          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="dashboard" element={<ViewProtectedRoute route="/admin/dashboard"><AdminDashboard /></ViewProtectedRoute>} />
           
           {/* Gestión académica */}
-          <Route path="cupos" element={<CuposManager />} />
-          <Route path="academico/grados" element={<GradosList />} />
-          <Route path="academico/grados/:id" element={<GradoDetail />} />
-          <Route path="academico/grados/:id/editar" element={<EditarGrado />} />
-          <Route path="academico/materias" element={<MateriasList />} />
-          <Route path="academico/secciones" element={<SeccionesList />} />
-          <Route path="academico/horarios" element={<HorariosManagement />} />
+          <Route path="cupos" element={<ViewProtectedRoute route="/admin/cupos"><CuposManager /></ViewProtectedRoute>} />
+          <Route path="academico/grados" element={<ViewProtectedRoute route="/admin/academico/grados"><GradosList /></ViewProtectedRoute>} />
+          <Route path="academico/grados/:id" element={<ViewProtectedRoute route="/admin/academico/grados"><GradoDetail /></ViewProtectedRoute>} />
+          <Route path="academico/grados/:id/editar" element={<ViewProtectedRoute route="/admin/academico/grados"><EditarGrado /></ViewProtectedRoute>} />
+          <Route path="academico/materias" element={<ViewProtectedRoute route="/admin/academico/materias"><MateriasList /></ViewProtectedRoute>} />
+          <Route path="academico/secciones" element={<ViewProtectedRoute route="/admin/academico/secciones"><SeccionesList /></ViewProtectedRoute>} />
+          <Route path="academico/horarios" element={<ViewProtectedRoute route="/admin/academico/horarios"><HorariosManagement /></ViewProtectedRoute>} />
           
           {/* Inscripciones */}
-          <Route path="inscripciones" element={<InscripcionesList />} />
-          <Route path="inscripciones/:id" element={<InscripcionDetail />} />
+          <Route path="inscripciones" element={<ViewProtectedRoute route="/admin/inscripciones"><InscripcionesList /></ViewProtectedRoute>} />
+          <Route path="inscripciones/:id" element={<ViewProtectedRoute route="/admin/inscripciones"><InscripcionDetail /></ViewProtectedRoute>} />
           
           {/* Estudiantes */}
-          <Route path="estudiantes" element={<EstudiantesList />} />
-          <Route path="estudiantes/:id" element={<EstudianteDetail />} />
+          <Route path="estudiantes" element={<ViewProtectedRoute route="/admin/estudiantes"><EstudiantesList /></ViewProtectedRoute>} />
+          <Route path="estudiantes/:id" element={<ViewProtectedRoute route="/admin/estudiantes"><EstudianteDetail /></ViewProtectedRoute>} />
           
           {/* Representantes */}
-          <Route path="representantes" element={<RepresentanteList />} />
-          <Route path="representantes/:id" element={<RepresentanteDetail />} />
-          <Route path="representantes/nuevo" element={<RepresentanteForm />} />
+          <Route path="representantes" element={<ViewProtectedRoute route="/admin/representantes"><RepresentanteList /></ViewProtectedRoute>} />
+          <Route path="representantes/:id" element={<ViewProtectedRoute route="/admin/representantes"><RepresentanteDetail /></ViewProtectedRoute>} />
+          <Route path="representantes/nuevo" element={<ViewProtectedRoute route="/admin/representantes"><RepresentanteForm /></ViewProtectedRoute>} />
           
           {/* Profesores */}
-          <Route path="profesores" element={<ProfesoresList />} />
-          <Route path="profesores/:id" element={<ProfesorDetail />} />
-          <Route path="profesores/nuevo" element={<ProfesorForm />} />
-          <Route path="profesores/editar/:id" element={<ProfesorForm />} />
+          <Route path="profesores" element={<ViewProtectedRoute route="/admin/profesores"><ProfesoresList /></ViewProtectedRoute>} />
+          <Route path="profesores/:id" element={<ViewProtectedRoute route="/admin/profesores"><ProfesorDetail /></ViewProtectedRoute>} />
+          <Route path="profesores/nuevo" element={<ViewProtectedRoute route="/admin/profesores"><ProfesorForm /></ViewProtectedRoute>} />
+          <Route path="profesores/editar/:id" element={<ViewProtectedRoute route="/admin/profesores"><ProfesorForm /></ViewProtectedRoute>} />
           
           {/* Pagos y aranceles */}
-          <Route path="aranceles" element={<ArancelesManager />} />
-          <Route path="pagos" element={<PagosList />} />
-          {/* <Route path="pagos/mensualidades" element={<MensualidadesAdmin />} />
-          <Route path="pagos/configuracion" element={<ConfiguracionPagosAdmin />} /> */}
+          <Route path="aranceles" element={<ViewProtectedRoute route="/admin/pagos"><ArancelesManager /></ViewProtectedRoute>} />
+          <Route path="pagos" element={<ViewProtectedRoute route="/admin/pagos"><PagosList /></ViewProtectedRoute>} />
           
           {/* Empleados */}
-          <Route path="empleados" element={<EmpleadosList />} />
-          <Route path="empleados/:id" element={<EmpleadoDetail />} />
-          <Route path="empleados/nuevo" element={<EmpleadoForm />} />
-          <Route path="empleados/editar/:id" element={<EmpleadoForm />} />
+          <Route path="empleados" element={<ViewProtectedRoute route="/admin/empleados"><EmpleadosList /></ViewProtectedRoute>} />
+          <Route path="empleados/:id" element={<ViewProtectedRoute route="/admin/empleados"><EmpleadoDetail /></ViewProtectedRoute>} />
+          <Route path="empleados/nuevo" element={<ViewProtectedRoute route="/admin/empleados"><EmpleadoForm /></ViewProtectedRoute>} />
+          <Route path="empleados/editar/:id" element={<ViewProtectedRoute route="/admin/empleados"><EmpleadoForm /></ViewProtectedRoute>} />
           
           {/* Configuración del sistema */}
-          <Route path="configuracion" element={<ConfiguracionGeneral />} />
-          <Route path="periodo-escolar" element={<AnnoEscolarManager />} />
-          <Route path="usuarios" element={<UsuariosManager />} />
+          <Route path="configuracion" element={<ViewProtectedRoute route="/admin/configuracion"><ConfiguracionGeneral /></ViewProtectedRoute>} />
+          <Route path="periodo-escolar" element={<ViewProtectedRoute route="/admin/configuracion"><AnnoEscolarManager /></ViewProtectedRoute>} />
+          <Route path="usuarios" element={<ViewProtectedRoute route="/admin/configuracion"><UsuariosManager /></ViewProtectedRoute>} />
         </Route>
 
       </Routes>

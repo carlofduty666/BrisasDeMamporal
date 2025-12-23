@@ -33,6 +33,8 @@ export const loginUser = async (credentials) => {
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      await loadPermissions(response.data.user.id);
     }
     return response.data;
   } catch (error) {
@@ -40,9 +42,25 @@ export const loginUser = async (credentials) => {
   }
 };
 
+export const loadPermissions = async (usuarioID) => {
+  try {
+    const response = await api.get(`/permisos/usuario/${usuarioID}`);
+    const user = getCurrentUser();
+    if (user) {
+      user.permisos = response.data.map(p => p.nombre);
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+    return response.data;
+  } catch (error) {
+    console.error('Error cargando permisos:', error);
+    return [];
+  }
+};
+
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  localStorage.removeItem('permissions');
 };
 
 export const getCurrentUser = () => {

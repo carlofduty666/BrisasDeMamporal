@@ -244,9 +244,10 @@ const UsuariosManager = () => {
   const handleAbrirModalPermisos = async (usuario) => {
     try {
       setUsuarioPermisosSeleccionado(usuario);
-      const permisosUser = await permisosService.getPermisosByUsuario(usuario.id);
-      setUsuarioPermisosActuales(permisosUser);
-      setPermisosSeleccionados(new Set(permisosUser.map(p => p.id)));
+      // Cargar SOLO permisos específicos del usuario (sin permisos del rol)
+      const permisosEspecificos = await permisosService.getPermisosEspecificosUsuario(usuario.id);
+      setUsuarioPermisosActuales(permisosEspecificos);
+      setPermisosSeleccionados(new Set(permisosEspecificos.map(p => p.id)));
       setShowModalPermisos(true);
     } catch (err) {
       console.error('Error al cargar permisos:', err);
@@ -275,7 +276,17 @@ const UsuariosManager = () => {
     try {
       setCargandoPermisos(true);
       const permisoIDs = Array.from(permisosSeleccionados);
-      await permisosService.asignarMultiplesPermisosUsuario(usuarioPermisosSeleccionado.id, permisoIDs);
+      
+      console.log('🔵 [Frontend] Guardando permisos...');
+      console.log('👤 Usuario ID:', usuarioPermisosSeleccionado?.id);
+      console.log('📋 Permisos seleccionados (Set):', permisosSeleccionados);
+      console.log('📋 Permisos seleccionados (Array):', permisoIDs);
+      console.log('📊 Total permisos:', permisoIDs.length);
+      
+      const resultado = await permisosService.asignarMultiplesPermisosUsuario(usuarioPermisosSeleccionado.id, permisoIDs);
+      
+      console.log('✅ [Frontend] Respuesta del servidor:', resultado);
+      
       toast.success('Permisos actualizados correctamente');
       handleCerrarModalPermisos();
       // Recargar usuarios
@@ -283,7 +294,12 @@ const UsuariosManager = () => {
       setUsuarios(usuariosActualizados);
       setFiltrados(usuariosActualizados);
     } catch (err) {
-      console.error('Error al guardar permisos:', err);
+      console.error('❌ [Frontend] Error al guardar permisos:', err);
+      console.error('❌ [Frontend] Detalles del error:', {
+        message: err.message,
+        response: err.response,
+        data: err.response?.data
+      });
       toast.error(err.message || 'Error al guardar permisos');
     } finally {
       setCargandoPermisos(false);

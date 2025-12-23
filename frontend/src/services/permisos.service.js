@@ -30,10 +30,20 @@ export const getPermisosByRol = async (rolID) => {
   }
 };
 
-// Obtener permisos de un usuario (combinados)
+// Obtener permisos de un usuario (combinados: rol + usuario)
 export const getPermisosByUsuario = async (usuarioID) => {
   try {
     const response = await api.get(`/permisos/usuario/${usuarioID}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Obtener SOLO permisos específicos del usuario (sin permisos del rol)
+export const getPermisosEspecificosUsuario = async (usuarioID) => {
+  try {
+    const response = await api.get(`/permisos/usuario/${usuarioID}/especificos`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: error.message };

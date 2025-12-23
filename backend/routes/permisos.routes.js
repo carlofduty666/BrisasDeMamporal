@@ -13,8 +13,11 @@ router.get('/categoria/:categoria', permisosController.getPermisosByCategoria);
 // Obtener permisos de un rol
 router.get('/rol/:rolID', permisosController.getPermisosByRol);
 
-// Obtener permisos de un usuario (combinados)
+// Obtener permisos de un usuario (combinados: rol + usuario)
 router.get('/usuario/:usuarioID', permisosController.getPermisosByUsuario);
+
+// Obtener SOLO permisos específicos del usuario (sin los del rol)
+router.get('/usuario/:usuarioID/especificos', permisosController.getPermisosEspecificosUsuario);
 
 // Crear permiso (solo admin)
 router.post('/', verifyToken, isAdmin, permisosController.crearPermiso);

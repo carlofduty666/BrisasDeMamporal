@@ -25,5 +25,5 @@ export const tienePermiso = (permisos, ruta) => {
     return false;
   }
   
-  return permisos.some(p => p.nombre === permisoRequerido);
+  return permisos.includes(permisoRequerido);
 };

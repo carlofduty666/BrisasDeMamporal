@@ -14,16 +14,15 @@ router.get('/inscripciones/cupos-disponibles', inscripcionController.getCuposDis
 
 // Rutas protegidas
 router.get('/inscripciones', authMiddleware.verifyToken, inscripcionController.getAllInscripciones);
-router.get('/inscripciones/representante/:representanteID', authMiddleware.verifyToken, inscripcionController.getInscripcionesByRepresentante); // ruta para obtener inscripciones por representante
+router.get('/inscripciones/representante/:representanteID', authMiddleware.verifyToken, inscripcionController.getInscripcionesByRepresentante);
 router.get('/inscripciones/:id', authMiddleware.verifyToken, inscripcionController.getInscripcionById);
-router.post('/inscripciones', authMiddleware.verifyToken, inscripcionController.createInscripcion);
+router.post('/inscripciones', authMiddleware.verifyToken, authMiddleware.loadUserPermissions, authMiddleware.requirePermission('crear_inscripciones'), inscripcionController.createInscripcion);
 router.get('/inscripciones/estudiante/:estudianteID/actual', authMiddleware.verifyToken, inscripcionController.getInscripcionActualByEstudiante);
 
-
-// Ruta para crear nuevo estudiante e inscripción
 router.post(
   '/inscripciones/nuevo-estudiante', 
   authMiddleware.verifyToken,
+  authMiddleware.loadUserPermissions,
   (req, res, next) => {
     console.log('Procesando solicitud de nueva inscripción');
     console.log('Headers:', req.headers);
@@ -31,16 +30,17 @@ router.post(
   },
   inscripcionController.crearNuevoEstudiante
 );
-router.put('/inscripciones/:id/estado', authMiddleware.verifyToken, inscripcionController.updateEstadoInscripcion);
-router.put('/:id/datos', authMiddleware.verifyToken, inscripcionController.updateInscripcionData);
+router.put('/inscripciones/:id/estado', authMiddleware.verifyToken, authMiddleware.loadUserPermissions, authMiddleware.requirePermission('editar_inscripciones'), inscripcionController.updateEstadoInscripcion);
+router.put('/:id/datos', authMiddleware.verifyToken, authMiddleware.loadUserPermissions, authMiddleware.requirePermission('editar_inscripciones'), inscripcionController.updateInscripcionData);
 router.post('/inscripciones/:id/pago', authMiddleware.verifyToken, inscripcionController.registrarPagoInscripcion);
 router.get('/inscripciones/:id/comprobante', authMiddleware.verifyToken, inscripcionController.getComprobanteInscripcion);
-router.delete('/inscripciones/:id', authMiddleware.verifyToken, inscripcionController.deleteInscripcion);
-
+router.delete('/inscripciones/:id', authMiddleware.verifyToken, authMiddleware.loadUserPermissions, authMiddleware.requirePermission('eliminar_inscripciones'), inscripcionController.deleteInscripcion);
 
 router.put('/inscripciones/:id/update-estado', 
   disableFileUpload, 
-  authMiddleware.verifyToken, 
+  authMiddleware.verifyToken,
+  authMiddleware.loadUserPermissions,
+  authMiddleware.requirePermission('editar_inscripciones'),
   inscripcionController.updateInscripcionDocumentos
 );
 

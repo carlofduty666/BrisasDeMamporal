@@ -30,8 +30,9 @@ const obtenerPermisosUsuario = async (usuarioID, tipo) => {
       });
       permisos = todosPermisos.map(p => ({ id: p.id, nombre: p.nombre, categoria: p.categoria }));
     } else {
-      // Obtener permisos base del tipo de usuario (si existe rol)
-      console.log(`🔍 Buscando rol: ${tipo}`);
+      // Obtener permisos base del rol (si existe)
+      const permisosMap = new Map();
+      
       const roles = await Roles.findAll({
         where: { nombre: tipo },
         include: [{
@@ -42,23 +43,16 @@ const obtenerPermisosUsuario = async (usuarioID, tipo) => {
         }]
       });
 
-      console.log(`📋 Roles encontrados: ${roles.length}`);
-      if (roles.length > 0) {
-        console.log(`✓ Rol: ${roles[0].nombre}, Permisos: ${roles[0].permisos ? roles[0].permisos.length : 0}`);
-      }
-
-      const permisosMap = new Map();
+      // Agregar permisos del rol
       roles.forEach(rol => {
         if (rol.permisos) {
           rol.permisos.forEach(p => {
-            permisosMap.set(p.nombre, { id: p.id, nombre: p.nombre, categoria: p.categoria });
+            permisosMap.set(p.id, { id: p.id, nombre: p.nombre, categoria: p.categoria });
           });
         }
       });
 
-      console.log(`📦 Permisos en Map: ${permisosMap.size}`);
-
-      // Obtener permisos adicionales del usuario
+      // Obtener permisos específicos del usuario y agregarlos
       const usuarioPermisos = await Usuario_Permiso.findAll({
         where: { usuarioID },
         include: [{
@@ -68,12 +62,9 @@ const obtenerPermisosUsuario = async (usuarioID, tipo) => {
         }]
       });
 
-      console.log(`👤 Permisos adicionales del usuario: ${usuarioPermisos.length}`);
-
-      // Combinar permisos
       usuarioPermisos.forEach(up => {
         if (up.permiso) {
-          permisosMap.set(up.permiso.nombre, { 
+          permisosMap.set(up.permiso.id, { 
             id: up.permiso.id, 
             nombre: up.permiso.nombre, 
             categoria: up.permiso.categoria 

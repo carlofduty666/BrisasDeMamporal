@@ -12,11 +12,11 @@ router.get('/pagos/:id/comprobante', authMiddleware.verifyToken, pagoEstudiantes
 router.get('/pagos/estudiante/:estudianteID/estado', authMiddleware.verifyToken, pagoEstudiantesController.verificarEstadoPagosEstudiante);
 
 // Rutas para crear y actualizar pagos
-router.post('/pagos', authMiddleware.verifyToken, pagoEstudiantesController.createPago);
-router.put('/pagos/:id/estado', authMiddleware.verifyToken, pagoEstudiantesController.updateEstadoPago);
-router.delete('/pagos/:id', authMiddleware.verifyToken, pagoEstudiantesController.deletePago);
+router.post('/pagos', authMiddleware.verifyToken, authMiddleware.loadUserPermissions, authMiddleware.requirePermission('crear_pagos'), pagoEstudiantesController.createPago);
+router.put('/pagos/:id/estado', authMiddleware.verifyToken, authMiddleware.loadUserPermissions, authMiddleware.requirePermission('editar_pagos'), pagoEstudiantesController.updateEstadoPago);
+router.delete('/pagos/:id', authMiddleware.verifyToken, authMiddleware.loadUserPermissions, authMiddleware.requirePermission('eliminar_pagos'), pagoEstudiantesController.deletePago);
 
-// Reset de pagos (solo admin/owner y requiere confirmar = "BORRAR")
+// Reset de pagos (solo admin/owner)
 router.post('/pagos/reset', authMiddleware.verifyToken, authMiddleware.isAdmin, pagoEstudiantesController.resetPagos);
 
 module.exports = router;

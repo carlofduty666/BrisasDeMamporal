@@ -72,6 +72,7 @@ exports.authorizeRoles = (allowedRoles) => {
       'admin': 'adminWeb',
       'owner': 'owner',
       'adminWeb': 'adminWeb',
+      'administrativo': 'administrativo',
       'profesor': 'profesor',
       'estudiante': 'estudiante',
       'representante': 'representante'
@@ -93,14 +94,79 @@ exports.authorizeRoles = (allowedRoles) => {
   };
 };
 
-// Middleware para verificar permisos específicos
+exports.loadUserPermissions = async (req, res, next) => {
+  try {
+    if (!req.userId) {
+      return next();
+    }
+
+    const Usuario_Permiso = db.Usuario_Permiso;
+    const Permiso = db.Permiso;
+    const Usuarios = db.Usuarios;
+    const Roles = db.Roles;
+    
+    const permisosSet = new Set();
+    
+    const usuario = await Usuarios.findByPk(req.userId, {
+      attributes: ['id'],
+      raw: true
+    });
+
+    if (usuario) {
+      const rolesUsuario = await Roles.findAll({
+        where: { nombre: req.userType },
+        include: [{
+          model: Permiso,
+          as: 'permisos',
+          through: { attributes: [] },
+          attributes: ['nombre'],
+          raw: true
+        }],
+        raw: true,
+        subQuery: false
+      });
+
+      if (rolesUsuario && rolesUsuario.length > 0) {
+        rolesUsuario.forEach(rol => {
+          if (rol['permisos.nombre']) {
+            permisosSet.add(rol['permisos.nombre']);
+          }
+        });
+      }
+
+      const usuarioPermisos = await Usuario_Permiso.findAll({
+        where: { usuarioID: req.userId },
+        attributes: ['permisoID'],
+        raw: true
+      });
+
+      if (usuarioPermisos.length > 0) {
+        const permisoIDs = usuarioPermisos.map(up => up.permisoID);
+        const permisos = await Permiso.findAll({
+          where: { id: permisoIDs },
+          attributes: ['nombre'],
+          raw: true
+        });
+        permisos.forEach(p => permisosSet.add(p.nombre));
+      }
+    }
+
+    req.userPermissions = Array.from(permisosSet);
+
+    next();
+  } catch (error) {
+    console.error('Error cargando permisos:', error);
+    req.userPermissions = [];
+    next();
+  }
+};
+
 exports.requirePermission = (requiredPermissions) => {
   return (req, res, next) => {
     if (!req.userType) {
       return res.status(401).json({ message: 'Usuario no autenticado' });
     }
 
-    // Si es owner o adminWeb, tiene todos los permisos
     if (req.userType === 'owner' || req.userType === 'adminWeb') {
       return next();
     }

@@ -51,7 +51,52 @@ exports.getPermisosByRol = async (req, res) => {
   }
 };
 
+// Obtener permisos específicos de un usuario (SOLO Usuario_Permisos)
+// Usado por el modal de gestión de permisos
+exports.getPermisosEspecificosUsuario = async (req, res) => {
+  try {
+    const { usuarioID } = req.params;
+
+    const usuario = await Usuarios.findByPk(usuarioID, {
+      include: [{
+        model: db.Personas,
+        as: 'persona',
+        attributes: ['tipo']
+      }]
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    // NOTA: Este endpoint retorna SOLO permisos específicos del usuario en Usuario_Permisos
+    // Los permisos del rol se obtienen por separado
+    const usuarioPermisos = await Usuario_Permiso.findAll({
+      where: { usuarioID },
+      include: [{
+        model: Permiso,
+        as: 'permiso',
+        attributes: ['id', 'nombre', 'descripcion', 'categoria']
+      }]
+    });
+
+    const permisos = usuarioPermisos
+      .map(up => up.permiso)
+      .sort((a, b) => {
+        if (a.categoria !== b.categoria) {
+          return a.categoria.localeCompare(b.categoria);
+        }
+        return a.nombre.localeCompare(b.nombre);
+      });
+
+    res.status(200).json(permisos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Obtener permisos de un usuario (combinados: rol base + permisos adicionales)
+// Usado por el login para cargar permisos completos
 exports.getPermisosByUsuario = async (req, res) => {
   try {
     const { usuarioID } = req.params;
@@ -68,69 +113,25 @@ exports.getPermisosByUsuario = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    const tipo = usuario.persona.tipo;
+    // NOTA: Este endpoint retorna SOLO permisos específicos del usuario en Usuario_Permisos
+    // Los permisos del rol se obtienen por separado
+    const usuarioPermisos = await Usuario_Permiso.findAll({
+      where: { usuarioID },
+      include: [{
+        model: Permiso,
+        as: 'permiso',
+        attributes: ['id', 'nombre', 'descripcion', 'categoria']
+      }]
+    });
 
-    let permisos = [];
-
-    // Si es owner o adminWeb, tiene acceso a TODO
-    if (tipo === 'owner' || tipo === 'adminWeb') {
-      permisos = await Permiso.findAll({
-        order: [['categoria', 'ASC'], ['nombre', 'ASC']]
-      });
-    } else {
-      // Obtener permisos base del tipo de usuario (si existe rol)
-      const roles = await Roles.findAll({
-        where: { nombre: tipo },
-        include: [{
-          model: Permiso,
-          as: 'permisos',
-          through: { attributes: [] },
-          attributes: ['id', 'nombre', 'descripcion', 'categoria', 'ruta']
-        }]
-      });
-
-      const rolesPermisos = new Set();
-      roles.forEach(rol => {
-        if (rol.permisos) {
-          rol.permisos.forEach(p => rolesPermisos.add(p.id));
+    const permisos = usuarioPermisos
+      .map(up => up.permiso)
+      .sort((a, b) => {
+        if (a.categoria !== b.categoria) {
+          return a.categoria.localeCompare(b.categoria);
         }
+        return a.nombre.localeCompare(b.nombre);
       });
-
-      // Obtener permisos adicionales del usuario (sin include para evitar problemas con composite key)
-      const usuarioPermisos = await Usuario_Permiso.findAll({
-        where: { usuarioID },
-        attributes: ['permisoID'],
-        raw: true
-      });
-
-      // Combinar permisos
-      const permisosMap = new Map();
-
-      // Primero agregar permisos del rol (solo si hay alguno)
-      if (rolesPermisos.size > 0) {
-        const rolesPermisosData = await Permiso.findAll({
-          where: { id: Array.from(rolesPermisos) }
-        });
-
-        rolesPermisosData.forEach(p => {
-          permisosMap.set(p.id, p);
-        });
-      }
-
-      // Luego agregar permisos adicionales del usuario
-      if (usuarioPermisos.length > 0) {
-        const permisoIDs = usuarioPermisos.map(up => up.permisoID);
-        const usuariosPermisosData = await Permiso.findAll({
-          where: { id: permisoIDs }
-        });
-
-        usuariosPermisosData.forEach(p => {
-          permisosMap.set(p.id, p);
-        });
-      }
-
-      permisos = Array.from(permisosMap.values());
-    }
 
     res.status(200).json(permisos);
   } catch (error) {
@@ -198,33 +199,86 @@ exports.asignarMultiplesPermisosUsuario = async (req, res) => {
   try {
     const { usuarioID, permisoIDs } = req.body;
 
+    console.log('📝 Asignando permisos al usuario:', usuarioID);
+    console.log('📋 Permisos a asignar:', permisoIDs);
+    console.log('📊 Total de permisos:', permisoIDs?.length);
+
+    // Validar datos de entrada
+    if (!usuarioID) {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'El ID del usuario es requerido' });
+    }
+
+    if (!Array.isArray(permisoIDs)) {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'permisoIDs debe ser un array' });
+    }
+
     // Verificar que el usuario existe
     const usuario = await Usuarios.findByPk(usuarioID, { transaction });
     if (!usuario) {
       await transaction.rollback();
+      console.log('❌ Usuario no encontrado:', usuarioID);
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
+    console.log('✓ Usuario encontrado:', usuario.email);
+
     // Remover permisos anteriores
-    await Usuario_Permiso.destroy({
+    const eliminados = await Usuario_Permiso.destroy({
       where: { usuarioID },
       transaction
     });
 
+    console.log('🗑️  Permisos anteriores eliminados:', eliminados);
+
+    // Si no hay permisos que asignar, solo eliminar y terminar
+    if (permisoIDs.length === 0) {
+      await transaction.commit();
+      console.log('✓ Todos los permisos removidos (array vacío)');
+      return res.status(200).json({ message: 'Permisos actualizados exitosamente' });
+    }
+
+    // Verificar que todos los permisos existen
+    const permisosExistentes = await Permiso.findAll({
+      where: { id: permisoIDs },
+      attributes: ['id'],
+      transaction
+    });
+
+    console.log('🔍 Permisos encontrados en BD:', permisosExistentes.length);
+
+    if (permisosExistentes.length !== permisoIDs.length) {
+      await transaction.rollback();
+      console.log('❌ Algunos permisos no existen');
+      return res.status(400).json({ message: 'Algunos permisos no existen' });
+    }
+
     // Asignar nuevos permisos
     const permisosData = permisoIDs.map(permisoID => ({
-      usuarioID,
-      permisoID
+      usuarioID: parseInt(usuarioID),
+      permisoID: parseInt(permisoID)
     }));
 
-    await Usuario_Permiso.bulkCreate(permisosData, { transaction });
+    console.log('📦 Datos a insertar:', JSON.stringify(permisosData, null, 2));
+
+    const result = await Usuario_Permiso.bulkCreate(permisosData, { 
+      transaction,
+      validate: true,
+      ignoreDuplicates: false
+    });
+
+    console.log('✓ Permisos insertados:', result.length);
 
     await transaction.commit();
+    console.log('✓ Transacción confirmada exitosamente');
 
-    res.status(201).json({ message: 'Permisos actualizados exitosamente' });
+    res.status(200).json({ message: 'Permisos actualizados exitosamente' });
   } catch (error) {
+    console.error('❌ Error al asignar permisos:', error);
+    console.error('Stack trace:', error.stack);
     await transaction.rollback();
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message, error: error.toString() });
   }
 };
 

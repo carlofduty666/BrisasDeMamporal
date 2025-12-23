@@ -46,6 +46,11 @@ module.exports = (sequelize, DataTypes) => {
         'usuarios'
       ),
       allowNull: false
+    },
+    ruta: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Ruta asociada del permiso'
     }
   }, {
     sequelize,
