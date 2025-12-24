@@ -106,16 +106,16 @@ const UsuariosManager = () => {
 
   // Función para verificar si el usuario actual es administrador
   const esAdministrador = () => {
-    if (!usuarioActual || !usuarioActual.persona_roles) return false;
-    const rolesAdmin = ['owner', 'adminWeb', 'administrativo'];
-    return usuarioActual.persona_roles.some(r => rolesAdmin.includes(r.rol?.nombre));
+    if (!usuarioActual || !usuarioActual.tipo) return false;
+    const rolesAdmin = ['owner', 'adminWeb'];
+    return rolesAdmin.includes(usuarioActual.tipo);
   };
 
   // Función para verificar si un usuario puede tener permisos gestionados
+  // Solo usuarios de tipo 'administrativo' pueden tener permisos personalizados
   const puedeTenerPermisos = (usuario) => {
     if (!usuario || !usuario.persona) return false;
-    const tiposAdmin = ['owner', 'adminWeb', 'administrativo'];
-    return tiposAdmin.includes(usuario.persona.tipo);
+    return usuario.persona.tipo === 'administrativo';
   };
 
   // Cargar usuarios y permisos

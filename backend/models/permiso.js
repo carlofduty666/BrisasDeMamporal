@@ -4,17 +4,6 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Permiso extends Model {
     static associate(models) {
-      // Many-to-Many con Roles a través de Rol_Permiso
-      Permiso.belongsToMany(models.Roles, {
-        through: {
-          model: 'Rol_Permisos',
-          timestamps: false
-        },
-        foreignKey: 'permisoID',
-        otherKey: 'rolID',
-        as: 'roles'
-      });
-
       // Many-to-Many con Usuarios a través de Usuario_Permisos
       Permiso.belongsToMany(models.Usuarios, {
         through: 'Usuario_Permisos',

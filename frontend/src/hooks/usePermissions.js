@@ -13,7 +13,9 @@ export const usePermissions = () => {
   useEffect(() => {
     const currentUser = getCurrentUser();
     if (currentUser) {
-      setPermissions(currentUser.permisos || []);
+      const rawPermisos = currentUser.permisos || [];
+      const normalizedPermisos = rawPermisos.map(p => typeof p === 'string' ? p : p?.nombre).filter(Boolean);
+      setPermissions(normalizedPermisos);
       setUserType(currentUser.tipo);
     }
     setLoading(false);
@@ -71,6 +73,7 @@ export const usePermissions = () => {
 
   /**
    * Verifica si el usuario es administrador (owner o adminWeb)
+   * Estos usuarios tienen acceso total al sistema
    * @returns {boolean}
    */
   const isAdmin = () => {
@@ -79,10 +82,20 @@ export const usePermissions = () => {
 
   /**
    * Verifica si el usuario es administrativo
+   * Estos usuarios tienen permisos personalizados
    * @returns {boolean}
    */
   const isAdministrativo = () => {
     return userType === 'administrativo';
+  };
+
+  /**
+   * Verifica si el usuario puede gestionar permisos
+   * Solo owner y adminWeb pueden asignar permisos
+   * @returns {boolean}
+   */
+  const canManagePermissions = () => {
+    return userType === 'owner' || userType === 'adminWeb';
   };
 
   /**
@@ -110,6 +123,7 @@ export const usePermissions = () => {
     hasAllPermissions,
     isAdmin,
     isAdministrativo,
+    canManagePermissions,
     getPermissions,
     getUserType
   };

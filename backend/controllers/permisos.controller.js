@@ -1,9 +1,7 @@
 const db = require('../models');
 const Permiso = db.Permiso;
-const Rol_Permiso = db.Rol_Permiso;
 const Usuario_Permiso = db.Usuario_Permiso;
 const Usuarios = db.Usuarios;
-const Roles = db.Roles;
 
 // Obtener todos los permisos
 exports.getAllPermisos = async (req, res) => {
@@ -31,26 +29,6 @@ exports.getPermisosByCategoria = async (req, res) => {
   }
 };
 
-// Obtener permisos de un rol
-exports.getPermisosByRol = async (req, res) => {
-  try {
-    const { rolID } = req.params;
-    const permisos = await Permiso.findAll({
-      include: [{
-        model: Roles,
-        as: 'roles',
-        where: { id: rolID },
-        through: { attributes: [] },
-        attributes: []
-      }],
-      order: [['categoria', 'ASC'], ['nombre', 'ASC']]
-    });
-    res.status(200).json(permisos);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
 // Obtener permisos específicos de un usuario (SOLO Usuario_Permisos)
 // Usado por el modal de gestión de permisos
 exports.getPermisosEspecificosUsuario = async (req, res) => {
@@ -69,8 +47,16 @@ exports.getPermisosEspecificosUsuario = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // NOTA: Este endpoint retorna SOLO permisos específicos del usuario en Usuario_Permisos
-    // Los permisos del rol se obtienen por separado
+    const tipo = usuario.persona.tipo;
+
+    // Solo usuarios administrativo pueden tener permisos gestionables
+    if (tipo !== 'administrativo') {
+      return res.status(400).json({ 
+        message: 'Solo usuarios de tipo administrativo pueden tener permisos personalizados' 
+      });
+    }
+
+    // Retornar solo permisos específicos del usuario (para edición en modal)
     const usuarioPermisos = await Usuario_Permiso.findAll({
       where: { usuarioID },
       include: [{
@@ -82,6 +68,7 @@ exports.getPermisosEspecificosUsuario = async (req, res) => {
 
     const permisos = usuarioPermisos
       .map(up => up.permiso)
+      .filter(p => p !== null)
       .sort((a, b) => {
         if (a.categoria !== b.categoria) {
           return a.categoria.localeCompare(b.categoria);
@@ -95,8 +82,7 @@ exports.getPermisosEspecificosUsuario = async (req, res) => {
   }
 };
 
-// Obtener permisos de un usuario (combinados: rol base + permisos adicionales)
-// Usado por el login para cargar permisos completos
+// Obtener permisos de un usuario (para login y carga de permisos)
 exports.getPermisosByUsuario = async (req, res) => {
   try {
     const { usuarioID } = req.params;
@@ -113,27 +99,43 @@ exports.getPermisosByUsuario = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // NOTA: Este endpoint retorna SOLO permisos específicos del usuario en Usuario_Permisos
-    // Los permisos del rol se obtienen por separado
-    const usuarioPermisos = await Usuario_Permiso.findAll({
-      where: { usuarioID },
-      include: [{
-        model: Permiso,
-        as: 'permiso',
-        attributes: ['id', 'nombre', 'descripcion', 'categoria']
-      }]
-    });
+    const tipo = usuario.persona.tipo;
 
-    const permisos = usuarioPermisos
-      .map(up => up.permiso)
-      .sort((a, b) => {
-        if (a.categoria !== b.categoria) {
-          return a.categoria.localeCompare(b.categoria);
-        }
-        return a.nombre.localeCompare(b.nombre);
+    // Owner y adminWeb tienen todos los permisos
+    if (tipo === 'owner' || tipo === 'adminWeb') {
+      const todosPermisos = await Permiso.findAll({
+        attributes: ['id', 'nombre', 'descripcion', 'categoria'],
+        order: [['categoria', 'ASC'], ['nombre', 'ASC']]
+      });
+      return res.status(200).json(todosPermisos);
+    }
+
+    // Solo usuarios administrativo tienen permisos personalizados
+    if (tipo === 'administrativo') {
+      const usuarioPermisos = await Usuario_Permiso.findAll({
+        where: { usuarioID },
+        include: [{
+          model: Permiso,
+          as: 'permiso',
+          attributes: ['id', 'nombre', 'descripcion', 'categoria']
+        }]
       });
 
-    res.status(200).json(permisos);
+      const permisos = usuarioPermisos
+        .map(up => up.permiso)
+        .filter(p => p !== null)
+        .sort((a, b) => {
+          if (a.categoria !== b.categoria) {
+            return a.categoria.localeCompare(b.categoria);
+          }
+          return a.nombre.localeCompare(b.nombre);
+        });
+
+      return res.status(200).json(permisos);
+    }
+
+    // Otros tipos no tienen permisos de gestión
+    res.status(200).json([]);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

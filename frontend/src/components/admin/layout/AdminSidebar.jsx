@@ -18,7 +18,8 @@ const AdminSidebar = ({ isOpen, toggleSidebar, userRole, onThemeChange }) => {
   useEffect(() => {
     const usuario = getCurrentUser();
     if (usuario && usuario.permisos) {
-      setPermisos(usuario.permisos);
+      const normalizedPermisos = usuario.permisos.map(p => typeof p === 'string' ? p : p?.nombre).filter(Boolean);
+      setPermisos(normalizedPermisos);
     }
   }, []);
 

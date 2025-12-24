@@ -25,5 +25,6 @@ export const tienePermiso = (permisos, ruta) => {
     return false;
   }
   
-  return permisos.includes(permisoRequerido);
+  const normalizedPermisos = permisos.map(p => typeof p === 'string' ? p : p?.nombre).filter(Boolean);
+  return normalizedPermisos.includes(permisoRequerido);
 };

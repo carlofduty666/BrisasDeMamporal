@@ -25,13 +25,6 @@ module.exports = (sequelize, DataTypes) => {
         as: 'materiasImpartidas'
       });
 
-      Personas.belongsToMany(models.Roles, {
-        through: 'Persona_Roles',
-        foreignKey: 'personaID',
-        otherKey: 'rolID',
-        as: 'roles'
-      });
-
       Personas.hasMany(models.PagoEstudiantes, {
         foreignKey: 'estudianteID',
         as: 'pagosEstudiantes'

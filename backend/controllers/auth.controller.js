@@ -4,9 +4,7 @@ const db = require('../models');
 const Persona = db.Personas;
 const Usuario = db.Usuarios;
 const Permiso = db.Permiso;
-const Rol_Permiso = db.Rol_Permiso;
 const Usuario_Permiso = db.Usuario_Permiso;
-const Roles = db.Roles;
 const nodemailer = require('nodemailer');
 
 // Configuración de nodemailer
@@ -29,30 +27,8 @@ const obtenerPermisosUsuario = async (usuarioID, tipo) => {
         attributes: ['id', 'nombre', 'categoria']
       });
       permisos = todosPermisos.map(p => ({ id: p.id, nombre: p.nombre, categoria: p.categoria }));
-    } else {
-      // Obtener permisos base del rol (si existe)
-      const permisosMap = new Map();
-      
-      const roles = await Roles.findAll({
-        where: { nombre: tipo },
-        include: [{
-          model: Permiso,
-          as: 'permisos',
-          through: { attributes: [] },
-          attributes: ['id', 'nombre', 'categoria']
-        }]
-      });
-
-      // Agregar permisos del rol
-      roles.forEach(rol => {
-        if (rol.permisos) {
-          rol.permisos.forEach(p => {
-            permisosMap.set(p.id, { id: p.id, nombre: p.nombre, categoria: p.categoria });
-          });
-        }
-      });
-
-      // Obtener permisos específicos del usuario y agregarlos
+    } else if (tipo === 'administrativo') {
+      // Solo usuarios administrativo tienen permisos personalizados
       const usuarioPermisos = await Usuario_Permiso.findAll({
         where: { usuarioID },
         include: [{
@@ -62,17 +38,10 @@ const obtenerPermisosUsuario = async (usuarioID, tipo) => {
         }]
       });
 
-      usuarioPermisos.forEach(up => {
-        if (up.permiso) {
-          permisosMap.set(up.permiso.id, { 
-            id: up.permiso.id, 
-            nombre: up.permiso.nombre, 
-            categoria: up.permiso.categoria 
-          });
-        }
-      });
-
-      permisos = Array.from(permisosMap.values());
+      permisos = usuarioPermisos
+        .map(up => up.permiso)
+        .filter(p => p !== null)
+        .map(p => ({ id: p.id, nombre: p.nombre, categoria: p.categoria }));
     }
 
     return permisos;

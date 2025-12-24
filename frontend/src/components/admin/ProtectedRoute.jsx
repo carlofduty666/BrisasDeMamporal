@@ -1,49 +1,97 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { usePermissions } from '../../hooks/usePermissions';
+import React, { useState, useEffect } from 'react';
+import { routePermissionsMap } from '../../utils/permisosMapping';
+import { getCurrentUser, loadPermissions } from '../../services/auth.service';
+import api from '../../services/api';
 
-/**
- * Componente para proteger rutas según permisos
- * @param {Object} props - Props del componente
- * @param {React.ReactNode} props.children - Componente a renderizar si tiene permiso
- * @param {string | string[]} props.permissions - Permiso(s) requerido(s)
- * @param {boolean} props.requireAll - Si true, requiere TODOS los permisos. Si false, requiere AL MENOS UNO
- * @param {React.ReactNode} props.fallback - Componente a mostrar si no tiene permiso
- * @returns {React.ReactNode}
- */
 const ProtectedRoute = ({ 
   children, 
   permissions, 
+  route,
   requireAll = false,
   fallback = null 
 }) => {
-  const { hasPermission, hasAnyPermission, hasAllPermissions, isAdmin, loading } = usePermissions();
+  const [userType, setUserType] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const currentUser = getCurrentUser();
+        
+        if (currentUser) {
+          setUserType(currentUser.tipo);
+          
+          let permisos = currentUser.permisos || [];
+          
+          if (permisos.length === 0 && currentUser.id) {
+            try {
+              const response = await api.get(`/permisos/usuario/${currentUser.id}`);
+              permisos = response.data.map(p => p.nombre);
+              
+              currentUser.permisos = permisos;
+              localStorage.setItem('user', JSON.stringify(currentUser));
+            } catch (error) {
+              console.error('Error al cargar permisos:', error);
+            }
+          }
+          
+          const normalizedPermisos = permisos.map(p => typeof p === 'string' ? p : p?.nombre).filter(Boolean);
+          setUserPermissions(normalizedPermisos);
+        }
+      } catch (error) {
+        console.error('Error al cargar datos del usuario:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+
+    const handleStorageChange = () => {
+      loadUserData();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   if (loading) {
-    return <div>Cargando...</div>;
+    return <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Cargando...</p>
+      </div>
+    </div>;
   }
 
-  // Si es admin, tiene acceso total
-  if (isAdmin()) {
+  const isAdmin = userType === 'owner' || userType === 'adminWeb';
+  if (isAdmin) {
     return children;
   }
 
-  // Si no se requieren permisos específicos
-  if (!permissions) {
+  let requiredPermission = permissions;
+  if (route && !permissions) {
+    requiredPermission = routePermissionsMap[route];
+  }
+
+  if (!requiredPermission) {
     return children;
   }
 
-  // Verificar permisos
   let hasAccess = false;
 
-  if (Array.isArray(permissions)) {
+  if (Array.isArray(requiredPermission)) {
     if (requireAll) {
-      hasAccess = hasAllPermissions(permissions);
+      hasAccess = requiredPermission.every(p => userPermissions.includes(p));
     } else {
-      hasAccess = hasAnyPermission(permissions);
+      hasAccess = requiredPermission.some(p => userPermissions.includes(p));
     }
   } else {
-    hasAccess = hasPermission(permissions);
+    hasAccess = userPermissions.includes(requiredPermission);
   }
 
   if (!hasAccess) {

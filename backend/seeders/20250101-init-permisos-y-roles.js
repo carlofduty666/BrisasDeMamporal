@@ -335,82 +335,6 @@ module.exports = {
         ignoreDuplicates: true 
       });
 
-      // Obtener IDs de permisos y roles para asignaciones
-      const permisos = await queryInterface.sequelize.query(
-        'SELECT id, nombre FROM Permisos',
-        { transaction, type: queryInterface.sequelize.QueryTypes.SELECT }
-      );
-
-      const roles = await queryInterface.sequelize.query(
-        'SELECT id, nombre FROM Roles',
-        { transaction, type: queryInterface.sequelize.QueryTypes.SELECT }
-      );
-
-      const permisosMap = {};
-      permisos.forEach(p => {
-        permisosMap[p.nombre] = p.id;
-      });
-
-      const rolesMap = {};
-      roles.forEach(r => {
-        rolesMap[r.nombre] = r.id;
-      });
-
-      // Definir permisos por rol
-      const permisosxRol = {
-        administrativo: [
-          'ver_dashboard',
-          'ver_grados', 'editar_grados',
-          'ver_materias', 'editar_materias',
-          'ver_secciones', 'editar_secciones',
-          'ver_horarios', 'editar_horarios',
-          'gestionar_cupos',
-          'ver_estudiantes', 'editar_estudiantes',
-          'ver_inscripciones', 'editar_inscripciones',
-          'ver_representantes', 'crear_representantes', 'editar_representantes',
-          'ver_profesores', 'crear_profesores', 'editar_profesores',
-          'ver_empleados', 'crear_empleados', 'editar_empleados',
-          'ver_aranceles', 'editar_aranceles',
-          'ver_pagos', 'procesar_pagos'
-        ],
-        profesor: [
-          'ver_dashboard',
-          'ver_grados',
-          'ver_materias',
-          'ver_secciones',
-          'ver_horarios',
-          'ver_estudiantes',
-          'ver_inscripciones'
-        ],
-        representante: [
-          'ver_estudiantes',
-          'ver_pagos'
-        ]
-      };
-
-      // Limpiar asignaciones previas de roles-permisos
-      await queryInterface.sequelize.query(
-        'DELETE FROM Rol_Permisos',
-        { transaction }
-      );
-
-      // Asignar permisos a roles
-      for (const [rolNombre, permisoNames] of Object.entries(permisosxRol)) {
-        const rolId = rolesMap[rolNombre];
-        if (!rolId) continue;
-
-        const asignaciones = permisoNames
-          .map(permisoNombre => ({
-            rolID: rolId,
-            permisoID: permisosMap[permisoNombre]
-          }))
-          .filter(a => a.permisoID);
-
-        if (asignaciones.length > 0) {
-          await queryInterface.bulkInsert('Rol_Permisos', asignaciones, { transaction });
-        }
-      }
-
       await transaction.commit();
       console.log('✅ Permisos y roles inicializados correctamente');
     } catch (error) {
@@ -423,7 +347,6 @@ module.exports = {
   down: async (queryInterface, Sequelize) => {
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      await queryInterface.sequelize.query('DELETE FROM Rol_Permisos', { transaction });
       await queryInterface.bulkDelete('Roles', null, { transaction });
       await queryInterface.bulkDelete('Permisos', null, { transaction });
       await transaction.commit();

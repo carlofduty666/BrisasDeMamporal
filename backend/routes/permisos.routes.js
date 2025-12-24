@@ -10,10 +10,7 @@ router.get('/', permisosController.getAllPermisos);
 // Obtener permisos por categoría
 router.get('/categoria/:categoria', permisosController.getPermisosByCategoria);
 
-// Obtener permisos de un rol
-router.get('/rol/:rolID', permisosController.getPermisosByRol);
-
-// Obtener permisos de un usuario (combinados: rol + usuario)
+// Obtener permisos de un usuario
 router.get('/usuario/:usuarioID', permisosController.getPermisosByUsuario);
 
 // Obtener SOLO permisos específicos del usuario (sin los del rol)
@@ -30,8 +27,5 @@ router.delete('/usuario/remover', verifyToken, isAdmin, permisosController.remov
 
 // Asignar múltiples permisos a un usuario
 router.post('/usuario/asignar-multiples', verifyToken, isAdmin, permisosController.asignarMultiplesPermisosUsuario);
-
-// Asignar permisos a un rol
-router.post('/rol/asignar', verifyToken, isAdmin, permisosController.asignarPermisosRol);
 
 module.exports = router;
