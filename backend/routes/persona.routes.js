@@ -14,6 +14,7 @@ router.get('/personas/representante/:id/estudiantes', authMiddleware.verifyToken
 router.get('/personas/estudiante/:id/representante', authMiddleware.verifyToken, personaController.getRepresentanteByEstudiante);
 router.get('/personas/profesor/:id/estudiantes', authMiddleware.verifyToken, personaController.getEstudiantesByProfesor);
 router.get('/personas/estudiante/:id/profesores', authMiddleware.verifyToken, personaController.getProfesorByEstudiante);
+router.get('/personas/profesiones-administrativos', authMiddleware.verifyToken, personaController.getProfesionesAdministrativos);
 
 router.post('/personas', authMiddleware.verifyToken, authMiddleware.loadUserPermissions, authMiddleware.requirePermission(['crear_estudiantes', 'crear_profesores', 'crear_representantes', 'crear_empleados']), personaController.createPersona);
 router.post('/personas/asignar-rol', authMiddleware.verifyToken, authMiddleware.loadUserPermissions, authMiddleware.requirePermission('gestionar_usuarios'), personaController.asignarRolAPersona);

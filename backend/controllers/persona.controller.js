@@ -617,6 +617,27 @@ const getRolesDePersona = async (req, res) => {
   }
 };
 
+const getProfesionesAdministrativos = async (req, res) => {
+  try {
+    const profesiones = await Personas.findAll({
+      where: { tipo: 'administrativo' },
+      attributes: ['profesion'],
+      raw: true,
+      group: ['profesion']
+    });
+    
+    const result = profesiones
+      .map(p => p.profesion)
+      .filter(p => p && p.trim() !== '')
+      .sort();
+    
+    res.json(result);
+  } catch (err) {
+    console.error('Error al obtener profesiones:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 
 module.exports = { 
@@ -635,5 +656,6 @@ module.exports = {
     getRepresentanteByEstudiante,
     getEstudiantesByProfesor,
     getProfesorByEstudiante,
-    getProfesorByMateriaGrado
+    getProfesorByMateriaGrado,
+    getProfesionesAdministrativos
 }

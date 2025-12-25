@@ -24,7 +24,7 @@ import {
   FaSpinner
 } from 'react-icons/fa';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:000';
 
 const NOTIFICATION_TYPES = [
   { value: 'grado_publicado', label: 'Calificación Publicada', icon: FaUserGraduate, color: 'blue' },
@@ -72,14 +72,25 @@ const NotificacionesManager = () => {
   const [filtrosAvanzados, setFiltrosAvanzados] = useState({
     pagosVencidos: false,
     gradoID: null,
-    seccionID: null
+    seccionID: null,
+    busqueda: '',
+    cargoProfesion: null
   });
+  const [grados, setGrados] = useState([]);
+  const [secciones, setSecciones] = useState([]);
+  const [profesiones, setProfesiones] = useState([]);
+  const [gradosLoading, setGradosLoading] = useState(false);
+
 
   useEffect(() => {
     if (activeTab === 'historial') {
       cargarHistorial();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    cargarGradosYSecciones();
+  }, []);
 
   useEffect(() => {
     if (formData.destinatariosTipo) {
@@ -122,6 +133,68 @@ const NotificacionesManager = () => {
       toast.error('Error al cargar historial');
     }
   };
+
+  const cargarGradosYSecciones = async () => {
+    setGradosLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const [gradosRes, seccionesRes, profesionesRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/grados`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API_BASE_URL}/secciones`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API_BASE_URL}/personas/profesiones-administrativos`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+      
+      setGrados(gradosRes.data || []);
+      setSecciones(seccionesRes.data || []);
+      setProfesiones(profesionesRes.data || []);
+    } catch (error) {
+      console.error('Error al cargar datos:', error);
+    } finally {
+      setGradosLoading(false);
+    }
+  };
+
+
+  const cargarProfesiones = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/personas/profesiones-administrativos`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProfesiones(response.data || []);
+    } catch (error) {
+      console.error('Error al cargar profesiones:', error);
+    }
+  };
+
+  const obtenerFiltrosDisponibles = () => {
+  const base = {
+    busqueda: true
+  };
+  
+  switch(formData.destinatariosTipo) {
+    case 'estudiantes':
+      return { ...base, gradoID: true, seccionID: true, pagosVencidos: false };
+    case 'representantes':
+      return { ...base, gradoID: true, seccionID: true, pagosVencidos: true };
+    case 'profesores':
+      return { ...base, gradoID: true, seccionID: true };
+    case 'empleados':
+      return { ...base, cargoProfesion: true };
+    case 'administradores':
+      return { ...base };
+    default:
+      return base;
+  }
+};
+
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -210,8 +283,13 @@ const NotificacionesManager = () => {
       setFiltrosAvanzados({
         pagosVencidos: false,
         gradoID: null,
-        seccionID: null
+        seccionID: null,
+        profesoresDeGrado: null,
+        profesoresDeSeccion: null,
+        representantesDeGrado: null,
+        representantesDeSeccion: null
       });
+      setTipoFiltroAvanzado(null);
 
     } catch (error) {
       console.error('Error al enviar notificación:', error);
@@ -426,28 +504,95 @@ const NotificacionesManager = () => {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FaFilter className="text-gray-600" />
-                    <h3 className="font-semibold text-gray-800">Filtros Avanzados</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer">
+                {['estudiantes', 'representantes', 'profesores', 'empleados', 'administradores'].includes(formData.destinatariosTipo) && (
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FaFilter className="text-gray-600" />
+                      <h3 className="font-semibold text-gray-800">Filtros Avanzados</h3>
+                    </div>
+                    <div className="space-y-4">
                       <input
-                        type="checkbox"
-                        checked={filtrosAvanzados.pagosVencidos}
-                        onChange={(e) => setFiltrosAvanzados(prev => ({ 
-                          ...prev, 
-                          pagosVencidos: e.target.checked 
-                        }))}
-                        className="w-5 h-5 text-pink-600 rounded focus:ring-pink-500"
+                        type="text"
+                        placeholder="Buscar por nombre, apellido, cédula..."
+                        value={filtrosAvanzados.busqueda}
+                        onChange={(e) => setFiltrosAvanzados(prev => ({ ...prev, busqueda: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
                       />
-                      <span className="text-sm text-gray-700">
-                        Solo representantes con pagos vencidos
-                      </span>
-                    </label>
+
+                      {['estudiantes', 'representantes', 'profesores'].includes(formData.destinatariosTipo) && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Grado</label>
+                          <select
+                            value={filtrosAvanzados.gradoID || ''}
+                            onChange={(e) => setFiltrosAvanzados(prev => ({ 
+                              ...prev, 
+                              gradoID: e.target.value ? parseInt(e.target.value) : null,
+                              seccionID: null
+                            }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          >
+                            <option value="">Todos los grados</option>
+                            {grados.map(grado => (
+                              <option key={grado.id} value={grado.id}>
+                                {grado.nombre_grado}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {['estudiantes', 'representantes', 'profesores'].includes(formData.destinatariosTipo) && filtrosAvanzados.gradoID && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Sección</label>
+                          <select
+                            value={filtrosAvanzados.seccionID || ''}
+                            onChange={(e) => setFiltrosAvanzados(prev => ({ ...prev, seccionID: e.target.value ? parseInt(e.target.value) : null }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          >
+                            <option value="">Todas las secciones</option>
+                            {secciones
+                              .filter(s => s.gradoID === filtrosAvanzados.gradoID)
+                              .map(seccion => (
+                                <option key={seccion.id} value={seccion.id}>
+                                  {seccion.nombre_seccion}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {formData.destinatariosTipo === 'representantes' && (
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={filtrosAvanzados.pagosVencidos}
+                            onChange={(e) => setFiltrosAvanzados(prev => ({ ...prev, pagosVencidos: e.target.checked }))}
+                            className="w-5 h-5 text-pink-600 rounded focus:ring-pink-500"
+                          />
+                          <span className="text-sm text-gray-700">Solo con pagos vencidos</span>
+                        </label>
+                      )}
+
+                      {formData.destinatariosTipo === 'empleados' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Cargo/Profesión</label>
+                          <select
+                            value={filtrosAvanzados.cargoProfesion || ''}
+                            onChange={(e) => setFiltrosAvanzados(prev => ({ ...prev, cargoProfesion: e.target.value || null }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          >
+                            <option value="">Todos los cargos</option>
+                            {profesiones.map(prof => (
+                              <option key={prof} value={prof}>
+                                {prof}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex gap-4">
                   <button
@@ -511,7 +656,7 @@ const NotificacionesManager = () => {
                 Destinatarios ({destinatariosLoading ? '...' : destinatarios.length})
               </h3>
 
-              {formData.destinatariosTipo === 'personalizado' && destinatarios.length > 0 && (
+              {['empleados', 'estudiantes', 'representantes', 'profesores', 'administradores'].includes(formData.destinatariosTipo) && destinatarios.length > 0 && (
                 <div className="mb-4">
                   <button
                     type="button"
@@ -535,7 +680,7 @@ const NotificacionesManager = () => {
                   <p className="text-sm text-gray-500 text-center py-8">
                     No hay destinatarios disponibles
                   </p>
-                ) : formData.destinatariosTipo === 'personalizado' ? (
+                ) : ['empleados', 'estudiantes', 'representantes', 'profesores', 'administradores'].includes(formData.destinatariosTipo) ? (
                   destinatarios.map(dest => (
                     <label
                       key={dest.id}
@@ -552,6 +697,7 @@ const NotificacionesManager = () => {
                           {dest.nombre} {dest.apellido}
                         </div>
                         <div className="text-xs text-gray-500">{dest.email}</div>
+                        {dest.profesion && <div className="text-xs text-pink-600">{dest.profesion}</div>}
                       </div>
                     </label>
                   ))

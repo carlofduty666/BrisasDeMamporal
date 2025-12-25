@@ -47,22 +47,20 @@ const notificacionesController = {
       else if (tipo === 'empleados') {
         personas = await Personas.findAll({
           where: { 
-            tipo: 'empleado',
+            tipo: 'administrativo',
             email: { [Op.ne]: null }
           },
           attributes: ['id', 'nombre', 'apellido', 'email', 'tipo']
         });
       }
       else if (tipo === 'administradores') {
-        const admins = await Usuarios.findAll({
-          where: { estado: 'activo' },
-          include: [{
-            model: Personas,
-            as: 'persona',
-            attributes: ['id', 'nombre', 'apellido', 'email', 'tipo']
-          }]
+        personas = await Personas.findAll({
+          where: { 
+            tipo: { [Op.in]: ['adminWeb', 'owner'] },
+            email: { [Op.ne]: null }
+          },
+          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo']
         });
-        personas = admins.map(a => a.persona).filter(p => p && p.email);
       }
       
       if (filtros) {
@@ -99,6 +97,73 @@ const notificacionesController = {
           const idsEstudiantes = inscripciones.map(i => i.estudianteID);
           personas = personas.filter(p => idsEstudiantes.includes(p.id));
         }
+
+        if (filtros.profesoresDeGrado) {
+          const { Profesor_Materia_Grados } = require('../models');
+          const profesoresDeGrado = await Profesor_Materia_Grados.findAll({
+            where: { gradoID: filtros.profesoresDeGrado },
+            attributes: ['profesorID'],
+            raw: true,
+            group: ['profesorID']
+          });
+          const idsProfesores = profesoresDeGrado.map(p => p.profesorID);
+          personas = personas.filter(p => idsProfesores.includes(p.id));
+        }
+
+        if (filtros.profesoresDeSeccion) {
+          const { Seccion_Personas } = require('../models');
+          const profesoresDeSeccion = await Seccion_Personas.findAll({
+            where: { 
+              seccionID: filtros.profesoresDeSeccion,
+              rol: 'profesor'
+            },
+            attributes: ['personaID'],
+            raw: true
+          });
+          const idsProfesores = profesoresDeSeccion.map(p => p.personaID);
+          personas = personas.filter(p => idsProfesores.includes(p.id));
+        }
+
+        if (filtros.representantesDeGrado) {
+          const { Inscripciones } = require('../models');
+          const estudiantesEnGrado = await Inscripciones.findAll({
+            where: { gradoID: filtros.representantesDeGrado },
+            attributes: ['representanteID'],
+            raw: true
+          });
+          const idsRepresentantes = [...new Set(estudiantesEnGrado.map(i => i.representanteID))];
+          personas = personas.filter(p => idsRepresentantes.includes(p.id));
+        }
+
+        if (filtros.representantesDeSeccion) {
+          const { Inscripciones } = require('../models');
+          const estudiantesEnSeccion = await Inscripciones.findAll({
+            where: { seccionID: filtros.representantesDeSeccion },
+            attributes: ['representanteID'],
+            raw: true
+          });
+          const idsRepresentantes = [...new Set(estudiantesEnSeccion.map(i => i.representanteID))];
+          personas = personas.filter(p => idsRepresentantes.includes(p.id));
+        }
+
+        if (filtros.busqueda && filtros.busqueda.trim()) {
+          const busqueda = filtros.busqueda.trim().toLowerCase();
+          personas = personas.filter(p => {
+            const nombre = (p.nombre || '').toLowerCase();
+            const apellido = (p.apellido || '').toLowerCase();
+            const cedula = (p.cedula || '').toLowerCase();
+            return nombre.includes(busqueda) || apellido.includes(busqueda) || cedula.includes(busqueda);
+          });
+        }
+
+        if (filtros.cargoProfesion && filtros.cargoProfesion.trim()) {
+          personas = personas.filter(p => {
+            const profesion = (p.profesion || '').toLowerCase();
+            const filtro = filtros.cargoProfesion.toLowerCase();
+            return profesion.includes(filtro);
+          });
+        }
+
       }
       
       res.json({
@@ -197,7 +262,9 @@ const notificacionesController = {
         } else if (notificacion.destinatariosTipo === 'profesores') {
           whereClause.tipo = 'profesor';
         } else if (notificacion.destinatariosTipo === 'empleados') {
-          whereClause.tipo = 'empleado';
+          whereClause.tipo = 'administrativo';
+        } else if (notificacion.destinatariosTipo === 'administradores') {
+          whereClause.tipo = { [Op.in]: ['adminWeb', 'owner'] };
         }
         
         destinatarios = await Personas.findAll({
