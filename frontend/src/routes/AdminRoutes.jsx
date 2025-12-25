@@ -34,6 +34,7 @@ import EmpleadoForm from '../components/admin/empleados/EmpleadoForm';
 import ConfiguracionGeneral from '../components/admin/configuracion/ConfiguracionGeneral';
 import AnnoEscolarManager from '../components/admin/configuracion/AnnoEscolarManager.jsx';
 import UsuariosManager from '../components/admin/configuracion/UsuariosManager.jsx';
+import NotificacionesManager from '../components/admin/configuracion/NotificacionesManager.jsx';
 
 const AdminLayoutWrapper = () => {
     const [user, setUser] = useState(null);
@@ -132,6 +133,7 @@ const AdminRoutes = () => {
           <Route path="configuracion" element={<ViewProtectedRoute route="/admin/configuracion"><ConfiguracionGeneral /></ViewProtectedRoute>} />
           <Route path="periodo-escolar" element={<ViewProtectedRoute route="/admin/configuracion"><AnnoEscolarManager /></ViewProtectedRoute>} />
           <Route path="usuarios" element={<ViewProtectedRoute route="/admin/configuracion"><UsuariosManager /></ViewProtectedRoute>} />
+          <Route path="notificaciones" element={<ViewProtectedRoute route="/admin/configuracion"><NotificacionesManager /></ViewProtectedRoute>} />
         </Route>
 
       </Routes>

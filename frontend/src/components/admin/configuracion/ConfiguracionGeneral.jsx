@@ -73,9 +73,7 @@ const ConfiguracionGeneral = () => {
         bgLight: 'bg-pink-50',
         borderColor: 'border-pink-200',
         textColor: 'text-pink-700',
-        action: () => {
-          // Por implementar
-        }
+        action: () => navigate('/admin/notificaciones')
       },
       {
         id: 'reportes',
