@@ -14,7 +14,7 @@ const notificacionesController = {
       if (tipo === 'todos') {
         personas = await Personas.findAll({
           where: { email: { [Op.ne]: null } },
-          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo']
+          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo', 'cedula']
         });
       } 
       else if (tipo === 'estudiantes') {
@@ -23,7 +23,7 @@ const notificacionesController = {
             tipo: 'estudiante',
             email: { [Op.ne]: null }
           },
-          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo']
+          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo', 'cedula']
         });
       }
       else if (tipo === 'representantes') {
@@ -32,7 +32,7 @@ const notificacionesController = {
             tipo: 'representante',
             email: { [Op.ne]: null }
           },
-          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo']
+          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo', 'cedula']
         });
       }
       else if (tipo === 'profesores') {
@@ -41,7 +41,7 @@ const notificacionesController = {
             tipo: 'profesor',
             email: { [Op.ne]: null }
           },
-          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo']
+          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo', 'cedula']
         });
       }
       else if (tipo === 'empleados') {
@@ -50,7 +50,7 @@ const notificacionesController = {
             tipo: 'administrativo',
             email: { [Op.ne]: null }
           },
-          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo']
+          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo', 'cedula']
         });
       }
       else if (tipo === 'administradores') {
@@ -59,7 +59,7 @@ const notificacionesController = {
             tipo: { [Op.in]: ['adminWeb', 'owner'] },
             email: { [Op.ne]: null }
           },
-          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo']
+          attributes: ['id', 'nombre', 'apellido', 'email', 'tipo', 'cedula']
         });
       }
       
@@ -78,24 +78,93 @@ const notificacionesController = {
           personas = personas.filter(p => idsVencidos.includes(p.id));
         }
         
-        if (filtros.gradoID) {
-          const { Inscripciones } = require('../models');
-          const inscripciones = await Inscripciones.findAll({
-            where: { gradoID: filtros.gradoID },
-            attributes: ['estudianteID']
-          });
-          const idsEstudiantes = inscripciones.map(i => i.estudianteID);
-          personas = personas.filter(p => idsEstudiantes.includes(p.id));
+        
+        // Obtener el año escolar activo
+        const { AnnoEscolar } = require('../models');
+        const annoEscolarActivo = await AnnoEscolar.findOne({
+          where: { activo: true }
+        });
+
+        const annoEscolarID = annoEscolarActivo ? annoEscolarActivo.id : null;
+
+        if (filtros.gradoID && annoEscolarID) {
+          const { Inscripciones, Profesor_Materia_Grados } = require('../models');
+          
+          if (tipo === 'estudiantes') {
+            const inscripciones = await Inscripciones.findAll({
+              where: { 
+                gradoID: filtros.gradoID,
+                annoEscolarID
+              },
+              attributes: ['estudianteID']
+            });
+            const idsEstudiantes = inscripciones.map(i => i.estudianteID);
+            personas = personas.filter(p => idsEstudiantes.includes(p.id));
+          } 
+          else if (tipo === 'representantes') {
+            const inscripciones = await Inscripciones.findAll({
+              where: { 
+                gradoID: filtros.gradoID,
+                annoEscolarID
+              },
+              attributes: ['representanteID']
+            });
+            const idsRepresentantes = [...new Set(inscripciones.map(i => i.representanteID))];
+            personas = personas.filter(p => idsRepresentantes.includes(p.id));
+          }
+          else if (tipo === 'profesores') {
+            const profesoresDeGrado = await Profesor_Materia_Grados.findAll({
+              where: { 
+                gradoID: filtros.gradoID,
+                annoEscolarID
+              },
+              attributes: ['profesorID'],
+              raw: true,
+              group: ['profesorID']
+            });
+            const idsProfesores = profesoresDeGrado.map(p => p.profesorID);
+            personas = personas.filter(p => idsProfesores.includes(p.id));
+          }
         }
         
-        if (filtros.seccionID) {
-          const { Inscripciones } = require('../models');
-          const inscripciones = await Inscripciones.findAll({
-            where: { seccionID: filtros.seccionID },
-            attributes: ['estudianteID']
-          });
-          const idsEstudiantes = inscripciones.map(i => i.estudianteID);
-          personas = personas.filter(p => idsEstudiantes.includes(p.id));
+        if (filtros.seccionID && annoEscolarID) {
+          const { Inscripciones, Seccion_Personas } = require('../models');
+          
+          if (tipo === 'estudiantes') {
+            const inscripciones = await Inscripciones.findAll({
+              where: { 
+                seccionID: filtros.seccionID,
+                annoEscolarID
+              },
+              attributes: ['estudianteID']
+            });
+            const idsEstudiantes = inscripciones.map(i => i.estudianteID);
+            personas = personas.filter(p => idsEstudiantes.includes(p.id));
+          }
+          else if (tipo === 'representantes') {
+            const inscripciones = await Inscripciones.findAll({
+              where: { 
+                seccionID: filtros.seccionID,
+                annoEscolarID
+              },
+              attributes: ['representanteID']
+            });
+            const idsRepresentantes = [...new Set(inscripciones.map(i => i.representanteID))];
+            personas = personas.filter(p => idsRepresentantes.includes(p.id));
+          }
+          else if (tipo === 'profesores') {
+            const profesoresDeSeccion = await Seccion_Personas.findAll({
+              where: { 
+                seccionID: filtros.seccionID,
+                annoEscolarID,
+                rol: 'profesor'
+              },
+              attributes: ['personaID'],
+              raw: true
+            });
+            const idsProfesores = profesoresDeSeccion.map(p => p.personaID);
+            personas = personas.filter(p => idsProfesores.includes(p.id));
+          }
         }
 
         if (filtros.profesoresDeGrado) {
