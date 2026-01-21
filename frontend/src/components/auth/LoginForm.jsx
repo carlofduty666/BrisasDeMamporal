@@ -48,6 +48,8 @@ const LoginForm = () => {
         navigate('/admin/dashboard');
       } else if (userData.tipo === 'profesor') {
         navigate('/profesor/dashboard');
+      } else if (userData.tipo === 'estudiante') {
+        navigate('/estudiante/dashboard');
       } else {
         navigate('/dashboard');
       }

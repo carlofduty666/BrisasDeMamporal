@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 
 // Componentes de authentication
@@ -23,6 +25,9 @@ import AdminRoutes from './routes/AdminRoutes';
 
 // Componentes de profesor
 import ProfesorDashboard from './components/dashboard/ProfesorDashboard'
+
+// Componentes de estudiante
+import EstudianteDashboard from './components/dashboard/EstudianteDashboard'
 
 // Componentes de home
 import NavBar from './components/NavBar';
@@ -139,6 +144,18 @@ function App() {
 
 
       <ThemeProvider>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+        />
         <Router>
       <Routes>
         {/* Rutas públicas */}
@@ -149,6 +166,7 @@ function App() {
         <Route path="/register" element={<RegisterForm key="register" />} />
         <Route path="/registro-profesor" element={<RegisterForm />} />
         <Route path="/registro-empleado-admin" element={<RegisterForm />} />
+        <Route path="/registro-estudiante" element={<RegisterForm />} />
         <Route path="/verificacion-email" element={<EmailVerification />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/recuperar-password" element={<ForgotPassword />} />
@@ -179,6 +197,17 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
+        {/* Nueva ruta para gestionar pagos (vista estudiante) */}
+        <Route 
+          path="/estudiante/pagos" 
+          element={
+            <ProtectedRoute allowedRoles={['estudiante', 'adminWeb', 'owner']}>
+              <GestionPagosPage />
+            </ProtectedRoute>
+          } 
+        />
+
         <Route 
           path="/estudiante/:estudianteId" 
           element={
@@ -189,7 +218,7 @@ function App() {
         />
         {/* Nueva ruta para gestionar pagos (vista unificada) */}
         <Route 
-          path="/pagos" 
+          path="/dashboard/representante/pagos" 
           element={
             <ProtectedRoute allowedRoles={['representante', 'estudiante', 'adminWeb', 'owner']}>
               <GestionPagosPage />
@@ -227,7 +256,15 @@ function App() {
           }
         />
 
-
+        {/* Rutas panel de estudiante */}
+        <Route
+          path="/estudiante/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['estudiante', 'adminWeb', 'owner']}>
+              <EstudianteDashboard />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
         path="/test/file-upload"

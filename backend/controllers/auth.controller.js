@@ -111,7 +111,7 @@ exports.register = async (req, res) => {
       attachments: [
         {
           filename: 'logo.png',
-          path: './public/img/1.colegioLogo.png',
+          path: '../frontend/public/img/1.colegioLogo.png',
           cid: 'collegeLogo'
         }
       ],
@@ -1471,5 +1471,56 @@ exports.verificarPersonal = async (req, res) => {
   } catch (error) {
     console.error('Error al verificar personal:', error);
     return res.status(500).json({ message: 'Error al verificar personal' });
+  }
+};
+
+// Verificar si existe un estudiante por cédula
+exports.verificarEstudiante = async (req, res) => {
+  try {
+    const { cedula } = req.params;
+    const result = await verificarPersonalPorCedula(cedula, 'estudiante');
+    
+    if (result.error) {
+      return res.status(result.status).json(result);
+    }
+    
+    return res.status(200).json(result);
+    
+  } catch (error) {
+    console.error('Error al verificar estudiante:', error);
+    return res.status(500).json({ message: 'Error al verificar estudiante' });
+  }
+};
+
+// Registrar usuario para un estudiante existente
+exports.registerEstudiante = async (req, res) => {
+  const transaction = await db.sequelize.transaction();
+  
+  try {
+    const { personaID, email, password } = req.body;
+    
+    // Validar datos
+    if (!personaID || !email || !password) {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Todos los campos son requeridos' });
+    }
+    
+    const result = await registrarUsuarioPersonal(personaID, email, password, 'estudiante', transaction);
+    
+    if (result.error) {
+      return res.status(result.status).json({ message: result.message, error: result.errorDetails });
+    }
+    
+    await transaction.commit();
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Usuario registrado correctamente. Por favor verifica tu correo electrónico.'
+    });
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error al registrar estudiante:', error);
+    return res.status(500).json({ message: 'Error al registrar estudiante', error: error.message });
   }
 };

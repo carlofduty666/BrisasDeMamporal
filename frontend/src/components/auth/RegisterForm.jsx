@@ -10,13 +10,15 @@ const RegisterForm = () => {
   // Determinar el tipo de registro basado en la URL
   const isProfesorRegister = location.pathname === '/registro-profesor';
   const isEmpleadoAdminRegister = location.pathname === '/registro-empleado-admin';
-  const isPersonalRegister = isProfesorRegister || isEmpleadoAdminRegister;
+  const isEstudianteRegister = location.pathname === '/registro-estudiante';
+  const isPersonalRegister = isProfesorRegister || isEmpleadoAdminRegister || isEstudianteRegister;
   
   // Determinar el tipo de personal y textos según la ruta
-  const tipoPersonal = isProfesorRegister ? 'profesor' : isEmpleadoAdminRegister ? 'administrativo' : null;
+  const tipoPersonal = isProfesorRegister ? 'profesor' : isEmpleadoAdminRegister ? 'administrativo' : isEstudianteRegister ? 'estudiante' : null;
   const getTitulo = () => {
     if (isProfesorRegister) return 'Registro de Profesor';
     if (isEmpleadoAdminRegister) return 'Registro de Personal Administrativo';
+    if (isEstudianteRegister) return 'Registro de Estudiante';
     return 'Registro de Representante';
   };
   const getIconoTitulo = () => {
@@ -53,7 +55,7 @@ const RegisterForm = () => {
     });
   };
 
-  // Función para buscar personal por cédula (profesor, empleado administrativo, etc)
+  // Función para buscar personal por cédula (profesor, empleado administrativo, estudiante, etc)
   const buscarPersonal = async () => {
     if (!formData.cedula) {
       setError('Por favor, ingrese su número de cédula');
@@ -64,9 +66,14 @@ const RegisterForm = () => {
       setBuscando(true);
       setError('');
       
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/personas/verificar-personal/${tipoPersonal}/${formData.cedula}`
-      );
+      let endpoint;
+      if (isEstudianteRegister) {
+        endpoint = `${import.meta.env.VITE_API_URL}/personas/verificar-estudiante/${formData.cedula}`;
+      } else {
+        endpoint = `${import.meta.env.VITE_API_URL}/personas/verificar-personal/${tipoPersonal}/${formData.cedula}`;
+      }
+      
+      const response = await axios.get(endpoint);
       
       if (response.data.existe && !response.data.yaRegistrado) {
         setPersonalEncontrado(response.data.persona);
@@ -109,7 +116,7 @@ const RegisterForm = () => {
       let response;
       
       if (isPersonalRegister) {
-        // Registro de personal (profesor, empleado administrativo, etc - vinculando a persona existente)
+        // Registro de personal (profesor, empleado administrativo, estudiante, etc - vinculando a persona existente)
         if (!personalEncontrado) {
           setError(`Debe verificar su cédula primero`);
           setLoading(false);
@@ -119,7 +126,9 @@ const RegisterForm = () => {
         // Determinar el endpoint según el tipo
         const endpoint = isProfesorRegister 
           ? '/auth/register-profesor'
-          : '/auth/register-empleado-admin';
+          : isEmpleadoAdminRegister 
+          ? '/auth/register-empleado-admin'
+          : '/auth/register-estudiante';
         
         response = await axios.post(
           `${import.meta.env.VITE_API_URL}${endpoint}`,
@@ -212,6 +221,17 @@ const RegisterForm = () => {
               ¿Es Personal Administrativo?{' '}
               <Link 
                 to="/registro-empleado-admin" 
+                className="font-semibold text-slate-300 hover:text-white transition-colors duration-300 underline decoration-slate-500 hover:decoration-white"
+              >
+                Regístrese aquí
+              </Link>
+            </p>
+          )}
+          {!isPersonalRegister && (
+            <p className="mt-1 text-center text-xs sm:text-sm text-slate-400">
+              ¿Es Estudiante?{' '}
+              <Link 
+                to="/registro-estudiante" 
                 className="font-semibold text-slate-300 hover:text-white transition-colors duration-300 underline decoration-slate-500 hover:decoration-white"
               >
                 Regístrese aquí
@@ -322,7 +342,7 @@ const RegisterForm = () => {
                     <p className="text-green-100 flex items-center gap-2">
                       <FaCheckCircle className="w-5 h-5" />
                       <span>
-                        {isProfesorRegister ? 'Profesor' : 'Personal Administrativo'} verificado: <strong>{personalEncontrado.nombre} {personalEncontrado.apellido}</strong>
+                        {isProfesorRegister ? 'Profesor' : isEstudianteRegister ? 'Estudiante' : 'Personal Administrativo'} verificado: <strong>{personalEncontrado.nombre} {personalEncontrado.apellido}</strong>
                       </span>
                     </p>
                     <p className="text-sm text-green-200 mt-1">

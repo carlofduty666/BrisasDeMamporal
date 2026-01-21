@@ -300,7 +300,6 @@ const NotificacionesManager = () => {
         representantesDeGrado: null,
         representantesDeSeccion: null
       });
-      setTipoFiltroAvanzado(null);
 
     } catch (error) {
       console.error('Error al enviar notificación:', error);

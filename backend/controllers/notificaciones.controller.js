@@ -387,15 +387,188 @@ const notificacionesController = {
               from: `"Brisas de Mamporal" <${process.env.EMAIL_USER}>`,
               to: destinatario.email,
               subject: notificacion.titulo,
+              attachments: [
+                {
+                  filename: 'logo.png',
+                  path: '../frontend/public/img/1.colegioLogo.png',
+                  cid: 'collegeLogo'
+                }
+              ],
               html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                  <h2 style="color: #333;">${notificacion.titulo}</h2>
-                  <p style="color: #666; line-height: 1.6;">${notificacion.mensaje}</p>
-                  <hr style="border: 1px solid #eee; margin: 20px 0;">
-                  <p style="color: #999; font-size: 12px;">
-                    Este es un mensaje automático del sistema de gestión escolar Brisas de Mamporal.
-                  </p>
-                </div>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <style>
+                    body {
+                      margin: 0;
+                      padding: 0;
+                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+                      min-height: 100vh;
+                    }
+                    .container {
+                      max-width: 600px;
+                      margin: 0 auto;
+                      background: white;
+                      border-radius: 16px;
+                      overflow: hidden;
+                      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+                    }
+                    .header {
+                      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+                      padding: 40px 20px;
+                      text-align: center;
+                      position: relative;
+                      overflow: hidden;
+                    }
+                    .header::before {
+                      content: '';
+                      position: absolute;
+                      top: -50%;
+                      right: -50%;
+                      width: 200%;
+                      height: 200%;
+                      background: radial-gradient(circle, rgba(71, 85, 105, 0.3) 0%, transparent 70%);
+                    }
+                    .logo {
+                      width: 80px;
+                      height: 80px;
+                      margin: 0 auto 15px;
+                      background: rgba(255, 255, 255, 0.95);
+                      border-radius: 12px;
+                      padding: 8px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+                      position: relative;
+                      z-index: 1;
+                    }
+                    .logo img {
+                      width: 100%;
+                      height: 100%;
+                      object-fit: contain;
+                    }
+                    .header h1 {
+                      margin: 0;
+                      color: white;
+                      font-size: 28px;
+                      font-weight: 700;
+                      letter-spacing: 0.5px;
+                      position: relative;
+                      z-index: 1;
+                    }
+                    .header p {
+                      margin: 8px 0 0 0;
+                      color: rgba(226, 232, 240, 0.8);
+                      font-size: 14px;
+                      position: relative;
+                      z-index: 1;
+                    }
+                    .content {
+                      padding: 40px;
+                      color: #1e293b;
+                    }
+                    .greeting {
+                      font-size: 18px;
+                      font-weight: 600;
+                      color: #1e293b;
+                      margin-bottom: 15px;
+                      text-align: center;
+                    }
+                    .message {
+                      font-size: 14px;
+                      line-height: 1.6;
+                      color: #475569;
+                      margin-bottom: 30px;
+                      text-align: left;
+                    }
+                    .notification-box {
+                      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+                      padding: 30px;
+                      border-radius: 12px;
+                      text-align: left;
+                      margin: 30px 0;
+                      border-left: 4px solid #db2777;
+                    }
+                    .notification-title {
+                      font-size: 16px;
+                      font-weight: 700;
+                      color: #db2777;
+                      margin-bottom: 10px;
+                    }
+                    .notification-body {
+                      font-size: 15px;
+                      color: #1e293b;
+                      line-height: 1.6;
+                    }
+                    .footer-message {
+                      font-size: 13px;
+                      line-height: 1.6;
+                      color: #64748b;
+                      margin-top: 30px;
+                      padding-top: 20px;
+                      border-top: 1px solid #e2e8f0;
+                      text-align: center;
+                    }
+                    .footer {
+                      background: #f8fafc;
+                      padding: 30px 40px;
+                      text-align: center;
+                      border-top: 1px solid #e2e8f0;
+                    }
+                    .footer p {
+                      margin: 0;
+                      font-size: 12px;
+                      color: #94a3b8;
+                      line-height: 1.6;
+                    }
+                    .footer a {
+                      color: #1e293b;
+                      text-decoration: none;
+                      font-weight: 600;
+                    }
+                    .footer a:hover {
+                      text-decoration: underline;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="header">
+                      <div class="logo">
+                        <img src="cid:collegeLogo" alt="U.E.P. Brisas de Mamporal" />
+                      </div>
+                      <h1>Brisas En Línea</h1>
+                      <p>Sistema de Gestión Escolar</p>
+                    </div>
+                    
+                    <div class="content">
+                      <div class="greeting">Hola, ${destinatario.nombre} ${destinatario.apellido}</div>
+                      
+                      <div class="message">
+                        Tienes una nueva notificación del sistema escolar:
+                      </div>
+                      
+                      <div class="notification-box">
+                        <div class="notification-title">${notificacion.titulo}</div>
+                        <div class="notification-body">${notificacion.mensaje}</div>
+                      </div>
+                      
+                      <div class="footer-message">
+                        Puedes ver más detalles ingresando a tu cuenta en el sistema.
+                      </div>
+                    </div>
+                    
+                    <div class="footer">
+                      <p>© ${new Date().getFullYear()} U.E.P. Brisas de Mamporal • Miranda, Venezuela</p>
+                      <p><a href="https://brisasenmamporal.com">Visita Nuestro Sitio Web</a></p>
+                    </div>
+                  </div>
+                </body>
+                </html>
               `
             });
 
