@@ -114,33 +114,16 @@ const DocumentosEstudiante = () => {
       formData.append('tipoDocumento', documentoSeleccionado.tipo);
       formData.append('personaID', estudiante.id);
 
-      const documentoExistente = documentos.find(
-        (doc) => doc.tipoDocumento === documentoSeleccionado.tipo
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/documentos`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
       );
-
-      if (documentoExistente) {
-        await axios.put(
-          `${import.meta.env.VITE_API_URL}/documentos/${documentoExistente.id}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        );
-      } else {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/documentos`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        );
-      }
 
       const documentosResponse = await axios.get(
         `${import.meta.env.VITE_API_URL}/documentos/persona/${estudiante.id}`,
@@ -166,10 +149,10 @@ const DocumentosEstudiante = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <FaSpinner className="text-6xl text-blue-400 animate-spin mx-auto mb-4" />
-          <p className="text-white text-lg">Cargando información de documentos...</p>
+          <FaSpinner className="text-6xl text-slate-800 animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 text-lg">Cargando información de documentos...</p>
         </div>
       </div>
     );
@@ -177,12 +160,12 @@ const DocumentosEstudiante = () => {
 
   if (error && !estudiante) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
-        <div className="bg-red-500/10 border border-red-500 rounded-lg p-6 max-w-md">
-          <p className="text-red-500 text-center">{error}</p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md shadow-sm">
+          <p className="text-red-600 text-center">{error}</p>
           <Link
-            to="/dashboard"
-            className="mt-4 block text-center text-white hover:text-blue-400 transition-colors"
+            to="/estudiante/dashboard"
+            className="mt-4 block text-center text-slate-700 hover:text-blue-600 transition-colors font-medium"
           >
             Volver al Dashboard
           </Link>
@@ -192,12 +175,12 @@ const DocumentosEstudiante = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+    <div className="min-h-screen bg-slate-50 p-6">
       {/* Header */}
       <div className="mb-8 animate-fade-in">
         <Link
-          to="/dashboard"
-          className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors mb-4"
+          to="/estudiante/dashboard"
+          className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors mb-4"
         >
           <FaArrowLeft />
           <span>Volver al Dashboard</span>
@@ -205,12 +188,12 @@ const DocumentosEstudiante = () => {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-200">
               <FaFileAlt className="text-2xl text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Mis Documentos</h1>
-              <p className="text-slate-400">
+              <h1 className="text-3xl font-bold text-slate-800">Mis Documentos</h1>
+              <p className="text-slate-500 font-medium">
                 {estudiante?.nombre} {estudiante?.apellido}
               </p>
             </div>
@@ -219,72 +202,69 @@ const DocumentosEstudiante = () => {
       </div>
 
       {/* Contenido */}
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto">
         {/* Mensajes de éxito y error */}
         {successMessage && (
-          <div className="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 rounded-lg flex items-center animate-fade-in">
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center animate-fade-in shadow-sm">
             <FaCheckCircle className="mr-2" />
             {successMessage}
           </div>
         )}
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg flex items-center animate-fade-in">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center animate-fade-in shadow-sm">
             <FaExclamationCircle className="mr-2" />
             {error}
           </div>
         )}
 
         {/* Documentos Requeridos */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 shadow-xl rounded-2xl border border-slate-700 overflow-hidden">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
-            <h2 className="text-2xl font-bold text-white flex items-center">
-              <FaFileAlt className="mr-3 text-3xl" />
-              Documentos Requeridos
+        <div className="bg-white shadow-md rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="bg-white px-6 py-5 border-b border-slate-200 flex items-center gap-3">
+            <div className="p-2 bg-amber-50 rounded-lg">
+              <FaFileAlt className="text-amber-500 text-xl" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800">
+              Documentos Faltantes
             </h2>
           </div>
           <div className="p-6">
             {loadingDocumentos ? (
               <div className="text-center py-8">
-                <FaSpinner className="text-5xl text-blue-400 mx-auto mb-4 animate-spin" />
-                <p className="text-slate-300">Cargando documentos...</p>
+                <FaSpinner className="text-5xl text-blue-500 mx-auto mb-4 animate-spin" />
+                <p className="text-slate-500">Cargando documentos...</p>
+              </div>
+            ) : documentosRequeridos.filter(d => !d.subido).length === 0 ? (
+              <div className="text-center py-8 bg-green-50 rounded-xl border border-green-100">
+                <FaCheckCircle className="text-5xl text-green-500 mx-auto mb-3" />
+                <p className="text-green-700 font-bold text-lg">¡Todos los documentos al día!</p>
+                <p className="text-green-600 mt-1">No tienes documentos pendientes por subir.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {documentosRequeridos.map((doc, index) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {documentosRequeridos
+                  .filter(doc => !doc.subido)
+                  .map((doc, index) => (
                   <div
                     key={index}
-                    className={`p-5 rounded-xl border-2 transition-all duration-300 hover:shadow-lg ${
-                      doc.subido
-                        ? 'bg-emerald-500/10 border-emerald-500'
-                        : doc.obligatorio
-                        ? 'bg-amber-500/10 border-amber-500'
-                        : 'bg-slate-700/30 border-slate-600'
-                    }`}
+                    className="p-5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:shadow-md transition-all duration-300"
                   >
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
-                        <h3 className="font-bold text-white text-sm mb-2">
+                        <h3 className="font-bold text-slate-800 text-base mb-2">
                           {tipoDocumentoFormateado[doc.tipo] || doc.tipo}
                         </h3>
                         <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            doc.subido
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500'
-                              : doc.obligatorio
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500'
-                              : 'bg-slate-600/50 text-slate-300 border border-slate-500'
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            doc.obligatorio
+                              ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                              : 'bg-slate-100 text-slate-600 border border-slate-200'
                           }`}
                         >
-                          {doc.subido ? (
+                          {doc.obligatorio ? (
                             <>
-                              <FaCheckCircle className="mr-1" />
-                              Subido
-                            </>
-                          ) : doc.obligatorio ? (
-                            <>
-                              <FaExclamationCircle className="mr-1" />
-                              Requerido
+                              <FaExclamationCircle className="mr-1.5" />
+                              Obligatorio
                             </>
                           ) : (
                             'Opcional'
@@ -295,14 +275,10 @@ const DocumentosEstudiante = () => {
 
                     <button
                       onClick={() => handleOpenUploadModal(doc)}
-                      className={`w-full py-2.5 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                        doc.subido
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                          : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white'
-                      }`}
+                      className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-all duration-300 flex items-center justify-center gap-2 shadow-sm shadow-blue-200"
                     >
                       <FaUpload />
-                      <span>{doc.subido ? 'Actualizar' : 'Subir'}</span>
+                      <span>Subir Documento</span>
                     </button>
                   </div>
                 ))}
@@ -312,35 +288,35 @@ const DocumentosEstudiante = () => {
         </div>
 
         {/* Documentos Subidos */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 shadow-xl rounded-2xl border border-slate-700 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
-            <h2 className="text-2xl font-bold text-white flex items-center">
-              <FaFileAlt className="mr-3 text-3xl" />
-              Documentos Subidos
+        <div className="bg-white shadow-md rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="bg-white px-6 py-5 border-b border-slate-200 flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <FaFileAlt className="text-blue-500 text-xl" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800">
+              Documentos Registrados
             </h2>
           </div>
           <div className="p-6">
             {documentos.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="p-6 bg-slate-700/30 rounded-xl border-2 border-dashed border-slate-600">
-                  <FaFileAlt className="text-6xl text-slate-600 mx-auto mb-4" />
-                  <p className="text-slate-300 text-lg font-medium">No hay documentos registrados</p>
-                  <p className="text-slate-400 mt-2">Los documentos aparecerán aquí cuando se suban</p>
-                </div>
+              <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                <FaFileAlt className="text-6xl text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-500 text-lg font-medium">No hay documentos registrados</p>
+                <p className="text-slate-400 mt-1">Los documentos aparecerán aquí cuando se suban</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {documentos.map((documento, index) => (
                   <div
                     key={documento.id}
-                    className="bg-slate-700/30 rounded-xl shadow-lg border border-slate-600 hover:border-blue-500 hover:shadow-2xl transition-all duration-300 overflow-hidden"
+                    className="bg-white rounded-xl shadow-sm border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col"
                   >
                     {/* Preview del documento */}
-                    <div className="bg-slate-800 h-40 flex items-center justify-center border-b border-slate-600">
+                    <div className="bg-slate-100 h-40 flex items-center justify-center border-b border-slate-200">
                       {documento.urlDocumento && documento.urlDocumento.toLowerCase().includes('.pdf') ? (
                         <div className="text-center">
-                          <FaFileAlt className="text-6xl text-slate-500 mx-auto mb-2" />
-                          <div className="text-xs text-slate-400 font-medium">PDF</div>
+                          <FaFileAlt className="text-6xl text-red-400 mx-auto mb-2" />
+                          <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">PDF</div>
                         </div>
                       ) : documento.urlDocumento &&
                         (documento.urlDocumento.toLowerCase().includes('.jpg') ||
@@ -357,61 +333,71 @@ const DocumentosEstudiante = () => {
                         />
                       ) : (
                         <div className="text-center">
-                          <FaFileAlt className="text-6xl text-slate-500 mx-auto mb-2" />
-                          <div className="text-xs text-slate-400 font-medium">ARCHIVO</div>
+                          <FaFileAlt className="text-6xl text-slate-300 mx-auto mb-2" />
+                          <div className="text-xs text-slate-500 font-bold uppercase">ARCHIVO</div>
                         </div>
                       )}
                       <div className="text-center" style={{ display: 'none' }}>
-                        <FaFileAlt className="text-6xl text-slate-500 mx-auto mb-2" />
-                        <div className="text-xs text-slate-400 font-medium">ARCHIVO</div>
+                        <FaFileAlt className="text-6xl text-slate-300 mx-auto mb-2" />
+                        <div className="text-xs text-slate-500 font-bold">ARCHIVO</div>
                       </div>
                     </div>
 
-                    <div className="p-5">
-                      <h3 className="text-lg font-bold text-white mb-3 truncate">
+                    <div className="p-5 flex-1 flex flex-col">
+                      <h3 className="text-lg font-bold text-slate-800 mb-3 truncate">
                         {documento.tipoDocumento
                           ? tipoDocumentoFormateado[documento.tipoDocumento] || documento.tipoDocumento
                           : 'Documento sin tipo'}
                       </h3>
 
-                      <div className="space-y-2 mb-4">
-                        <div className="bg-slate-700/50 rounded-lg p-2.5 border border-slate-600">
-                          <div className="text-xs font-medium text-slate-400 mb-1">Fecha de subida</div>
-                          <div className="text-sm font-semibold text-white">{formatearFecha(documento.createdAt)}</div>
+                      <div className="space-y-3 mb-5 flex-1">
+                        <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                          <div className="text-xs font-bold text-slate-400 uppercase tracking-tight mb-1">Fecha de subida</div>
+                          <div className="text-sm font-semibold text-slate-700">{formatearFecha(documento.createdAt)}</div>
                         </div>
 
-                        <div className="bg-slate-700/50 rounded-lg p-2.5 border border-slate-600">
-                          <div className="text-xs font-medium text-slate-400 mb-1">Estado</div>
+                        {/* <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                          <div className="text-xs font-bold text-slate-400 uppercase tracking-tight mb-1">Estado</div>
                           <div
-                            className={`text-sm font-bold ${
-                              documento.verificado ? 'text-green-400' : 'text-yellow-400'
+                            className={`text-sm font-bold flex items-center gap-1.5 ${
+                              documento.verificado ? 'text-green-600' : 'text-amber-600'
                             }`}
                           >
-                            {documento.verificado ? 'Verificado' : 'Pendiente de verificación'}
+                            {documento.verificado ? (
+                              <>
+                                <FaCheckCircle />
+                                Verificado
+                              </>
+                            ) : (
+                              <>
+                                <FaSpinner className="animate-spin text-xs" />
+                                Pendiente de verificación
+                              </>
+                            )}
                           </div>
-                        </div>
+                        </div> */}
 
                         {documento.observaciones && (
-                          <div className="bg-yellow-500/10 rounded-lg p-2.5 border border-yellow-500/30">
-                            <div className="text-xs font-medium text-yellow-400 mb-1">Observaciones</div>
-                            <div className="text-sm text-yellow-300">{documento.observaciones}</div>
+                          <div className="bg-amber-50 rounded-lg p-2.5 border border-amber-200">
+                            <div className="text-xs font-bold text-amber-600 uppercase tracking-tight mb-1">Observaciones</div>
+                            <div className="text-sm text-amber-700">{documento.observaciones}</div>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 mt-auto">
                         <a
                           href={`${import.meta.env.VITE_API_URL}${documento.urlDocumento}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 bg-slate-600 hover:bg-slate-500 text-white py-2 px-3 rounded-lg text-center text-sm font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2"
+                          className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 px-3 rounded-lg text-center text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-slate-200"
                         >
                           <FaEye />
                           Ver
                         </a>
                         <a
                           href={`${import.meta.env.VITE_API_URL}/documentos/${documento.id}/download`}
-                          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded-lg text-center text-sm font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2"
+                          className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 py-2 px-3 rounded-lg text-center text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-blue-200"
                         >
                           <FaDownload />
                           Descargar
@@ -428,47 +414,53 @@ const DocumentosEstudiante = () => {
 
       {/* Modal de Subida de Documentos */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl border border-slate-700 max-w-md w-full">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 rounded-t-2xl">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-fade-in">
+            <div className="bg-blue-600 px-6 py-4">
               <h3 className="text-xl font-bold text-white flex items-center">
                 <FaUpload className="mr-2" />
-                {documentoSeleccionado?.subido ? 'Actualizar Documento' : 'Subir Documento'}
+                Subir Documento
               </h3>
             </div>
 
             <div className="p-6">
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-300 mb-2">Tipo de Documento</label>
-                <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
-                  <p className="font-semibold text-white">
+                <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Documento</label>
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <p className="font-bold text-blue-800 text-lg">
                     {tipoDocumentoFormateado[documentoSeleccionado?.tipo] || documentoSeleccionado?.tipo}
                   </p>
                 </div>
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-2">Seleccionar Archivo</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  onChange={handleFileSelect}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-                {archivoSeleccionado && (
-                  <p className="mt-2 text-sm text-green-400 flex items-center">
-                    <FaCheckCircle className="mr-2" />
-                    {archivoSeleccionado.name}
-                  </p>
-                )}
+                <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Seleccionar Archivo</label>
+                <div 
+                  className="relative group cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="w-full px-4 py-8 bg-slate-50 border-2 border-dashed border-slate-300 text-slate-500 rounded-xl hover:bg-blue-50 hover:border-blue-400 transition-all duration-300 flex flex-col items-center justify-center gap-3">
+                    <FaUpload className="text-3xl text-slate-400 group-hover:text-blue-500" />
+                    <span className="font-medium text-center">
+                      {archivoSeleccionado ? archivoSeleccionado.name : 'Haz clic para seleccionar un archivo'}
+                    </span>
+                    <span className="text-xs text-slate-400">PDF, JPG o PNG</span>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                  />
+                </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3">
                 <button
                   onClick={handleUploadDocument}
                   disabled={subiendoDocumento || !archivoSeleccionado}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
                 >
                   {subiendoDocumento ? (
                     <>
@@ -478,7 +470,7 @@ const DocumentosEstudiante = () => {
                   ) : (
                     <>
                       <FaUpload />
-                      <span>{documentoSeleccionado?.subido ? 'Actualizar' : 'Subir'}</span>
+                      <span>Subir Documento</span>
                     </>
                   )}
                 </button>
@@ -486,7 +478,7 @@ const DocumentosEstudiante = () => {
                 <button
                   onClick={handleCloseUploadModal}
                   disabled={subiendoDocumento}
-                  className="flex-1 bg-slate-600 hover:bg-slate-500 text-white py-3 px-6 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full bg-white hover:bg-slate-50 text-slate-600 py-3 px-6 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-slate-200"
                 >
                   <FaTimes />
                   <span>Cancelar</span>

@@ -29,6 +29,7 @@ import ProfesorDashboard from './components/dashboard/ProfesorDashboard'
 // Componentes de estudiante
 import EstudianteDashboard from './components/dashboard/EstudianteDashboard';
 import EstudianteLayout from './components/dashboard/EstudianteLayout';
+import DocumentosEstudiante from './components/dashboard/estudiante/DocumentosEstudiante';
 import ProfesoresPage from './components/dashboard/estudiante/ProfesoresPage';
 import CalificacionesPage from './components/dashboard/estudiante/CalificacionesPage';
 import ProgresoAcademicoPage from './components/dashboard/estudiante/ProgresoAcademicoPage';
@@ -204,14 +205,6 @@ function App() {
         
 
 
-        <Route 
-          path="/estudiante/:estudianteId" 
-          element={
-            <ProtectedRoute>
-              <DetallesEstudiante />
-            </ProtectedRoute>
-          } 
-        />
         {/* Nueva ruta para gestionar pagos (vista unificada) */}
         <Route 
           path="/dashboard/representante/pagos" 
@@ -253,8 +246,8 @@ function App() {
         />
 
         {/* Rutas panel de estudiante */}
-        <Route
-          path="/estudiante/*"
+        <Route 
+          path="/estudiante"
           element={
             <ProtectedRoute allowedRoles={['estudiante', 'adminWeb', 'owner']}>
               <EstudianteLayout />
@@ -263,10 +256,20 @@ function App() {
         >
           <Route path="dashboard" element={<EstudianteDashboard />} />
           <Route path="profesores" element={<ProfesoresPage />} />
+          <Route path="documentos" element={<DocumentosEstudiante />} />
           <Route path="calificaciones" element={<CalificacionesPage />} />
           <Route path="progreso" element={<ProgresoAcademicoPage />} />
           <Route path="pagos" element={<GestionPagosPage />} />
         </Route>
+
+        <Route 
+          path="/estudiante/:estudianteId" 
+          element={
+            <ProtectedRoute>
+              <DetallesEstudiante />
+            </ProtectedRoute>
+          } 
+        />
 
         <Route
         path="/test/file-upload"
