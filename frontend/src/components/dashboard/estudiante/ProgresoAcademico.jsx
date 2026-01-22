@@ -1,7 +1,8 @@
 import { FaChartLine, FaBook, FaTrophy, FaExclamationCircle, FaEye } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
-const ProgresoAcademico = ({ calificaciones, onVerDetalle }) => {
+const ProgresoAcademico = ({ calificaciones }) => {
   const [materiaStats, setMateriaStats] = useState([]);
 
   useEffect(() => {
@@ -161,15 +162,13 @@ const ProgresoAcademico = ({ calificaciones, onVerDetalle }) => {
             </div>
 
             {/* Botón Ver Detalles */}
-            {onVerDetalle && (
-              <button
-                onClick={onVerDetalle}
-                className="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white py-3 px-4 rounded-lg font-semibold transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 border border-slate-600 shadow-sm"
-              >
-                <FaEye className="text-lg" />
-                Ver Análisis Detallado
-              </button>
-            )}
+            <Link
+              to="/estudiante/progreso"
+              className="block w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white py-3 px-4 rounded-lg font-semibold transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 border border-slate-600 shadow-sm"
+            >
+              <FaEye className="text-lg" />
+              Ver Análisis Detallado
+            </Link>
           </div>
         ) : (
           <div className="text-center py-8">

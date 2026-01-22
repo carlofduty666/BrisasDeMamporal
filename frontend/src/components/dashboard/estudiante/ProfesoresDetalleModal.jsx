@@ -14,7 +14,7 @@ const ProfesoresDetalleModal = ({ isOpen, onClose, profesores }) => {
       'from-teal-500 to-teal-600',
       'from-indigo-500 to-indigo-600',
       'from-cyan-500 to-cyan-600',
-      'from-rose-500 to-rose-600'
+      'from-red-500 to-red-600'
     ];
     return colores[index % colores.length];
   };

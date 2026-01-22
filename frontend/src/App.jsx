@@ -27,7 +27,11 @@ import AdminRoutes from './routes/AdminRoutes';
 import ProfesorDashboard from './components/dashboard/ProfesorDashboard'
 
 // Componentes de estudiante
-import EstudianteDashboard from './components/dashboard/EstudianteDashboard'
+import EstudianteDashboard from './components/dashboard/EstudianteDashboard';
+import EstudianteLayout from './components/dashboard/EstudianteLayout';
+import ProfesoresPage from './components/dashboard/estudiante/ProfesoresPage';
+import CalificacionesPage from './components/dashboard/estudiante/CalificacionesPage';
+import ProgresoAcademicoPage from './components/dashboard/estudiante/ProgresoAcademicoPage';
 
 // Componentes de home
 import NavBar from './components/NavBar';
@@ -198,15 +202,7 @@ function App() {
           } 
         />
         
-        {/* Nueva ruta para gestionar pagos (vista estudiante) */}
-        <Route 
-          path="/estudiante/pagos" 
-          element={
-            <ProtectedRoute allowedRoles={['estudiante', 'adminWeb', 'owner']}>
-              <GestionPagosPage />
-            </ProtectedRoute>
-          } 
-        />
+
 
         <Route 
           path="/estudiante/:estudianteId" 
@@ -258,13 +254,19 @@ function App() {
 
         {/* Rutas panel de estudiante */}
         <Route
-          path="/estudiante/dashboard"
+          path="/estudiante/*"
           element={
             <ProtectedRoute allowedRoles={['estudiante', 'adminWeb', 'owner']}>
-              <EstudianteDashboard />
+              <EstudianteLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route path="dashboard" element={<EstudianteDashboard />} />
+          <Route path="profesores" element={<ProfesoresPage />} />
+          <Route path="calificaciones" element={<CalificacionesPage />} />
+          <Route path="progreso" element={<ProgresoAcademicoPage />} />
+          <Route path="pagos" element={<GestionPagosPage />} />
+        </Route>
 
         <Route
         path="/test/file-upload"
