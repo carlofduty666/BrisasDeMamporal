@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaTimes, FaSpinner, FaSave, FaTrash } from 'react-icons/fa';
 
-const CalificacionRow = ({ estudiante, onGuardar, onEliminar }) => {
+
+
+const CalificacionRow = ({ estudiante, onGuardar, onEliminar, onRefresh }) => {
   const [calificacion, setCalificacion] = useState(estudiante.calificacion || '');
   const [observaciones, setObservaciones] = useState(estudiante.observaciones || '');
   const [guardando, setGuardando] = useState(false);
@@ -15,6 +17,7 @@ const CalificacionRow = ({ estudiante, onGuardar, onEliminar }) => {
     
     setGuardando(true);
     await onGuardar(estudiante, parseFloat(calificacion), observaciones);
+    onRefresh();
     setGuardando(false);
   };
 
@@ -93,6 +96,8 @@ const CalificacionRow = ({ estudiante, onGuardar, onEliminar }) => {
   );
 };
 
+
+
 const ModalCalificaciones = ({
   isOpen,
   onClose,
@@ -103,12 +108,13 @@ const ModalCalificaciones = ({
 }) => {
   const [calificacionesModal, setCalificacionesModal] = useState([]);
   const [loadingModal, setLoadingModal] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     if (isOpen && selectedEvaluacion) {
       cargarCalificaciones();
     }
-  }, [isOpen, selectedEvaluacion]);
+  }, [isOpen, selectedEvaluacion, refreshTrigger]);
 
   const cargarCalificaciones = async () => {
     setLoadingModal(true);
@@ -191,6 +197,7 @@ const ModalCalificaciones = ({
                     estudiante={estudiante}
                     onGuardar={onGuardarCalificacion}
                     onEliminar={onEliminarCalificacion}
+                    onRefresh={() => setRefreshTrigger(prev => prev + 1)}
                   />
                 </div>
               ))}
