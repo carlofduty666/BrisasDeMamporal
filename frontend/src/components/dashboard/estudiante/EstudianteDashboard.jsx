@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaSpinner } from 'react-icons/fa';
-import InfoAcademica from './estudiante/InfoAcademica';
-import HorariosEstudiante from './estudiante/HorariosEstudiante';
-import ProgresoAcademico from './estudiante/ProgresoAcademico';
-import PagosWidget from './estudiante/PagosWidget';
+import InfoAcademica from './InfoAcademica';
+import HorariosEstudiante from './HorariosEstudiante';
+import ProgresoAcademico from './ProgresoAcademico';
+import PagosWidget from './widgets/PagosWidget';
 
 const EstudianteDashboard = () => {
   const [estudiante, setEstudiante] = useState(null);

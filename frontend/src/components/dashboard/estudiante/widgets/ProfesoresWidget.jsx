@@ -1,5 +1,5 @@
 import { FaChalkboardTeacher, FaBook, FaEnvelope, FaPhone, FaUser, FaEye } from 'react-icons/fa';
-import { formatearCedula } from '../../../utils/formatters';
+import { formatearCedula } from '../../../../utils/formatters';
 
 const ProfesoresWidget = ({ profesores, onVerDetalle }) => {
   const getMateriaColor = (index) => {

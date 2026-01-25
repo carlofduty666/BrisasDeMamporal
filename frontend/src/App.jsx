@@ -24,11 +24,11 @@ import TestUpload from './components/test/TestUpload';
 import AdminRoutes from './routes/AdminRoutes';
 
 // Componentes de profesor
-import ProfesorDashboard from './components/dashboard/ProfesorDashboard'
+import ProfesorDashboard from './components/dashboard/profesor/ProfesorDashboard'
 
 // Componentes de estudiante
-import EstudianteDashboard from './components/dashboard/EstudianteDashboard';
-import EstudianteLayout from './components/dashboard/EstudianteLayout';
+import EstudianteDashboard from './components/dashboard/estudiante/EstudianteDashboard';
+import EstudianteLayout from './components/dashboard/estudiante/EstudianteLayout';
 import DocumentosEstudiante from './components/dashboard/estudiante/DocumentosEstudiante';
 import ProfesoresPage from './components/dashboard/estudiante/ProfesoresPage';
 import CalificacionesPage from './components/dashboard/estudiante/CalificacionesPage';

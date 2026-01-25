@@ -1,5 +1,5 @@
 import { FaTimes, FaChalkboardTeacher, FaBook, FaEnvelope, FaPhone, FaUser, FaGraduationCap, FaSearch } from 'react-icons/fa';
-import { formatearCedula } from '../../../utils/formatters';
+import { formatearCedula } from '../../../../utils/formatters';
 import { useState } from 'react';
 
 const ProfesoresDetalleModal = ({ isOpen, onClose, profesores }) => {

@@ -4,7 +4,7 @@ import {
   FaHome, FaChalkboardTeacher, FaFileAlt, FaChartBar, 
   FaBook, FaMoneyBillWave, FaSignOutAlt
 } from 'react-icons/fa';
-import { logout } from '../../services/auth.service';
+import { logout } from '../../../services/auth.service';
 
 const EstudianteSidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
