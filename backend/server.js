@@ -55,6 +55,7 @@ const rolesRoutes = require('./routes/roles.routes');
 const usuariosRoutes = require('./routes/usuarios.routes');
 const permisosRoutes = require('./routes/permisos.routes');
 const notificacionesRoutes = require('./routes/notificaciones.routes');
+const reporteRoutes = require('./routes/reporte.routes');
 
 // ruta de prueba multer
 const testRoutes = require('./routes/test.routes');
@@ -127,6 +128,7 @@ app.use('/', rolesRoutes);
 app.use('/', usuariosRoutes);
 app.use('/permisos', permisosRoutes);
 app.use('/', notificacionesRoutes);
+app.use('/', reporteRoutes);
 // Ruta de prueba directa
 app.get('/test-horarios', (req, res) => {
   res.json({
